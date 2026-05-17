@@ -1,0 +1,15 @@
+{
+  "name": "ormic-launcher",
+  "version": "1.0.0",
+  "description": "Ormic Launcher GNOME Extension in TypeScript",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "@girs/gjs": "4.0.0-rc.15",
+    "@girs/gnome-shell": "^50.0.0",
+    "typescript": "^5.9.3"
+  }
+}

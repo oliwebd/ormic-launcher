@@ -1,0 +1,8 @@
+{
+  "name": "Ormic Launcher",
+  "description": "A modular floating app launcher for GNOME Shell — search apps, calculate, run commands and search the web. Inspired by the pop-os/launcher architecture.",
+  "uuid": "ormic-launcher@github.com",
+  "version": 1,
+  "shell-version": ["45", "46", "47", "48", "49", "50"],
+  "settings-schema": "org.gnome.shell.extensions.ormic-launcher"
+}

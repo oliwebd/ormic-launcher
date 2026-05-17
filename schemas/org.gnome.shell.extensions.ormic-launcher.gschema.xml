@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.ormic-launcher"
+          path="/org/gnome/shell/extensions/ormic-launcher/">
+
+    <key name="toggle-ormic-launcher" type="as">
+      <default><![CDATA[['<Super>space']]]></default>
+      <summary>Toggle Ormic Launcher</summary>
+      <description>Keyboard shortcut to open or close the Ormic Launcher dialog.</description>
+    </key>
+
+    <key name="show-indicator" type="b">
+      <default>true</default>
+      <summary>Show top panel indicator</summary>
+      <description>Whether to show the top panel search indicator icon.</description>
+    </key>
+
+    <key name="max-results" type="i">
+      <default>12</default>
+      <range min="5" max="24"/>
+      <summary>Maximum number of results</summary>
+      <description>How many results to show at once in the launcher.</description>
+    </key>
+
+    <key name="enable-web-search" type="b">
+      <default>true</default>
+      <summary>Enable web search provider</summary>
+    </key>
+
+    <key name="enable-recent-files" type="b">
+      <default>true</default>
+      <summary>Enable recent files provider</summary>
+    </key>
+
+    <key name="default-web-engine" type="s">
+      <default>'duckduckgo'</default>
+      <choices>
+        <choice value='duckduckgo'/>
+        <choice value='google'/>
+        <choice value='bing'/>
+      </choices>
+      <summary>Default web search engine</summary>
+    </key>
+
+  </schema>
+</schemalist>

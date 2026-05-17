@@ -1,0 +1,203 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Ormic Launcher — GNOME Shell Extension Stylesheet
+   Inspired by Pop!_OS launcher + GNOME 48 Adwaita design language
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Overlay backdrop ────────────────────────────────────────────────────── */
+.ormic-launcher-overlay {
+  background-color: rgba(0, 0, 0, 0.45);
+}
+
+/* ── Main dialog card ────────────────────────────────────────────────────── */
+.ormic-launcher {
+  background-color: rgba(30, 30, 36, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 16px;
+
+  /* Layered shadow for depth */
+  box-shadow:
+    0 4px  12px rgba(0, 0, 0, 0.40),
+    0 24px 64px rgba(0, 0, 0, 0.55),
+    0 0   0 1px rgba(255, 255, 255, 0.04) inset;
+
+  padding: 0;
+  spacing: 0;
+
+  /* Subtle backdrop-filter effect via layered bg */
+}
+
+/* ── Search bar ──────────────────────────────────────────────────────────── */
+.ormic-launcher-search-box {
+  padding: 16px 16px 14px 16px;
+  spacing: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.ormic-launcher-search-icon {
+  color: rgba(255, 255, 255, 0.45);
+  padding-left: 4px;
+  padding-top: 2px;
+  icon-size: 20px;
+}
+
+.ormic-launcher-entry {
+  background-color: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 300;
+  caret-color: #FAB84B;          /* Ormic orange accent */
+  padding: 0;
+  height: 32px;
+  selection-background-color: rgba(250, 184, 75, 0.30);
+}
+
+.ormic-launcher-entry:focus {
+  box-shadow: none;
+  border: none;
+  background-color: transparent;
+}
+
+/* Placeholder text */
+.ormic-launcher-entry StLabel.hint-text {
+  color: rgba(255, 255, 255, 0.30);
+  font-size: 16px;
+  font-weight: 300;
+}
+
+/* ── Scroll view ─────────────────────────────────────────────────────────── */
+.ormic-launcher-scroll {
+  max-height: 420px;
+}
+
+.ormic-launcher-results {
+  padding: 6px;
+  spacing: 2px;
+}
+
+/* ── Result rows ─────────────────────────────────────────────────────────── */
+.ormic-launcher-result {
+  padding: 10px 12px;
+  border-radius: 10px;
+  spacing: 14px;
+  background-color: transparent;
+  transition-duration: 80ms;
+  transition-timing-function: ease;
+}
+
+.ormic-launcher-result:hover {
+  background-color: rgba(255, 255, 255, 0.07);
+}
+
+.ormic-launcher-result.selected {
+  background-color: rgba(250, 184, 75, 0.18);
+  border: 1px solid rgba(250, 184, 75, 0.28);
+}
+
+.ormic-launcher-result.selected .ormic-launcher-result-name {
+  color: #FAB84B;
+}
+
+.ormic-launcher-result-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background-color: rgba(255, 255, 255, 0.06);
+  padding: 4px;
+}
+
+.ormic-launcher-result-gicon {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.ormic-launcher-result-text {
+  spacing: 3px;
+}
+
+.ormic-launcher-result-name {
+  color: rgba(255, 255, 255, 0.90);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.ormic-launcher-result-description {
+  color: rgba(255, 255, 255, 0.38);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.ormic-launcher-result-category {
+  color: rgba(255, 255, 255, 0.22);
+  padding-right: 4px;
+}
+
+/* ── Tips bar ────────────────────────────────────────────────────────────── */
+.ormic-launcher-tips {
+  padding: 10px 16px;
+  spacing: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.ormic-launcher-tip {
+  spacing: 3px;
+}
+
+.ormic-launcher-tip-key {
+  color: rgba(250, 184, 75, 0.80);
+  font-size: 11px;
+  font-weight: 600;
+  background-color: rgba(250, 184, 75, 0.12);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+.ormic-launcher-tip-label {
+  color: rgba(255, 255, 255, 0.30);
+  font-size: 11px;
+}
+
+/* ── Scrollbar theming ───────────────────────────────────────────────────── */
+.ormic-launcher-scroll StScrollBar {
+  padding: 0 2px;
+}
+
+.ormic-launcher-scroll StScrollBar StBin#trough {
+  background-color: transparent;
+  border-radius: 4px;
+  width: 6px;
+}
+
+.ormic-launcher-scroll StScrollBar StButton#vhandle {
+  background-color: rgba(255, 255, 255, 0.20);
+  border-radius: 4px;
+  border: none;
+  min-height: 40px;
+}
+
+.ormic-launcher-scroll StScrollBar StButton#vhandle:hover {
+  background-color: rgba(255, 255, 255, 0.30);
+}
+
+/* ── Favorite / Dock Button ──────────────────────────────────────────────── */
+.ormic-launcher-fav-button {
+  color: rgba(255, 255, 255, 0.25);
+  border-radius: 6px;
+  padding: 6px;
+  transition-duration: 80ms;
+  transition-timing-function: ease;
+}
+
+.ormic-launcher-fav-button:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+  color: rgba(250, 184, 75, 0.90);
+}
+
+.ormic-launcher-fav-button.is-fav {
+  color: #FAB84B; /* Favorite is active (starred/pinned) */
+}
+
+.ormic-launcher-fav-button.is-fav:hover {
+  background-color: rgba(250, 184, 75, 0.15);
+}
