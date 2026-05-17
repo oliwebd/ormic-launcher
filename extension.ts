@@ -393,14 +393,16 @@ const ResultRow = GObject.registerClass({
         _selected!: boolean;
         _favButton?: St.Button;
 
-        _init(result: SearchResult, index: number) {
+        _init() {
             super._init({
                 style_class: 'ormic-launcher-result',
                 reactive: true,
                 track_hover: true,
                 can_focus: true,
             });
+        }
 
+        setup(result: SearchResult, index: number) {
             this._result = result;
             this._index = index;
             this._selected = false;
@@ -561,13 +563,15 @@ const LauncherDialog = GObject.registerClass(
         _resultsBox!: St.BoxLayout;
         _tipBar!: St.BoxLayout;
 
-        _init(extension: OrmicLauncherExtension) {
+        _init() {
             super._init({
                 style_class: 'ormic-launcher',
                 vertical: true,
                 reactive: true,
             });
+        }
 
+        setup(extension: OrmicLauncherExtension) {
             this._extension = extension;
             this._providers = extension.providers;
             this._results = [];
@@ -734,7 +738,8 @@ const LauncherDialog = GObject.registerClass(
             }
 
             this._results.forEach((result, i) => {
-                const row = new ResultRow(result, i);
+                const row = new (ResultRow as any)();
+                row.setup(result, i);
                 row.connect('activate', () => {
                     result.activate();
                     this._extension.hide();
@@ -880,7 +885,8 @@ export default class OrmicLauncherExtension extends Extension {
             return Clutter.EVENT_STOP;
         });
 
-        this._dialog = new (LauncherDialog as any)(this);
+        this._dialog = new (LauncherDialog as any)();
+        this._dialog!.setup(this);
         this._overlay.add_child(this._dialog!);
 
         Main.layoutManager.addTopChrome(this._overlay);
