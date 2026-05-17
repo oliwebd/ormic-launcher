@@ -42,5 +42,15 @@
       <summary>Default web search engine</summary>
     </key>
 
+    <key name="enable-window-search" type="b">
+      <default>true</default>
+      <summary>Enable open windows search provider</summary>
+    </key>
+
+    <key name="enable-quick-select" type="b">
+      <default>true</default>
+      <summary>Enable quick selection keyboard shortcuts (Ctrl+1..Ctrl+9)</summary>
+    </key>
+
   </schema>
 </schemalist>

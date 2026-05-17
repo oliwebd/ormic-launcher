@@ -10,8 +10,8 @@
 
 /* ── Main dialog card ────────────────────────────────────────────────────── */
 .ormic-launcher {
-  background-color: rgba(30, 30, 36, 0.96);
-  border: 1px solid rgba(255, 255, 255, 0.10);
+  background-color: rgba(22, 22, 28, 0.88); /* Premium dark glassmorphism */
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 16px;
 
   /* Layered shadow for depth */
@@ -200,4 +200,31 @@
 
 .ormic-launcher-fav-button.is-fav:hover {
   background-color: rgba(250, 184, 75, 0.15);
+}
+
+/* ── Quick Select Shortcut Badge ─────────────────────────────────────────── */
+.ormic-launcher-shortcut-badge {
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(250, 184, 75, 0.85);
+  background-color: rgba(250, 184, 75, 0.08);
+  border: 1px solid rgba(250, 184, 75, 0.28);
+  border-radius: 5px;
+  padding: 2px 7px;
+  margin-right: 6px;
+  transition-duration: 80ms;
+  transition-timing-function: ease;
+  box-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.15),
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+}
+
+/* Active visual feedback when row is selected */
+.ormic-launcher-result.selected .ormic-launcher-shortcut-badge {
+  color: #1e1e24;
+  background-color: #FAB84B;
+  border-color: #FAB84B;
+  box-shadow: 
+    0 2px 8px rgba(250, 184, 75, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.12) inset;
 }

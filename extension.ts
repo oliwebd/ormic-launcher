@@ -380,6 +380,93 @@ class CommandProvider {
         }];
     }
 }
+/**
+ * WindowProvider: search open windows and activate/switch to them
+ */
+class WindowProvider {
+    id: string;
+    priority: number;
+    _settings: Gio.Settings;
+
+    constructor(settings: Gio.Settings) {
+        this.id = 'window';
+        this.priority = 9; // High priority, just below apps/commands
+        this._settings = settings;
+    }
+
+    search(query: string): SearchResult[] {
+        if (!this._settings.get_boolean('enable-window-search')) return [];
+
+        const q = query.toLowerCase().trim();
+        if (!q) return [];
+
+        // Check if query starts with explicit window prefix 'w '
+        let isExplicit = false;
+        let searchTerms = q;
+        if (q.startsWith('w ')) {
+            isExplicit = true;
+            searchTerms = q.slice(2).trim();
+        }
+
+        const results: SearchResult[] = [];
+        
+        try {
+            // Get all window actors on the current screen
+            const actors = global.get_window_actors() as any[];
+            const windows = actors
+                .map(a => a.meta_window)
+                .filter(w => w && !w.is_skip_taskbar()) as any[];
+
+            const appSystem = Shell.AppSystem.get_default();
+
+            for (const win of windows) {
+                const title = (win.get_title() ?? '').toLowerCase();
+                const wmClass = (win.get_wm_class() ?? '').toLowerCase();
+
+                let score = 0;
+                
+                if (isExplicit) {
+                    if (!searchTerms) {
+                        // Just list all open windows if typing 'w '
+                        score = 80;
+                    } else if (title.includes(searchTerms) || wmClass.includes(searchTerms)) {
+                        score = 90;
+                    }
+                } else {
+                    // Match window title or application name
+                    if (title === q || wmClass === q) score = 85;
+                    else if (title.startsWith(q) || wmClass.startsWith(q)) score = 70;
+                    else if (title.includes(q) || wmClass.includes(q)) score = 50;
+                }
+
+                if (score > 0) {
+                    // Lookup native icon using app system
+                    const app = appSystem.lookup_app(win.get_wm_class());
+                    const icon = app ? app.create_icon_texture(32) : null;
+
+                    results.push({
+                        id: `window:${win.get_id()}`,
+                        name: win.get_title() ?? 'Unknown Window',
+                        description: `Switch to active window (${win.get_wm_class() ?? 'unknown'})`,
+                        score,
+                        icon: icon,
+                        iconName: icon ? undefined : 'window-new-symbolic',
+                        categoryIcon: 'window-new-symbolic',
+                        activate: () => {
+                            // Raise and focus the window
+                            win.activate(global.get_current_time());
+                        },
+                    });
+                }
+            }
+        } catch (_e) {
+            // Gracefully ignore window querying errors
+        }
+
+        // Return sorted results
+        return results.sort((a, b) => b.score - a.score).slice(0, 6);
+    }
+}
 
 // ─── Result Row Widget ────────────────────────────────────────────────────────
 
@@ -402,7 +489,7 @@ const ResultRow = GObject.registerClass({
             });
         }
 
-        setup(result: SearchResult, index: number) {
+        setup(result: SearchResult, index: number, settings: Gio.Settings) {
             this._result = result;
             this._index = index;
             this._selected = false;
@@ -515,6 +602,16 @@ const ResultRow = GObject.registerClass({
                 });
 
                 this.add_child(favButton);
+            }
+
+            // Quick select shortcut badge (e.g. Ctrl+1 .. Ctrl+9)
+            if (settings.get_boolean('enable-quick-select') && index >= 0 && index < 9) {
+                const badgeLabel = new St.Label({
+                    text: `Ctrl+${index + 1}`,
+                    style_class: 'ormic-launcher-shortcut-badge',
+                    y_align: Clutter.ActorAlign.CENTER,
+                });
+                this.add_child(badgeLabel);
             }
 
             this.add_child(categoryIcon);
@@ -660,6 +757,16 @@ const LauncherDialog = GObject.registerClass(
         _onKeyPress(event: any): boolean {
             const sym = event.get_key_symbol();
 
+            // Check for Ctrl modifier and quick select setting
+            const state = event.get_state();
+            const ctrlActive = (state & Clutter.ModifierType.CONTROL_MASK) !== 0;
+            const settings = this._extension._settings;
+            if (ctrlActive && settings.get_boolean('enable-quick-select') && sym >= Clutter.KEY_1 && sym <= Clutter.KEY_9) {
+                const index = sym - Clutter.KEY_1;
+                this._activateIndex(index);
+                return true;
+            }
+
             if (sym === Clutter.KEY_Escape) {
                 this._extension.hide();
                 return true;
@@ -703,7 +810,44 @@ const LauncherDialog = GObject.registerClass(
             const q = query.trim();
 
             if (!q) {
-                this._scrollView.hide();
+                const apps = Gio.AppInfo.get_all() as any[];
+                const allResults: SearchResult[] = [];
+                const appSystem = Shell.AppSystem.get_default();
+
+                for (const info of apps) {
+                    if (!info || !info.should_show()) continue;
+                    
+                    const appId = info.get_id();
+                    const app = appId ? appSystem.lookup_app(appId) : null;
+                    const icon = app ? app.create_icon_texture(32) : null;
+
+                    allResults.push({
+                        id: `app:${appId ?? info.get_name()}`,
+                        desktopId: appId,
+                        name: info.get_name() ?? '',
+                        description: info.get_description() ?? '',
+                        score: 0,
+                        icon: icon,
+                        iconName: icon ? undefined : 'application-x-executable-symbolic',
+                        categoryIcon: 'application-x-executable-symbolic',
+                        activate: () => {
+                            if (app) {
+                                app.open_new_window(-1);
+                            } else {
+                                try {
+                                    info.launch([], null);
+                                } catch (_e) {
+                                    // Fallback
+                                }
+                            }
+                        },
+                    });
+                }
+
+                allResults.sort((a, b) => a.name.localeCompare(b.name));
+
+                this._results = allResults;
+                this._renderResults();
                 return;
             }
 
@@ -739,7 +883,7 @@ const LauncherDialog = GObject.registerClass(
 
             this._results.forEach((result, i) => {
                 const row = new (ResultRow as any)();
-                row.setup(result, i);
+                row.setup(result, i, this._extension._settings);
                 row.connect('activate', () => {
                     result.activate();
                     this._extension.hide();
@@ -784,6 +928,17 @@ const LauncherDialog = GObject.registerClass(
             }
         }
 
+        _activateIndex(index: number) {
+            const rows = this._resultsBox.get_children();
+            if (index >= 0 && index < rows.length) {
+                const result = this._results[index];
+                if (result) {
+                    result.activate();
+                    this._extension.hide();
+                }
+            }
+        }
+
         _completeSelected() {
             const result = this._results[this._selectedIndex];
             if (result?.name) {
@@ -799,7 +954,7 @@ const LauncherDialog = GObject.registerClass(
         reset() {
             this._clearResults();
             this._entry.text = '';
-            this._scrollView.hide();
+            this._runSearch('');
         }
     }
 );
@@ -853,17 +1008,18 @@ export default class OrmicLauncherExtension extends Extension {
     _settingsChangedId!: number | null;
 
     enable() {
+        this._settings = this.getSettings();
         this.providers = [
             new AppProvider(),
             new CalcProvider(),
             new WebProvider(),
             new RecentProvider(),
             new CommandProvider(),
+            new WindowProvider(this._settings),
         ];
 
         this._visible = false;
         this._keybindingName = 'toggle-ormic-launcher';
-        this._settings = this.getSettings();
         this._indicator = null;
         this._settingsChangedId = null;
 
