@@ -815,8 +815,14 @@ const OrmicLauncherIndicator = GObject.registerClass(
             });
             this.add_child(icon);
 
+            // Redirect the menu toggle function directly to toggle the launcher
+            this.menu.toggle = () => {
+                this._extension.toggle();
+            };
+
             this.connect('button-press-event', (_, event) => {
-                if (event.get_button() === 1) {
+                const button = typeof event.get_button === 'function' ? event.get_button() : 1;
+                if (button === 1) {
                     this._extension.toggle();
                     return Clutter.EVENT_STOP;
                 }
