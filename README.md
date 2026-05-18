@@ -1,4 +1,4 @@
-# Ormic Launcher — GNOME Shell Extension
+# Ormic Launcher — GNOME Shell Extension [BETA]
 
 A modular, floating application launcher for GNOME Shell **45 – 50**, inspired by
 the [pop-os/launcher](https://github.com/pop-os/launcher) project architecture. Re-engineered in pure TypeScript and standard GJS, it matches the premium glassmorphic dark theme and features of the Pop!_OS Launcher window.
