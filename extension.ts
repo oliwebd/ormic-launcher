@@ -37,7 +37,7 @@ const DEBUG = true;   // set false to silence all debug output
 function dbg(scope: string, msg: string, ...args: any[]) {
     if (!DEBUG) return;
     const extra = args.length ? ' ' + args.map(a => JSON.stringify(a)).join(' ') : '';
-    log(\`[Ormic:\${scope}] \${msg}\${extra}\`);
+    log(`[Ormic:\${scope}] \${msg}\${extra}`);
 }
 
 import { Extension, gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
