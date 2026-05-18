@@ -30,6 +30,16 @@ import * as Config from 'resource:///org/gnome/shell/misc/config.js';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
+
+// ─── Debug helpers ────────────────────────────────────────────────────────────
+const DEBUG = true;   // set false to silence all debug output
+
+function dbg(scope: string, msg: string, ...args: any[]) {
+    if (!DEBUG) return;
+    const extra = args.length ? ' ' + args.map(a => JSON.stringify(a)).join(' ') : '';
+    log(\`[Ormic:\${scope}] \${msg}\${extra}\`);
+}
+
 import { Extension, gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
 
 // ─── Runtime version gates ────────────────────────────────────────────────────
@@ -155,6 +165,7 @@ class AppProvider {
     }
 
     reload() {
+        dbg('AppProvider', 'reload() — clearing cache');
         this._appsCache.clear();
         try {
             if (this._tree && this._tree.load_sync()) {
@@ -171,6 +182,7 @@ class AppProvider {
                         }
                     }
                     this._loadCategory(root, _('App'), false);
+                dbg('AppProvider', `cache size after reload: ${this._appsCache.size}`);
                 }
             }
         } catch (e: any) {
@@ -297,42 +309,6 @@ class CalcProvider {
     }
 }
 
-class WebProvider {
-    id = 'web'; priority = 1;
-    private engines: Record<string, { name: string; url: string }> = {
-        'g ': { name: 'Google', url: 'https://www.google.com/search?q=%s' },
-        'gg ': { name: 'Google', url: 'https://www.google.com/search?q=%s' },
-        'd ': { name: 'DuckDuckGo', url: 'https://duckduckgo.com/?q=%s' },
-        'ddg ': { name: 'DuckDuckGo', url: 'https://duckduckgo.com/?q=%s' },
-        'y ': { name: 'YouTube', url: 'https://www.youtube.com/results?search_query=%s' },
-        'gh ': { name: 'GitHub', url: 'https://github.com/search?q=%s' },
-        'w ': { name: 'Wikipedia', url: 'https://en.wikipedia.org/wiki/Special:Search/%s' },
-        'b ': { name: 'Bing', url: 'https://www.bing.com/search?q=%s' },
-    };
-
-    constructor(private _s: Gio.Settings) { }
-
-    search(query: string): SearchResult[] {
-        if (!this._s.get_boolean('enable-web-search')) return [];
-        const q = query.trim(); if (!q) return [];
-        for (const [pfx, eng] of Object.entries(this.engines)) {
-            if (q.toLowerCase().startsWith(pfx)) {
-                const terms = encodeURIComponent(q.slice(pfx.length));
-                if (!terms) continue;
-                return [{
-                    id: `web:${pfx.trim()}`,
-                    name: `Search ${eng.name} for "${q.slice(pfx.length)}"`,
-                    description: eng.url.replace('%s', decodeURIComponent(terms)),
-                    score: 50, providerPriority: this.priority,
-                    iconName: 'web-browser-symbolic',
-                    categoryIcon: 'web-browser-symbolic', category: eng.name,
-                    activate: () => Gio.app_info_launch_default_for_uri(eng.url.replace('%s', terms), null),
-                }];
-            }
-        }
-        return [];
-    }
-}
 
 class RecentProvider {
     id = 'recent'; priority = 3;
@@ -378,6 +354,7 @@ class CommandProvider {
             iconName: 'utilities-terminal-symbolic',
             categoryIcon: 'utilities-terminal-symbolic', category: _('Command'),
             activate: () => {
+                dbg('Command', 'spawn:', cmd);
                 try { GLib.spawn_command_line_async(cmd); }
                 catch (e: any) { Main.notifyError(_('Command Error'), e.message); }
             },
@@ -803,7 +780,7 @@ const LauncherDialog = GObject.registerClass(
         // UI Container Boxes
         _entryBox!: St.BoxLayout;
         _entry!: St.Entry;
-        
+
         // Search Results List
         _scroll!: St.ScrollView;
         _rbox!: St.BoxLayout;
@@ -814,7 +791,7 @@ const LauncherDialog = GObject.registerClass(
         _headerTitleLabel!: St.Label;
         _editBtn!: St.Button;
         _deleteBtn!: St.Button;
-        
+
         _gridScroll!: St.ScrollView;
         _gridBox!: St.BoxLayout;
         _tabsBox!: St.BoxLayout;
@@ -856,11 +833,19 @@ const LauncherDialog = GObject.registerClass(
             }));
             this._entry = new St.Entry({
                 style_class: 'ormic-entry',
-                hint_text: _('Search apps, calculate, or type > for commands…'),
+                hint_text: _('Search apps, calculate, > command, win  windows…'),
                 x_expand: true, can_focus: true,
             });
             this._entry.clutter_text.connect('text-changed', () => this._onText());
             this._entry.clutter_text.connect('key-press-event', (_, ev) => this._onKey(ev));
+            this.connect('button-press-event', () => {
+                this._entry.grab_key_focus();
+                return Clutter.EVENT_PROPAGATE;
+            });
+            this.connect('button-press-event', () => {
+                this._entry.grab_key_focus();
+                return Clutter.EVENT_PROPAGATE;
+            });
             this._entryBox.add_child(this._entry);
 
             // ── Search Results ────────────────────────────────────────────
@@ -891,7 +876,7 @@ const LauncherDialog = GObject.registerClass(
 
             // ── Library Grid Header ────────────────────────────────────────
             this._headerBox = new St.BoxLayout({ style_class: 'ormic-header', x_expand: true });
-            
+
             // Spacer to center the title
             const leftSpacer = new St.Widget({ x_expand: true });
             this._headerBox.add_child(leftSpacer);
@@ -967,7 +952,7 @@ const LauncherDialog = GObject.registerClass(
             edHeader.add_child(this._editorNameEntry);
 
             const edBtnBox = new St.BoxLayout({ style_class: 'ormic-editor-btn-box' });
-            
+
             const cancelEdBtn = new St.Button({
                 label: _('Cancel'), style_class: 'ormic-editor-btn cancel-btn',
                 reactive: true, track_hover: true,
@@ -1047,7 +1032,7 @@ const LauncherDialog = GObject.registerClass(
             // Assemble everything
             this.add_child(this._entryBox);
             this.add_child(new St.Widget({ style_class: 'ormic-sep', x_expand: true }));
-            
+
             // Central Swap Container for views
             this.add_child(this._scroll);
             this.add_child(this._headerBox);
@@ -1064,6 +1049,7 @@ const LauncherDialog = GObject.registerClass(
 
         private _onKey(ev: any): boolean {
             const sym = ev.get_key_symbol();
+            dbg('Key', `sym=0x${sym.toString(16)} ctrl=${!!(ev.get_state() & Clutter.ModifierType.CONTROL_MASK)}`);
             const ctrl = !!(ev.get_state() & Clutter.ModifierType.CONTROL_MASK);
 
             // 1. Check if Prompt Modal is active
@@ -1129,6 +1115,7 @@ const LauncherDialog = GObject.registerClass(
         }
 
         private _search(query: string) {
+            dbg('Search', 'query:', query);
             const q = query.trim();
             const max = this._ext._settings.get_int('max-results');
 
@@ -1143,7 +1130,7 @@ const LauncherDialog = GObject.registerClass(
                 this._headerBox.show();
                 this._gridScroll.show();
                 this._tabsBox.show();
-                
+
                 this._renderGridAndTabs();
                 return;
             }
@@ -1162,6 +1149,7 @@ const LauncherDialog = GObject.registerClass(
             }
             combined.sort((a, b) => b.score - a.score || b.providerPriority - a.providerPriority);
             this._results = combined.slice(0, max);
+            dbg('Search', `results: ${this._results.length} (max ${max})`);
             this._renderSearchResults();
         }
 
@@ -1204,6 +1192,7 @@ const LauncherDialog = GObject.registerClass(
 
         private _activateSel() {
             const r = this._results[this._selIdx];
+            dbg('Activate', 'list sel', this._selIdx, r?.name ?? 'none');
             if (r) { r.activate(); this._ext.hide(); }
         }
 
@@ -1220,6 +1209,7 @@ const LauncherDialog = GObject.registerClass(
         // ─── Grid View Rendering & Management ────────────────────────────────
 
         private _renderGridAndTabs() {
+            dbg('Grid', `renderGridAndTabs category=${this._activeCategory}`);
             // Render Bottom Category Tabs
             this._tabsBox.destroy_all_children();
 
@@ -1392,6 +1382,7 @@ const LauncherDialog = GObject.registerClass(
         }
 
         private _activateGridSel() {
+            dbg('Activate', 'grid sel', this._gridSelIdx);
             const items: GridItem[] = [];
             this._gridBox.get_children().forEach((row: any) => {
                 row.get_children().forEach((item: GridItem) => items.push(item));
@@ -1515,7 +1506,7 @@ const LauncherDialog = GObject.registerClass(
                     customGroups[gName] = [];
                     this._saveCustomGroups(customGroups);
                     this._activeCategory = gName;
-                    
+
                     // Switch to group editor checklists immediately!
                     this._renderGridAndTabs();
                     this._startEditing();
@@ -1530,6 +1521,7 @@ const LauncherDialog = GObject.registerClass(
         // ─── Settings Helper Methods ──────────────────────────────────────────
 
         private _getCustomGroups(): Record<string, string[]> {
+            dbg('Groups', 'getCustomGroups()');
             try {
                 const str = this._ext._settings.get_string('custom-groups') || '{}';
                 return JSON.parse(str);
@@ -1539,6 +1531,7 @@ const LauncherDialog = GObject.registerClass(
         }
 
         private _saveCustomGroups(groups: Record<string, string[]>) {
+            dbg('Groups', 'saveCustomGroups()', Object.keys(groups));
             try {
                 this._ext._settings.set_string('custom-groups', JSON.stringify(groups));
             } catch (e: any) {
@@ -1549,6 +1542,7 @@ const LauncherDialog = GObject.registerClass(
         // ─── External Controls ────────────────────────────────────────────────
 
         focus() {
+            dbg('Focus', 'grab_key_focus → entry');
             // FIX (Bug 2b): The search entry is always the key-capture point.
             // It is always visible, so we unconditionally focus it here instead
             // of branching on _entryBox.visible or _scroll.visible. Grid
@@ -1617,6 +1611,7 @@ export default class OrmicLauncherExtension extends Extension {
     _cfgId!: number | null;
 
     enable() {
+        dbg('Extension', 'enable() called');
         this._settings = this.getSettings();
         this.providers = [
             new AppProvider(), new CalcProvider(),
@@ -1664,6 +1659,7 @@ export default class OrmicLauncherExtension extends Extension {
     }
 
     disable() {
+        dbg('Extension', 'disable() called');
         if (this._cfgId) { this._settings.disconnect(this._cfgId); this._cfgId = null; }
         if (this._keyId) { global.stage.disconnect(this._keyId); this._keyId = null; }
         if (this._monId) { Main.layoutManager.disconnect(this._monId); this._monId = null; }
@@ -1674,7 +1670,7 @@ export default class OrmicLauncherExtension extends Extension {
         this._dialog = null;
         for (const p of this.providers) {
             if (typeof p.destroy === 'function') {
-                try { p.destroy(); } catch (_) {}
+                try { p.destroy(); } catch (_) { }
             }
         }
         this.providers = [];
@@ -1706,6 +1702,7 @@ export default class OrmicLauncherExtension extends Extension {
     toggle() { this._visible ? this.hide() : this.show(); }
 
     show() {
+        dbg('Launcher', 'show()');
         if (!this._dialog || !this._overlay) return;
         this._visible = true;
         this._dialog.reset();
@@ -1714,10 +1711,11 @@ export default class OrmicLauncherExtension extends Extension {
         this._dialog.translation_y = -20;
         easeActor(this._overlay, { opacity: 255, duration: 150, mode: Clutter.AnimationMode.EASE_OUT_QUAD });
         easeActor(this._dialog, { opacity: 255, translation_y: 0, duration: 200, mode: Clutter.AnimationMode.EASE_OUT_EXPO });
-        timeoutOnce(55, () => this._dialog?.focus());
+        timeoutOnce(10, () => this._dialog?.grab_key_focus());
     }
 
     hide() {
+        dbg('Launcher', 'hide()');
         if (!this._dialog || !this._overlay) return;
         this._visible = false;
         // Capture refs — safe if disable() runs mid-animation

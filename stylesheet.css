@@ -20,7 +20,8 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.06);
   padding: 0;
   spacing: 0;
-  min-width: 680px; /* Spacious, wide library view */
+  min-width: 750px;
+  /* Spacious, wide library view */
 }
 
 /* ── Search row ──────────────────────────────────────────────────────────── */
@@ -520,7 +521,7 @@
   padding: 20px;
   spacing: 14px;
   min-width: 300px;
-  box-shadow: 
+  box-shadow:
     0 12px 24px rgba(0, 0, 0, 0.5),
     0 32px 80px rgba(0, 0, 0, 0.85);
 }

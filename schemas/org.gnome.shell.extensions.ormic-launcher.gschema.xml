@@ -22,30 +22,9 @@
       <description>How many results to show at once in the launcher.</description>
     </key>
 
-    <key name="enable-web-search" type="b">
-      <default>false</default>
-      <summary>Enable web search provider</summary>
-    </key>
-
-    <key name="web-search-prefix-only" type="b">
-      <default>true</default>
-      <summary>Only search web with prefix</summary>
-      <description>If enabled, web search is only triggered when explicitly using a prefix like g, d, y, etc. General typing remains strictly local.</description>
-    </key>
-
     <key name="enable-recent-files" type="b">
       <default>true</default>
       <summary>Enable recent files provider</summary>
-    </key>
-
-    <key name="default-web-engine" type="s">
-      <default>'duckduckgo'</default>
-      <choices>
-        <choice value='duckduckgo'/>
-        <choice value='google'/>
-        <choice value='bing'/>
-      </choices>
-      <summary>Default web search engine</summary>
     </key>
 
     <key name="enable-window-search" type="b">

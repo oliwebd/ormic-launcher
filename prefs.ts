@@ -146,8 +146,6 @@ export default class OrmicLauncherPrefs extends ExtensionPreferences {
 
         const rows: Record<string, Adw.SwitchRow> = {};
         for (const [key, title, sub] of [
-            ['enable-web-search', _('Web Search'), _('Type "g ", "d ", "y " … to search the web')],
-            ['web-search-prefix-only', _('Only Search Web with Prefix'), _('Only search web when typing explicitly prefixed queries, keeping general typing strictly local')],
             ['enable-recent-files', _('Recent Files'), _('Search files you have recently opened')],
             // Both missing from prefs before (bug fix):
             ['enable-window-search', _('Open Windows'), _('Search open windows — type "win " to list all')],
@@ -157,22 +155,6 @@ export default class OrmicLauncherPrefs extends ExtensionPreferences {
             provGroup.add(row);
             rows[key] = row;
         }
-
-        s.bind('enable-web-search', rows['web-search-prefix-only'], 'sensitive', Gio.SettingsBindFlags.DEFAULT);
-
-        // Default engine
-        const engGroup = new Adw.PreferencesGroup({ title: _('Default Web Engine') });
-        provPage.add(engGroup);
-        const engines = ['duckduckgo', 'google', 'bing'];
-        const engLabels = [_('DuckDuckGo (privacy-first)'), _('Google'), _('Microsoft Bing')];
-        const engRow = new Adw.ComboRow({
-            title: _('Default engine'),
-            subtitle: _('Used when no prefix (g/d/b …) is typed'),
-            model: new Gtk.StringList({ strings: engLabels }),
-        });
-        engRow.selected = Math.max(0, engines.indexOf(s.get_string('default-web-engine') ?? 'duckduckgo'));
-        engRow.connect('notify::selected', () => s.set_string('default-web-engine', engines[engRow.selected]));
-        engGroup.add(engRow);
 
         // ══ Page: About ═══════════════════════════════════════════════════
         const aboutPage = new Adw.PreferencesPage({
@@ -195,12 +177,6 @@ export default class OrmicLauncherPrefs extends ExtensionPreferences {
         for (const [k, d] of [
             [_('Type anything'), _('Search installed applications')],
             [_('2 + 2, sqrt(16)'), _('Calculate — result copied to clipboard')],
-            [_('g <query>'), _('Search Google')],
-            [_('d <query>'), _('Search DuckDuckGo')],
-            [_('y <query>'), _('Search YouTube')],
-            [_('gh <query>'), _('Search GitHub')],
-            [_('w <query>'), _('Search Wikipedia')],
-            [_('b <query>'), _('Search Bing')],
             [_('win '), _('List / search open windows')],
             [_('> <command>'), _('Run a shell command')],
         ] as [string, string][]) {
