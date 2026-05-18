@@ -23,8 +23,14 @@
     </key>
 
     <key name="enable-web-search" type="b">
-      <default>true</default>
+      <default>false</default>
       <summary>Enable web search provider</summary>
+    </key>
+
+    <key name="web-search-prefix-only" type="b">
+      <default>true</default>
+      <summary>Only search web with prefix</summary>
+      <description>If enabled, web search is only triggered when explicitly using a prefix like g, d, y, etc. General typing remains strictly local.</description>
     </key>
 
     <key name="enable-recent-files" type="b">
@@ -50,6 +56,16 @@
     <key name="enable-quick-select" type="b">
       <default>true</default>
       <summary>Enable quick selection keyboard shortcuts (Ctrl+1..Ctrl+9)</summary>
+    </key>
+
+    <key name="custom-groups" type="s">
+      <default>'{}'</default>
+      <summary>Custom user groups and their apps</summary>
+    </key>
+
+    <key name="show-search-bar" type="b">
+      <default>false</default>
+      <summary>Show search bar by default</summary>
     </key>
 
   </schema>

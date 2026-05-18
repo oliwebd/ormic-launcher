@@ -5,7 +5,8 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "local-install": "make install"
   },
   "devDependencies": {
     "@girs/gjs": "4.0.0-rc.15",

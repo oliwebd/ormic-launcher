@@ -1,7 +1,7 @@
 # Ormic Launcher — GNOME Shell Extension
 
 A modular, floating application launcher for GNOME Shell **45 – 50**, inspired by
-the [pop-os/launcher](https://github.com/pop-os/launcher) project architecture.
+the [pop-os/launcher](https://github.com/pop-os/launcher) project architecture. Re-engineered in pure TypeScript and standard GJS, it matches the premium glassmorphic dark theme and features of the Pop!_OS Launcher window.
 
 ## Supported GNOME Versions
 
@@ -16,13 +16,16 @@ the [pop-os/launcher](https://github.com/pop-os/launcher) project architecture.
 
 ## Features
 
-| Provider | Trigger | Example |
+| Feature | Description | Example |
 |---|---|---|
-| **Apps** | Any text | `firefox`, `calc` |
-| **Calculator** | Start with digit/operator | `2 + 2`, `sqrt(144)`, `sin(90) * pi` |
-| **Web Search** | `g `, `d `, `y `, `gh `, `w ` | `g gnome extensions` |
-| **Recent Files** | Any text (≥2 chars) | `report`, `screenshot` |
-| **Shell Command** | `> ` | `> systemctl restart NetworkManager` |
+| **Apps (GMenu)** | Standard GUI apps loaded recursively from `GMenu.Tree` | `firefox`, `gimp` |
+| **Favorites First** | Empty search shows your **Favorite Apps** prioritized at the top | Direct launch |
+| **Calculator** | Evaluates math expressions securely with fallback | `2 + 2`, `sqrt(144)`, `sin(90) * pi` |
+| **Web Search** | Launches default engine or specific engines with `g `, `d `, `y `, `gh `, `w ` | `g gnome extensions` |
+| **Recent Files** | Search files you have recently opened (≥2 chars) | `report`, `screenshot` |
+| **Shell Command** | Run shell commands directly with `> ` trigger | `> systemctl restart bluetooth` |
+
+*Each search result highlights its source on the right side of the list (e.g. `Internet`, `Office`, `Calc`, `Web`) matching the premium look of the Pop!_OS Launcher.*
 
 ## Keyboard Shortcuts
 
@@ -32,20 +35,21 @@ the [pop-os/launcher](https://github.com/pop-os/launcher) project architecture.
 | `↑` / `↓` | Navigate results |
 | `Enter` | Activate selected result |
 | `Tab` | Auto-complete selected name |
+| `Ctrl + 1..9` | Quick-select and launch search results instantly |
 | `Esc` | Close launcher |
 
 ## Installation
 
-### Method 1 — Manual (recommended for development)
+### Method 1 — Build and Install (Recommended for Development)
+
+Ensure you have `pnpm` installed on your machine. This method compiles the TypeScript code, bundles GSettings schemas, and installs the extension locally:
 
 ```bash
-# 1. Copy to GNOME extensions directory
-cp -r ormic-launcher-gnome@extension \
-  ~/.local/share/gnome-shell/extensions/ormic-launcher@github.com
+# 1. Build the extension (compiles TypeScript to dist/)
+make build
 
-# 2. Compile the GSettings schema
-glib-compile-schemas \
-  ~/.local/share/gnome-shell/extensions/ormic-launcher@github.com/schemas/
+# 2. Copy compiled artifacts to local GNOME directory
+make install
 
 # 3. Restart GNOME Shell
 #    On Wayland: log out and log back in
@@ -53,18 +57,19 @@ glib-compile-schemas \
 
 # 4. Enable the extension
 gnome-extensions enable ormic-launcher@github.com
-# or use GNOME Extensions app / Extension Manager
+# or use GNOME Extensions / Extension Manager app
 ```
 
-### Method 2 — Extensions Manager
+### Method 2 — Extension Manager (Zip Archive)
 
-1. Install **Extension Manager** from Flathub
-2. Click "Install from file" and select the `.zip` archive
-3. Toggle the extension on
+1. Build the project using `make build`.
+2. Package the `dist/` directory into a `.zip` archive.
+3. Open **Extension Manager**, click "Install from file" and select the `.zip` archive.
+4. Toggle the extension on.
 
 ## Preferences
 
-Open with:
+Open the Libadwaita-based settings UI with:
 ```bash
 gnome-extensions prefs ormic-launcher@github.com
 ```
@@ -74,21 +79,22 @@ Or via GNOME Extensions / Extension Manager → ⚙ gear icon.
 ## Architecture
 
 ```
-extension.js          ← Main entry point (GNOME 45+ ESM)
-  ├── AppProvider     ← Searches Shell.AppSystem
+extension.ts          ← Main TypeScript entry point (compiles to dist/extension.js)
+  ├── AppProvider     ← Caches and indexes GUI apps recursively via GMenu.Tree
   ├── CalcProvider    ← Evaluates math expressions
   ├── WebProvider     ← Opens browser with search query
   ├── RecentProvider  ← Reads ~/.local/share/recently-used.xbel
   └── CommandProvider ← Runs shell commands via GLib.spawn
 
-LauncherDialog        ← St.BoxLayout floating dialog
+LauncherDialog        ← St.BoxLayout floating dialog (Pop!_OS glassmorphic aesthetic)
   ├── St.Entry        ← Search input with debounced handler
   ├── St.ScrollView   ← Results list with keyboard navigation
   └── Tips bar        ← Keyboard shortcut hints
 
-prefs.js              ← Adw-based preferences window
-stylesheet.css        ← Adwaita dark + Pop!_OS orange accent
-schemas/              ← GSettings schema (keybinding, options)
+prefs.ts              ← Adw-based preferences window (Libadwaita UI)
+stylesheet.css        ← COSMIC Dark + Pop!_OS orange accent (#FAB84B)
+gmenu.d.ts            ← Global GMenu typings for TypeScript compilation
+schemas/              ← GSettings schema (keybindings, maximum results, providers)
 ```
 
 ## GNOME 49 & 50 Porting Notes
@@ -111,44 +117,39 @@ schemas/              ← GSettings schema (keybinding, options)
 | `libsigcplusplus` / `graphene` | Removed | Not used |
 | X11 | Fully removed | Extension is Wayland-native |
 
-All three shims (`timeoutOnce`, `idleOnce`, `easeActor`) automatically detect the
-GNOME version at runtime and call the new API when available, falling back to the
-traditional approach on older shells — **zero code duplication**.
+All three shims (`timeoutOnce`, `idleOnce`, `easeActor`) automatically detect the GNOME version at runtime and call the new API when available, falling back to the traditional approach on older shells — **zero code duplication**.
 
-
-
-Edit `stylesheet.css` to change colors. The accent color is `#FAB84B`
-(Pop!_OS orange). Change every occurrence to your preferred color.
+## Customizing styling
+Edit `stylesheet.css` to change colors. The default accent color is `#FAB84B` (Pop!_OS orange). Change every occurrence to your preferred color.
 
 ## Adding Custom Providers
 
 A provider is any object with:
 
-```js
+```typescript
 class MyProvider {
-  constructor() {
-    this.id = 'my-provider';
-    this.priority = 5; // higher = sorted first on equal score
-  }
+  id = 'my-provider';
+  priority = 5; // higher = sorted first on equal score
 
   /** @param {string} query @returns {SearchResult[]} */
-  search(query) {
+  search(query: string): SearchResult[] {
     return [{
       id: 'my-provider:result-1',
       name: 'My Result',
       description: 'A description shown below the name',
       score: 50,            // 0–100, higher shown first
       iconName: 'document-symbolic',   // fallback icon
-      // icon: <Clutter.Actor>, // or a rendered texture
+      categoryIcon: 'document-symbolic',
+      category: 'Custom',
       activate: () => { /* do something */ },
     }];
   }
 }
 ```
 
-Then add it to the providers array in `extension.js`:
+Then add it to the providers array in `extension.ts`:
 
-```js
+```typescript
 this.providers = [
   new AppProvider(),
   new MyProvider(),   // ← add here
@@ -159,11 +160,12 @@ this.providers = [
 ## Requirements
 
 - GNOME Shell 45, 46, 47, 48, 49, or 50
-- GLib, Gio, St, Clutter, Meta, Shell (all standard GNOME dependencies)
-- No external Rust daemon required — everything runs in GJS
+- GLib, Gio, St, Clutter, Meta, Shell, and **GMenu** (standard GNOME libraries)
+- No external Rust daemon required — everything runs directly inside GNOME Shell GJS!
 
 ## License
 
 GPL-2.0-or-later — GNOME Shell extensions are inherently derived works of GNOME Shell, which is licensed GPL-2.0-or-later.
 
-Inspired by the modular architecture and pluggable providers concept of the [pop-os/launcher](https://github.com/pop-os/launcher) project (MPL-2.0), but completely and independently reimplemented in original GJS code with no borrowed source code.
+Inspired by the modular architecture and pluggable providers concept of the [pop-os/launcher](https://github.com/pop-os/launcher) project (MPL-2.0), but completely and independently reimplemented in original TypeScript & GJS code with no borrowed source code.
+

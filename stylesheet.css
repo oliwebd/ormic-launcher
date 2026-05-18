@@ -1,230 +1,633 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   Ormic Launcher — GNOME Shell Extension Stylesheet
-   Inspired by Pop!_OS launcher + GNOME 48 Adwaita design language
+   Ormic Launcher — Stylesheet
+   Design: Premium dark glassmorphism layout with 6-column Grid & Bottom Tabs
+   Accent: #FAB84B  (Pop!_OS orange)
    ═══════════════════════════════════════════════════════════════════════════ */
 
-/* ── Overlay backdrop ────────────────────────────────────────────────────── */
-.ormic-launcher-overlay {
-  background-color: rgba(0, 0, 0, 0.45);
+/* ── Overlay ─────────────────────────────────────────────────────────────── */
+.ormic-overlay {
+  background-color: rgba(0, 0, 0, 0.52);
 }
 
-/* ── Main dialog card ────────────────────────────────────────────────────── */
-.ormic-launcher {
-  background-color: rgba(22, 22, 28, 0.88); /* Premium dark glassmorphism */
-  border: 1px solid rgba(255, 255, 255, 0.12);
+/* ── Dialog card ─────────────────────────────────────────────────────────── */
+.ormic-dialog {
+  background-color: rgba(17, 17, 23, 0.97);
+  border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 16px;
-
-  /* Layered shadow for depth */
   box-shadow:
-    0 4px  12px rgba(0, 0, 0, 0.40),
-    0 24px 64px rgba(0, 0, 0, 0.55),
-    0 0   0 1px rgba(255, 255, 255, 0.04) inset;
-
+    0 4px 12px rgba(0, 0, 0, 0.4),
+    0 24px 64px rgba(0, 0, 0, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
   padding: 0;
   spacing: 0;
-
-  /* Subtle backdrop-filter effect via layered bg */
+  min-width: 680px; /* Spacious, wide library view */
 }
 
-/* ── Search bar ──────────────────────────────────────────────────────────── */
-.ormic-launcher-search-box {
-  padding: 16px 16px 14px 16px;
-  spacing: 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+/* ── Search row ──────────────────────────────────────────────────────────── */
+.ormic-search-row {
+  padding: 16px 20px 14px 20px;
+  spacing: 14px;
 }
 
-.ormic-launcher-search-icon {
-  color: rgba(255, 255, 255, 0.45);
-  padding-left: 4px;
-  padding-top: 2px;
-  icon-size: 20px;
+.ormic-search-icon {
+  color: rgba(255, 255, 255, 0.38);
+  icon-size: 18px;
+  margin-top: 1px;
 }
 
-.ormic-launcher-entry {
+.ormic-entry {
   background-color: transparent;
   border: none;
   border-radius: 0;
   box-shadow: none;
-  color: #ffffff;
-  font-size: 18px;
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 17px;
   font-weight: 300;
-  caret-color: #FAB84B;          /* Ormic orange accent */
+  letter-spacing: 0.15px;
+  caret-color: #FAB84B;
   padding: 0;
   height: 32px;
-  selection-background-color: rgba(250, 184, 75, 0.30);
+  selection-background-color: rgba(250, 184, 75, 0.25);
 }
 
-.ormic-launcher-entry:focus {
+.ormic-entry:focus {
+  background-color: transparent;
   box-shadow: none;
   border: none;
-  background-color: transparent;
 }
 
-/* Placeholder text */
-.ormic-launcher-entry StLabel.hint-text {
-  color: rgba(255, 255, 255, 0.30);
+.ormic-entry StLabel.hint-text {
+  color: rgba(255, 255, 255, 0.24);
   font-size: 16px;
   font-weight: 300;
 }
 
-/* ── Scroll view ─────────────────────────────────────────────────────────── */
-.ormic-launcher-scroll {
-  max-height: 420px;
+/* ── Separators ──────────────────────────────────────────────────────────── */
+.ormic-sep {
+  height: 1px;
+  background-color: rgba(255, 255, 255, 0.065);
 }
 
-.ormic-launcher-results {
-  padding: 6px;
-  spacing: 2px;
+/* ── Search Results List View ────────────────────────────────────────────── */
+.ormic-scroll {
+  max-height: 400px;
 }
 
-/* ── Result rows ─────────────────────────────────────────────────────────── */
-.ormic-launcher-result {
-  padding: 10px 12px;
-  border-radius: 10px;
-  spacing: 14px;
+.ormic-rbox {
+  padding: 4px 0;
+  spacing: 0;
+}
+
+.ormic-result {
+  padding: 0;
+  spacing: 0;
+  border-radius: 0;
   background-color: transparent;
+  transition-duration: 60ms;
+  transition-timing-function: ease;
+  min-height: 60px;
+}
+
+.ormic-result:hover {
+  background-color: rgba(255, 255, 255, 0.042);
+}
+
+.ormic-result.selected {
+  background-color: rgba(250, 184, 75, 0.09);
+}
+
+/* ── Left accent bar (list view selection) ───────────────────────────────── */
+.ormic-accent-bar {
+  width: 3px;
+  min-height: 100%;
+  background-color: transparent;
+  border-radius: 0 2px 2px 0;
   transition-duration: 80ms;
   transition-timing-function: ease;
 }
 
-.ormic-launcher-result:hover {
-  background-color: rgba(255, 255, 255, 0.07);
+.ormic-result.selected .ormic-accent-bar {
+  background-color: #FAB84B;
 }
 
-.ormic-launcher-result.selected {
-  background-color: rgba(250, 184, 75, 0.18);
-  border: 1px solid rgba(250, 184, 75, 0.28);
+/* ── Icon bins ───────────────────────────────────────────────────────────── */
+.ormic-icon-bin {
+  width: 52px;
+  height: 52px;
+  border-radius: 11px;
+  background-color: rgba(255, 255, 255, 0.04);
+  margin: 4px 14px 4px 10px;
+  padding: 2px;
 }
 
-.ormic-launcher-result.selected .ormic-launcher-result-name {
-  color: #FAB84B;
+.ormic-icon-sym {
+  color: rgba(255, 255, 255, 0.70);
+  icon-size: 48px;
 }
 
-.ormic-launcher-result-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
-  background-color: rgba(255, 255, 255, 0.06);
-  padding: 4px;
-}
-
-.ormic-launcher-result-gicon {
-  color: rgba(255, 255, 255, 0.75);
-}
-
-.ormic-launcher-result-text {
+/* ── Text column ─────────────────────────────────────────────────────────── */
+.ormic-text-col {
   spacing: 3px;
+  padding: 0;
 }
 
-.ormic-launcher-result-name {
-  color: rgba(255, 255, 255, 0.90);
+.ormic-name {
+  color: rgba(255, 255, 255, 0.92);
   font-size: 14px;
   font-weight: 500;
 }
 
-.ormic-launcher-result-description {
-  color: rgba(255, 255, 255, 0.38);
-  font-size: 12px;
+.ormic-result.selected .ormic-name {
+  color: #FAB84B;
+}
+
+.ormic-desc {
+  color: rgba(255, 255, 255, 0.36);
+  font-size: 11.5px;
   font-weight: 400;
 }
 
-.ormic-launcher-result-category {
-  color: rgba(255, 255, 255, 0.22);
-  padding-right: 4px;
+/* ── Category pill (list view source indicator) ──────────────────────────── */
+.ormic-cat-pill {
+  background-color: rgba(255, 255, 255, 0.055);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  padding: 3px 9px 3px 7px;
+  spacing: 5px;
+  margin-right: 12px;
 }
 
-/* ── Tips bar ────────────────────────────────────────────────────────────── */
-.ormic-launcher-tips {
-  padding: 10px 16px;
-  spacing: 14px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+.ormic-cat-icon {
+  color: rgba(255, 255, 255, 0.30);
+  icon-size: 11px;
 }
 
-.ormic-launcher-tip {
+.ormic-cat-label {
+  color: rgba(255, 255, 255, 0.36);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+}
+
+.ormic-result.selected .ormic-cat-pill {
+  background-color: rgba(250, 184, 75, 0.10);
+  border-color: rgba(250, 184, 75, 0.20);
+}
+
+.ormic-result.selected .ormic-cat-icon,
+.ormic-result.selected .ormic-cat-label {
+  color: rgba(250, 184, 75, 0.70);
+}
+
+/* ── Favourite button ────────────────────────────────────────────────────── */
+.ormic-fav-btn {
+  color: rgba(255, 255, 255, 0.18);
+  border-radius: 6px;
+  padding: 5px;
+  margin-right: 4px;
+  transition-duration: 60ms;
+}
+
+.ormic-fav-btn:hover {
+  background-color: rgba(255, 255, 255, 0.09);
+  color: rgba(250, 184, 75, 0.85);
+}
+
+.ormic-fav-btn.is-fav {
+  color: #FAB84B;
+}
+
+.ormic-fav-btn.is-fav:hover {
+  background-color: rgba(250, 184, 75, 0.12);
+}
+
+/* ── Keyboard shortcut badge ─────────────────────────────────────────────── */
+.ormic-kbd-badge {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: rgba(250, 184, 75, 0.72);
+  background-color: rgba(250, 184, 75, 0.07);
+  border: 1px solid rgba(250, 184, 75, 0.18);
+  border-radius: 5px;
+  padding: 2px 6px;
+  margin-right: 6px;
+  transition-duration: 60ms;
+}
+
+.ormic-result.selected .ormic-kbd-badge {
+  color: #1a1a22;
+  background-color: #FAB84B;
+  border-color: #FAB84B;
+  box-shadow: 0 2px 6px rgba(250, 184, 75, 0.35);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   NEW: Premium Grid & Library Layout Styles
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Category Header ─────────────────────────────────────────────────────── */
+.ormic-header {
+  padding: 16px 24px 8px 24px;
+}
+
+.ormic-header-title {
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 0.25px;
+  text-align: center;
+}
+
+.ormic-header-control {
+  spacing: 8px;
+}
+
+.ormic-header-btn {
+  padding: 7px;
+  border-radius: 8px;
+  background-color: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.6);
+  transition-duration: 80ms;
+}
+
+.ormic-header-btn:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.95);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.ormic-header-btn.delete-btn:hover {
+  background-color: rgba(239, 68, 68, 0.14);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+}
+
+/* ── Grid Container ──────────────────────────────────────────────────────── */
+.ormic-grid-scroll {
+  max-height: 440px;
+}
+
+.ormic-grid-box {
+  padding: 16px 20px;
+  spacing: 12px;
+}
+
+.ormic-grid-row {
+  spacing: 12px;
+}
+
+.ormic-grid-empty {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 14px;
+  font-weight: 300;
+  text-align: center;
+  padding: 60px 0;
+  line-height: 1.6;
+}
+
+/* ── Grid Card Item ──────────────────────────────────────────────────────── */
+.ormic-grid-item {
+  padding: 10px;
+  border-radius: 14px;
+  background-color: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  min-width: 98px;
+  min-height: 112px;
+  transition-duration: 80ms;
+}
+
+.ormic-grid-item:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.09);
+}
+
+.ormic-grid-item.selected {
+  background-color: rgba(250, 184, 75, 0.12);
+  border-color: #FAB84B;
+  box-shadow: 0 4px 18px rgba(250, 184, 75, 0.18);
+}
+
+.ormic-grid-item-box {
+  spacing: 4px;
+}
+
+.ormic-grid-icon-bin {
+  width: 58px;
+  height: 58px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.02) 100%);
+  padding: 6px;
+  margin: 0 auto 6px auto;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+.ormic-grid-icon-sym {
+  color: rgba(255, 255, 255, 0.65);
+  icon-size: 56px;
+}
+
+.ormic-grid-label {
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 11px;
+  font-weight: 500;
+  text-align: center;
+}
+
+.ormic-grid-item.selected .ormic-grid-label {
+  color: #FAB84B;
+}
+
+/* ── Footer Category Tabs ────────────────────────────────────────────────── */
+.ormic-tabs-box {
+  padding: 12px 20px;
+  spacing: 8px;
+  background-color: rgba(0, 0, 0, 0.16);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.ormic-category-tab {
+  padding: 6px 14px;
+  border-radius: 10px;
+  background-color: transparent;
+  border: 1px solid transparent;
+  transition-duration: 80ms;
+  min-width: 90px;
+}
+
+.ormic-category-tab:hover {
+  background-color: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+.ormic-category-tab.active {
+  background-color: rgba(250, 184, 75, 0.12);
+  border-color: rgba(250, 184, 75, 0.32);
+}
+
+.ormic-category-tab-box {
   spacing: 3px;
 }
 
-.ormic-launcher-tip-key {
-  color: rgba(250, 184, 75, 0.80);
-  font-size: 11px;
+.ormic-category-tab-icon {
+  color: rgba(255, 255, 255, 0.52);
+  icon-size: 20px;
+}
+
+.ormic-category-tab.active .ormic-category-tab-icon {
+  color: #FAB84B;
+}
+
+.ormic-category-tab-label {
+  font-size: 10px;
   font-weight: 600;
-  background-color: rgba(250, 184, 75, 0.12);
+  color: rgba(255, 255, 255, 0.45);
+  margin-top: 2px;
+}
+
+.ormic-category-tab.active .ormic-category-tab-label {
+  color: #FAB84B;
+}
+
+/* ── Group Editor Screen ─────────────────────────────────────────────────── */
+.ormic-editor-box {
+  padding: 14px 20px;
+  spacing: 12px;
+}
+
+.ormic-editor-header {
+  spacing: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.ormic-editor-label {
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.ormic-editor-entry {
+  background-color: rgba(255, 255, 255, 0.042);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.95);
+  padding: 6px 12px;
+  font-size: 14px;
+  caret-color: #FAB84B;
+  height: 28px;
+  selection-background-color: rgba(250, 184, 75, 0.25);
+}
+
+.ormic-editor-btn-box {
+  spacing: 8px;
+}
+
+.ormic-editor-btn {
+  padding: 6px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  transition-duration: 80ms;
+}
+
+.ormic-editor-btn.cancel-btn {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ormic-editor-btn.cancel-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.ormic-editor-btn.save-btn {
+  background-color: #FAB84B;
+  color: #111117;
+  border: 1px solid #FAB84B;
+}
+
+.ormic-editor-btn.save-btn:hover {
+  background-color: #fccb7b;
+  border-color: #fccb7b;
+  box-shadow: 0 2px 10px rgba(250, 184, 75, 0.25);
+}
+
+.ormic-editor-scroll {
+  max-height: 300px;
+}
+
+.ormic-editor-apps {
+  spacing: 4px;
+  padding: 4px 0;
+}
+
+.ormic-edit-row {
+  padding: 8px 12px;
+  border-radius: 10px;
+  background-color: transparent;
+  border: 1px solid transparent;
+  transition-duration: 60ms;
+  min-height: 48px;
+}
+
+.ormic-edit-row:hover {
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+.ormic-edit-row.selected {
+  background-color: rgba(250, 184, 75, 0.06);
+  border-color: rgba(250, 184, 75, 0.14);
+}
+
+.ormic-edit-row-box {
+  spacing: 12px;
+}
+
+.ormic-edit-icon-bin {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background-color: rgba(255, 255, 255, 0.03);
+  padding: 2px;
+}
+
+.ormic-edit-name {
+  font-size: 13.5px;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.ormic-edit-checkbox {
+  color: rgba(255, 255, 255, 0.25);
+  icon-size: 16px;
+}
+
+.ormic-edit-row.selected .ormic-edit-checkbox {
+  color: #FAB84B;
+}
+
+/* ── Prompt Overlay Dim & Popup Card ────────────────────────────────────── */
+.ormic-prompt-overlay {
+  background-color: rgba(0, 0, 0, 0.45);
+  padding: 30px;
+}
+
+.ormic-prompt-card {
+  background-color: rgba(22, 22, 30, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 20px;
+  spacing: 14px;
+  min-width: 300px;
+  box-shadow: 
+    0 12px 24px rgba(0, 0, 0, 0.5),
+    0 32px 80px rgba(0, 0, 0, 0.85);
+}
+
+.ormic-prompt-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.95);
+  text-align: center;
+}
+
+.ormic-prompt-entry {
+  background-color: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.95);
+  padding: 8px 12px;
+  font-size: 14px;
+  caret-color: #FAB84B;
+  height: 28px;
+  selection-background-color: rgba(250, 184, 75, 0.25);
+}
+
+.ormic-prompt-btns {
+  spacing: 8px;
+}
+
+.ormic-prompt-btn {
+  padding: 7px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  transition-duration: 80ms;
+}
+
+.ormic-prompt-btn.cancel-btn {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ormic-prompt-btn.cancel-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.ormic-prompt-btn.create-btn {
+  background-color: #FAB84B;
+  color: #111117;
+  border: 1px solid #FAB84B;
+}
+
+.ormic-prompt-btn.create-btn:hover {
+  background-color: #fccb7b;
+  border-color: #fccb7b;
+}
+
+/* ── Tip bar & Tips ──────────────────────────────────────────────────────── */
+.ormic-tips {
+  padding: 10px 16px;
+  spacing: 12px;
+  background-color: rgba(0, 0, 0, 0.08);
+}
+
+.ormic-tip {
+  spacing: 3px;
+}
+
+.ormic-tip-key {
+  color: rgba(250, 184, 75, 0.80);
+  font-size: 10px;
+  font-weight: 700;
+  background-color: rgba(250, 184, 75, 0.09);
   border-radius: 4px;
   padding: 1px 5px;
 }
 
-.ormic-launcher-tip-label {
-  color: rgba(255, 255, 255, 0.30);
-  font-size: 11px;
+.ormic-tip-val {
+  color: rgba(255, 255, 255, 0.26);
+  font-size: 10px;
 }
 
-/* ── Scrollbar theming ───────────────────────────────────────────────────── */
-.ormic-launcher-scroll StScrollBar {
+/* ── Scrollbar customization ─────────────────────────────────────────────── */
+.ormic-scroll StScrollBar,
+.ormic-grid-scroll StScrollBar,
+.ormic-editor-scroll StScrollBar {
   padding: 0 2px;
 }
 
-.ormic-launcher-scroll StScrollBar StBin#trough {
+.ormic-scroll StScrollBar StBin#trough,
+.ormic-grid-scroll StScrollBar StBin#trough,
+.ormic-editor-scroll StScrollBar StBin#trough {
   background-color: transparent;
-  border-radius: 4px;
-  width: 6px;
+  width: 5px;
+  border-radius: 3px;
 }
 
-.ormic-launcher-scroll StScrollBar StButton#vhandle {
-  background-color: rgba(255, 255, 255, 0.20);
-  border-radius: 4px;
+.ormic-scroll StScrollBar StButton#vhandle,
+.ormic-grid-scroll StScrollBar StButton#vhandle,
+.ormic-editor-scroll StScrollBar StButton#vhandle {
+  background-color: rgba(255, 255, 255, 0.16);
+  border-radius: 3px;
   border: none;
-  min-height: 40px;
+  min-height: 28px;
 }
 
-.ormic-launcher-scroll StScrollBar StButton#vhandle:hover {
-  background-color: rgba(255, 255, 255, 0.30);
-}
-
-/* ── Favorite / Dock Button ──────────────────────────────────────────────── */
-.ormic-launcher-fav-button {
-  color: rgba(255, 255, 255, 0.25);
-  border-radius: 6px;
-  padding: 6px;
-  transition-duration: 80ms;
-  transition-timing-function: ease;
-}
-
-.ormic-launcher-fav-button:hover {
-  background-color: rgba(255, 255, 255, 0.12);
-  color: rgba(250, 184, 75, 0.90);
-}
-
-.ormic-launcher-fav-button.is-fav {
-  color: #FAB84B; /* Favorite is active (starred/pinned) */
-}
-
-.ormic-launcher-fav-button.is-fav:hover {
-  background-color: rgba(250, 184, 75, 0.15);
-}
-
-/* ── Quick Select Shortcut Badge ─────────────────────────────────────────── */
-.ormic-launcher-shortcut-badge {
-  font-size: 10px;
-  font-weight: 600;
-  color: rgba(250, 184, 75, 0.85);
-  background-color: rgba(250, 184, 75, 0.08);
-  border: 1px solid rgba(250, 184, 75, 0.28);
-  border-radius: 5px;
-  padding: 2px 7px;
-  margin-right: 6px;
-  transition-duration: 80ms;
-  transition-timing-function: ease;
-  box-shadow: 
-    0 1px 2px rgba(0, 0, 0, 0.15),
-    0 0 0 1px rgba(255, 255, 255, 0.04) inset;
-}
-
-/* Active visual feedback when row is selected */
-.ormic-launcher-result.selected .ormic-launcher-shortcut-badge {
-  color: #1e1e24;
-  background-color: #FAB84B;
-  border-color: #FAB84B;
-  box-shadow: 
-    0 2px 8px rgba(250, 184, 75, 0.4),
-    0 0 0 1px rgba(255, 255, 255, 0.12) inset;
+.ormic-scroll StScrollBar StButton#vhandle:hover,
+.ormic-grid-scroll StScrollBar StButton#vhandle:hover,
+.ormic-editor-scroll StScrollBar StButton#vhandle:hover {
+  background-color: rgba(255, 255, 255, 0.26);
 }

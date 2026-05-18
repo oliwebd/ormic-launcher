@@ -1,285 +1,212 @@
 /**
  * Ormic Launcher — Preferences
- * Uses libadwaita (Adw) widgets for native GNOME 45+ prefs UI.
+ * Libadwaita UI for GNOME 45+.
  */
 
 import Adw from 'gi://Adw';
 import Gtk from 'gi://Gtk';
-import GObject from 'gi://GObject';
 import Gio from 'gi://Gio';
 
-import { ExtensionPreferences, gettext as _ } from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
+import { ExtensionPreferences, gettext as _ }
+    from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 
 export default class OrmicLauncherPrefs extends ExtensionPreferences {
-    fillPreferencesWindow(window: Adw.PreferencesWindow): Promise<void> {
-        const settings = this.getSettings();
+    fillPreferencesWindow(win: Adw.PreferencesWindow): Promise<void> {
+        const s = this.getSettings();
+        win.set_default_size(640, 580);
+        win.set_title(_('Ormic Launcher Settings'));
 
-        window.set_default_size(620, 500);
-        window.set_title(_('Ormic Launcher Settings'));
-
-        // ── Page: General ────────────────────────────────────────────────
-        const generalPage = new Adw.PreferencesPage({
-            title: _('General'),
-            icon_name: 'preferences-system-symbolic',
+        // ══ Page: General ════════════════════════════════════════════════
+        const genPage = new Adw.PreferencesPage({
+            title: _('General'), icon_name: 'preferences-system-symbolic',
         });
-        window.add(generalPage);
+        win.add(genPage);
 
-        // Keybinding group
-        const keybindGroup = new Adw.PreferencesGroup({
+        // ── Keybinding ────────────────────────────────────────────────────
+        const kbGroup = new Adw.PreferencesGroup({
             title: _('Keyboard Shortcut'),
             description: _('Shortcut to open the Ormic Launcher dialog'),
         });
-        generalPage.add(keybindGroup);
+        genPage.add(kbGroup);
 
-        const keybindRow = new Adw.ActionRow({
-            title: _('Toggle launcher'),
-            subtitle: _('Default: Super+Space'),
+        const kbRow = new Adw.ActionRow({
+            title: _('Toggle launcher'), subtitle: _('Default: Super+Space'),
         });
-        const keybindLabel = new Gtk.ShortcutLabel({
-            valign: Gtk.Align.CENTER,
-            disabled_text: _('Disabled'),
+        const kbLabel = new Gtk.ShortcutLabel({
+            valign: Gtk.Align.CENTER, disabled_text: _('Disabled'),
         });
-
-        // Display current shortcut
-        const updateShortcutLabel = () => {
-            const shortcuts = settings.get_strv('toggle-ormic-launcher');
-            if (shortcuts.length > 0) {
-                keybindLabel.set_accelerator(shortcuts[0]);
-            } else {
-                keybindLabel.set_accelerator('');
-            }
+        const refreshKb = () => {
+            const shortcuts = s.get_strv('toggle-ormic-launcher');
+            kbLabel.set_accelerator(shortcuts[0] ?? '');
         };
-        updateShortcutLabel();
-        settings.connect('changed::toggle-ormic-launcher', updateShortcutLabel);
+        refreshKb();
+        s.connect('changed::toggle-ormic-launcher', refreshKb);
+        kbRow.add_suffix(kbLabel);
+        kbGroup.add(kbRow);
 
-        keybindRow.add_suffix(keybindLabel);
-        keybindGroup.add(keybindRow);
-
-        // System keybindings conflict detection and resolution
-        const sysSettings = new Gio.Settings({ schema_id: 'org.gnome.desktop.wm.keybindings' });
-
-        let ibusSettings: Gio.Settings | null = null;
+        // Conflict detection
+        const sysSets = new Gio.Settings({ schema_id: 'org.gnome.desktop.wm.keybindings' });
+        let ibusSets: Gio.Settings | null = null;
         try {
-            const schemas = Gio.Settings.list_schemas() || [];
-            if (schemas.includes('org.freedesktop.ibus.general.hotkey')) {
-                ibusSettings = new Gio.Settings({ schema_id: 'org.freedesktop.ibus.general.hotkey' });
-            }
-        } catch (_e) {
-            ibusSettings = null;
-        }
+            if ((Gio.Settings.list_schemas() ?? []).includes('org.freedesktop.ibus.general.hotkey'))
+                ibusSets = new Gio.Settings({ schema_id: 'org.freedesktop.ibus.general.hotkey' });
+        } catch (_e) { }
 
-        const conflictRow = new Adw.ActionRow({
-            title: _('Shortcut Conflict Detected'),
-            subtitle: _('GNOME is using Super+Space for input switching, which blocks the launcher. Click Resolve to clear the GNOME shortcut.'),
-            visible: false,
-        });
+        const conflictRow = new Adw.ActionRow({ title: _('Shortcut Conflict Detected'), subtitle: '', visible: false });
+        conflictRow.add_prefix(new Gtk.Image({ icon_name: 'dialog-warning-symbolic', valign: Gtk.Align.CENTER }));
 
-        const warningIcon = new Gtk.Image({
-            icon_name: 'dialog-warning-symbolic',
-            valign: Gtk.Align.CENTER,
-        });
-        conflictRow.add_prefix(warningIcon);
-
-        const resolveBtn = new Gtk.Button({
-            label: _('Resolve Conflict'),
-            valign: Gtk.Align.CENTER,
-        });
+        const resolveBtn = new Gtk.Button({ label: _('Resolve Conflict'), valign: Gtk.Align.CENTER });
         resolveBtn.add_css_class('suggested-action');
-
         resolveBtn.connect('clicked', () => {
-            const launcherShortcuts = settings.get_strv('toggle-ormic-launcher');
-
-            // Remove '<Super>space' from switch-input-source
-            const current = sysSettings.get_strv('switch-input-source');
-            const filtered = current.filter(x => !launcherShortcuts.includes(x));
-            sysSettings.set_strv('switch-input-source', filtered);
-
-            // Also check switch-input-source-backward
-            const currentBack = sysSettings.get_strv('switch-input-source-backward');
-            const filteredBack = currentBack.filter(x => !launcherShortcuts.includes(x) && x !== '<Shift><Super>space');
-            sysSettings.set_strv('switch-input-source-backward', filteredBack);
-
-            // Clear from IBus triggers
-            if (ibusSettings) {
-                const ibusTriggers = ibusSettings.get_strv('triggers');
-                const filteredTriggers = ibusTriggers.filter(x => !launcherShortcuts.includes(x));
-                ibusSettings.set_strv('triggers', filteredTriggers);
+            const shorts = s.get_strv('toggle-ormic-launcher');
+            const strip = (key: string) => {
+                sysSets.set_strv(key, sysSets.get_strv(key).filter((x: string) => !shorts.includes(x)));
+            };
+            strip('switch-input-source');
+            strip('switch-input-source-backward');
+            if (ibusSets) {
+                ibusSets.set_strv('triggers',
+                    ibusSets.get_strv('triggers').filter((x: string) => !shorts.includes(x)));
             }
-
-            updateConflictVisibility();
+            refreshConflict();
         });
-
         conflictRow.add_suffix(resolveBtn);
-        keybindGroup.add(conflictRow);
+        kbGroup.add(conflictRow);
 
-        const updateConflictVisibility = () => {
-            const current = sysSettings.get_strv('switch-input-source');
-            const currentBack = sysSettings.get_strv('switch-input-source-backward');
-            const launcherShortcuts = settings.get_strv('toggle-ormic-launcher');
-
-            const hasGnomeConflict = launcherShortcuts.some(s =>
-                current.includes(s) || currentBack.includes(s)
-            );
-
-            let hasIbusConflict = false;
-            if (ibusSettings) {
-                const ibusTriggers = ibusSettings.get_strv('triggers');
-                hasIbusConflict = launcherShortcuts.some(s => ibusTriggers.includes(s));
+        const refreshConflict = () => {
+            const shorts = s.get_strv('toggle-ormic-launcher');
+            const src = sysSets.get_strv('switch-input-source');
+            const srcBack = sysSets.get_strv('switch-input-source-backward');
+            const gnome = shorts.some((x: string) => src.includes(x) || srcBack.includes(x));
+            const ibus = ibusSets
+                ? shorts.some((x: string) => (ibusSets!.get_strv('triggers') as string[]).includes(x))
+                : false;
+            conflictRow.set_visible(gnome || ibus);
+            if (gnome || ibus) {
+                conflictRow.set_subtitle(
+                    gnome && ibus ? _('GNOME and IBus are using Super+Space — blocks the launcher. Click Resolve.') :
+                        gnome ? _('GNOME is using Super+Space — blocks the launcher. Click Resolve.') :
+                            _('IBus is using Super+Space — blocks the launcher. Click Resolve.'),
+                );
             }
-
-            const hasConflict = hasGnomeConflict || hasIbusConflict;
-
-            if (hasConflict) {
-                let msg = '';
-                if (hasGnomeConflict && hasIbusConflict) {
-                    msg = _('GNOME and IBus are using Super+Space for input switching, which blocks the launcher. Click Resolve to clear the shortcuts.');
-                } else if (hasGnomeConflict) {
-                    msg = _('GNOME is using Super+Space for input switching, which blocks the launcher. Click Resolve to clear the GNOME shortcut.');
-                } else {
-                    msg = _('IBus is using Super+Space for input switching, which blocks the launcher. Click Resolve to clear the IBus shortcut.');
-                }
-                conflictRow.set_subtitle(msg);
-            }
-
-            conflictRow.set_visible(hasConflict);
         };
+        refreshConflict();
+        sysSets.connect('changed::switch-input-source', refreshConflict);
+        sysSets.connect('changed::switch-input-source-backward', refreshConflict);
+        ibusSets?.connect('changed::triggers', refreshConflict);
+        s.connect('changed::toggle-ormic-launcher', refreshConflict);
 
-        updateConflictVisibility();
-        sysSettings.connect('changed::switch-input-source', updateConflictVisibility);
-        sysSettings.connect('changed::switch-input-source-backward', updateConflictVisibility);
-        if (ibusSettings) {
-            ibusSettings.connect('changed::triggers', updateConflictVisibility);
-        }
-        settings.connect('changed::toggle-ormic-launcher', updateConflictVisibility);
-
-        // Show panel indicator toggle
-        const indicatorRow = new Adw.SwitchRow({
+        // Show indicator
+        const indRow = new Adw.SwitchRow({
             title: _('Show Top Panel Indicator'),
-            subtitle: _('Show a search icon in the top panel to open the launcher'),
+            subtitle: _('Search icon in the top bar to open the launcher'),
         });
-        settings.bind('show-indicator', indicatorRow, 'active',
-            Gio.SettingsBindFlags.DEFAULT);
-        keybindGroup.add(indicatorRow);
+        s.bind('show-indicator', indRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        kbGroup.add(indRow);
 
-        // Max results
-        const resultsGroup = new Adw.PreferencesGroup({
-            title: _('Results'),
+        // Show search bar
+        const sbRow = new Adw.SwitchRow({
+            title: _('Show Search Bar by Default'),
+            subtitle: _('Show a search entry at the top of the library view'),
         });
-        generalPage.add(resultsGroup);
+        s.bind('show-search-bar', sbRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        kbGroup.add(sbRow);
 
-        const maxResultsRow = new Adw.SpinRow({
+        // ── Results ───────────────────────────────────────────────────────
+        const resGroup = new Adw.PreferencesGroup({ title: _('Results') });
+        genPage.add(resGroup);
+
+        const maxRow = new Adw.SpinRow({
             title: _('Maximum results'),
-            subtitle: _('How many results to show at once'),
-            adjustment: new Gtk.Adjustment({
-                lower: 5,
-                upper: 24,
-                step_increment: 1,
-                value: settings.get_int('max-results'),
-            }),
+            subtitle: _('How many results to show at once (5 – 24)'),
+            adjustment: new Gtk.Adjustment({ lower: 5, upper: 24, step_increment: 1, value: s.get_int('max-results') }),
         });
-        settings.bind('max-results', maxResultsRow, 'value',
-            Gio.SettingsBindFlags.DEFAULT);
-        resultsGroup.add(maxResultsRow);
+        s.bind('max-results', maxRow, 'value', Gio.SettingsBindFlags.DEFAULT);
+        resGroup.add(maxRow);
 
-        // ── Page: Providers ──────────────────────────────────────────────
-        const providersPage = new Adw.PreferencesPage({
-            title: _('Providers'),
-            icon_name: 'application-x-executable-symbolic',
+        // Quick-select was in schema but had no UI row (bug fix)
+        const qsRow = new Adw.SwitchRow({
+            title: _('Quick-select shortcuts'),
+            subtitle: _('Show Ctrl+1…9 badges and activate results instantly with those keys'),
         });
-        window.add(providersPage);
+        s.bind('enable-quick-select', qsRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        resGroup.add(qsRow);
 
-        const providersGroup = new Adw.PreferencesGroup({
+        // ══ Page: Providers ═══════════════════════════════════════════════
+        const provPage = new Adw.PreferencesPage({
+            title: _('Providers'), icon_name: 'application-x-executable-symbolic',
+        });
+        win.add(provPage);
+
+        const provGroup = new Adw.PreferencesGroup({
             title: _('Search Providers'),
             description: _('Enable or disable individual search providers'),
         });
-        providersPage.add(providersGroup);
+        provPage.add(provGroup);
 
-        // Web search toggle
-        const webRow = new Adw.SwitchRow({
-            title: _('Web Search'),
-            subtitle: _('Type "g ", "d ", "y " etc. to search the web'),
-        });
-        settings.bind('enable-web-search', webRow, 'active',
-            Gio.SettingsBindFlags.DEFAULT);
-        providersGroup.add(webRow);
+        const rows: Record<string, Adw.SwitchRow> = {};
+        for (const [key, title, sub] of [
+            ['enable-web-search', _('Web Search'), _('Type "g ", "d ", "y " … to search the web')],
+            ['web-search-prefix-only', _('Only Search Web with Prefix'), _('Only search web when typing explicitly prefixed queries, keeping general typing strictly local')],
+            ['enable-recent-files', _('Recent Files'), _('Search files you have recently opened')],
+            // Both missing from prefs before (bug fix):
+            ['enable-window-search', _('Open Windows'), _('Search open windows — type "win " to list all')],
+        ] as [string, string, string][]) {
+            const row = new Adw.SwitchRow({ title, subtitle: sub });
+            s.bind(key, row, 'active', Gio.SettingsBindFlags.DEFAULT);
+            provGroup.add(row);
+            rows[key] = row;
+        }
 
-        // Web engine chooser
-        const engineGroup = new Adw.PreferencesGroup({title: _('Default Web Engine')});
-        providersPage.add(engineGroup);
+        s.bind('enable-web-search', rows['web-search-prefix-only'], 'sensitive', Gio.SettingsBindFlags.DEFAULT);
 
+        // Default engine
+        const engGroup = new Adw.PreferencesGroup({ title: _('Default Web Engine') });
+        provPage.add(engGroup);
         const engines = ['duckduckgo', 'google', 'bing'];
-        const engineLabels: Record<string, string> = {
-            duckduckgo: 'DuckDuckGo (privacy-first)',
-            google: 'Google',
-            bing: 'Microsoft Bing',
-        };
-        const engineRow = new Adw.ComboRow({
+        const engLabels = [_('DuckDuckGo (privacy-first)'), _('Google'), _('Microsoft Bing')];
+        const engRow = new Adw.ComboRow({
             title: _('Default engine'),
-            subtitle: _('Used when no prefix is specified'),
-            model: new Gtk.StringList({strings: engines.map(e => engineLabels[e])}),
+            subtitle: _('Used when no prefix (g/d/b …) is typed'),
+            model: new Gtk.StringList({ strings: engLabels }),
         });
-        const currentEngine = settings.get_string('default-web-engine');
-        engineRow.selected = engines.indexOf(currentEngine);
-        engineRow.connect('notify::selected', () => {
-            settings.set_string('default-web-engine', engines[engineRow.selected]);
-        });
-        engineGroup.add(engineRow);
+        engRow.selected = Math.max(0, engines.indexOf(s.get_string('default-web-engine') ?? 'duckduckgo'));
+        engRow.connect('notify::selected', () => s.set_string('default-web-engine', engines[engRow.selected]));
+        engGroup.add(engRow);
 
-        // Recent files toggle
-        const recentGroup = new Adw.PreferencesGroup({title: _('Files')});
-        providersPage.add(recentGroup);
-
-        const recentRow = new Adw.SwitchRow({
-            title: _('Recent Files'),
-            subtitle: _('Search files you have recently opened'),
-        });
-        settings.bind('enable-recent-files', recentRow, 'active',
-            Gio.SettingsBindFlags.DEFAULT);
-        recentGroup.add(recentRow);
-
-        // ── Page: About ──────────────────────────────────────────────────
+        // ══ Page: About ═══════════════════════════════════════════════════
         const aboutPage = new Adw.PreferencesPage({
-            title: _('About'),
-            icon_name: 'help-about-symbolic',
+            title: _('About'), icon_name: 'help-about-symbolic',
         });
-        window.add(aboutPage);
+        win.add(aboutPage);
 
         const aboutGroup = new Adw.PreferencesGroup();
         aboutPage.add(aboutGroup);
-
-        const aboutRow = new Adw.ActionRow({
+        aboutGroup.add(new Adw.ActionRow({
             title: _('Ormic Launcher'),
-            subtitle: _('A modular app launcher for GNOME Shell,\ninspired by the pop-os/launcher project architecture.'),
-        });
-        aboutGroup.add(aboutRow);
+            subtitle: _('A modular floating app launcher for GNOME Shell,\ninspired by the pop-os/launcher project architecture.'),
+        }));
+        aboutGroup.add(new Adw.ActionRow({ title: _('Version'), subtitle: '1.0' }));
+        aboutGroup.add(new Adw.ActionRow({ title: _('License'), subtitle: 'GPL-2.0-or-later' }));
+        aboutGroup.add(new Adw.ActionRow({ title: _('GNOME'), subtitle: '45 · 46 · 47 · 48 · 49 · 50' }));
 
-        const versionRow = new Adw.ActionRow({
-            title: _('Version'),
-            subtitle: '1.0',
-        });
-        aboutGroup.add(versionRow);
-
-        const tipGroup = new Adw.PreferencesGroup({title: _('Quick Reference')});
-        aboutPage.add(tipGroup);
-
-        const tips = [
+        const refGroup = new Adw.PreferencesGroup({ title: _('Quick Reference') });
+        aboutPage.add(refGroup);
+        for (const [k, d] of [
             [_('Type anything'), _('Search installed applications')],
-            [_('2 + 2, sqrt(16)'), _('Calculate expressions — result is copied')],
+            [_('2 + 2, sqrt(16)'), _('Calculate — result copied to clipboard')],
             [_('g <query>'), _('Search Google')],
             [_('d <query>'), _('Search DuckDuckGo')],
             [_('y <query>'), _('Search YouTube')],
             [_('gh <query>'), _('Search GitHub')],
             [_('w <query>'), _('Search Wikipedia')],
+            [_('b <query>'), _('Search Bing')],
+            [_('win '), _('List / search open windows')],
             [_('> <command>'), _('Run a shell command')],
-        ];
-
-        for (const [key, desc] of tips) {
-            const row = new Adw.ActionRow({
-                title: key,
-                subtitle: desc,
-            });
-            tipGroup.add(row);
+        ] as [string, string][]) {
+            refGroup.add(new Adw.ActionRow({ title: k, subtitle: d }));
         }
+
         return Promise.resolve();
     }
 }
