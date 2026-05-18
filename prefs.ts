@@ -8,7 +8,7 @@ import Gtk from 'gi://Gtk';
 import Gio from 'gi://Gio';
 
 import { ExtensionPreferences, gettext as _ }
-    from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
+    from 'resource:///org/gnome/shell/extensions/prefs.js';
 
 export default class OrmicLauncherPrefs extends ExtensionPreferences {
     fillPreferencesWindow(win: Adw.PreferencesWindow): Promise<void> {
@@ -48,7 +48,7 @@ export default class OrmicLauncherPrefs extends ExtensionPreferences {
         const sysSets = new Gio.Settings({ schema_id: 'org.gnome.desktop.wm.keybindings' });
         let ibusSets: Gio.Settings | null = null;
         try {
-            if ((Gio.Settings.list_schemas() ?? []).includes('org.freedesktop.ibus.general.hotkey'))
+            if (((Gio.Settings as any).list_schemas?.() ?? []).includes('org.freedesktop.ibus.general.hotkey'))
                 ibusSets = new Gio.Settings({ schema_id: 'org.freedesktop.ibus.general.hotkey' });
         } catch (_e) { }
 
