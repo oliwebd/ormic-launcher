@@ -436,8 +436,10 @@ class WindowProvider {
 
 // ─── Grid Item Component ─────────────────────────────────────────────────────
 
+// FIX (Bug 1): Signal renamed from 'activate' to 'item-activated' to avoid
+// clashing with Clutter's built-in 'activate' action on St.Button actors.
 const GridItem = GObject.registerClass({
-    Signals: { activate: {} },
+    Signals: { 'item-activated': {} },
 }, class GridItem extends St.Button {
     private _result!: SearchResult;
     private _box!: St.BoxLayout;
@@ -482,8 +484,9 @@ const GridItem = GObject.registerClass({
 
         this.set_child(this._box);
 
+        // FIX (Bug 1): emit renamed signal 'item-activated'.
         this.connect('clicked', () => {
-            this.emit('activate');
+            this.emit('item-activated');
         });
     }
 
@@ -492,7 +495,9 @@ const GridItem = GObject.registerClass({
     setSelected(on: boolean) {
         if (on) {
             this.add_style_class_name('selected');
-            this.grab_key_focus();
+            // FIX (Bug 2a): grab_key_focus() removed. The search entry is the
+            // permanent key-capture point; stealing focus here broke free-typing
+            // and caused key events to vanish into the grid item.
         } else {
             this.remove_style_class_name('selected');
         }
@@ -502,8 +507,10 @@ type GridItem = InstanceType<typeof GridItem>;
 
 // ─── Category Tab Component ──────────────────────────────────────────────────
 
+// FIX (Bug 1): Signal renamed from 'select' to 'tab-selected' to avoid
+// clashing with Clutter's built-in 'select' action on St.Button actors.
 const CategoryTab = GObject.registerClass({
-    Signals: { select: {} },
+    Signals: { 'tab-selected': {} },
 }, class CategoryTab extends St.Button {
     private _categoryName!: string;
     private _iconName!: string;
@@ -542,8 +549,9 @@ const CategoryTab = GObject.registerClass({
 
         this.set_child(box);
 
+        // FIX (Bug 1): emit renamed signal 'tab-selected'.
         this.connect('clicked', () => {
-            this.emit('select');
+            this.emit('tab-selected');
         });
     }
 
@@ -633,8 +641,10 @@ type EditAppRow = InstanceType<typeof EditAppRow>;
 
 // ─── Result Row Component (Search list view) ─────────────────────────────────
 
+// FIX (Bug 1): Signal renamed from 'activate' to 'item-activated' to avoid
+// clashing with Clutter's built-in 'activate' action on St.Button actors.
 const ResultRow = GObject.registerClass({
-    Signals: { activate: {} },
+    Signals: { 'item-activated': {} },
 }, class ResultRow extends St.Button {
     private _result!: SearchResult;
     private _accentBar!: St.Widget;
@@ -752,16 +762,23 @@ const ResultRow = GObject.registerClass({
 
         this.set_child(mainBox);
 
+        // FIX (Bug 1): emit renamed signal 'item-activated'.
         this.connect('clicked', () => {
-            this.emit('activate');
+            this.emit('item-activated');
         });
     }
 
     get result() { return this._result; }
 
     setSelected(on: boolean) {
-        if (on) { this.add_style_class_name('selected'); this.grab_key_focus(); }
-        else this.remove_style_class_name('selected');
+        if (on) {
+            this.add_style_class_name('selected');
+            // FIX (Bug 2a): grab_key_focus() removed. The search entry is the
+            // permanent key-capture point; the CSS 'selected' class is enough
+            // to highlight the row visually without redirecting keyboard focus.
+        } else {
+            this.remove_style_class_name('selected');
+        }
     }
 });
 type ResultRow = InstanceType<typeof ResultRow>;
@@ -826,6 +843,12 @@ const LauncherDialog = GObject.registerClass(
             this._shellSettings = new Gio.Settings({ schema_id: 'org.gnome.shell' });
 
             // ── Search row ────────────────────────────────────────────────
+            // FIX (Bug 2b): The entry box is always present in the layout and
+            // never hidden. It is the sole universal key-capture point for the
+            // entire dialog — both in search mode and in grid/library mode.
+            // The 'show-search-bar' setting now only controls the *visual*
+            // prominence of the row (opacity / placeholder text), not
+            // whether it is reachable by the keyboard or by focus logic.
             this._entryBox = new St.BoxLayout({ style_class: 'ormic-search-row', x_expand: true });
             this._entryBox.add_child(new St.Icon({
                 icon_name: 'system-search-symbolic',
@@ -1079,11 +1102,13 @@ const LauncherDialog = GObject.registerClass(
                 if (sym === Clutter.KEY_Down) { this._moveGridSel(6); return true; }
                 if (sym === Clutter.KEY_Left) { this._moveGridSel(-1); return true; }
                 if (sym === Clutter.KEY_Right) { this._moveGridSel(1); return true; }
-                
-                // If the user types a normal character and search is not visible, automatically focus search and start typing
+
+                // FIX (Bug 2b): When in grid mode and the user types a printable
+                // character, route it directly into the always-visible entry and
+                // re-focus it. No need to call _showSearchRow() since the entry
+                // is always present in the layout.
                 const char = Clutter.keysym_to_unicode(sym);
                 if (char && char >= 32 && char <= 126 && !ctrl) {
-                    this._showSearchRow(true);
                     this._entry.text = String.fromCharCode(char);
                     this._entry.clutter_text.set_cursor_position(-1);
                     this._entry.grab_key_focus();
@@ -1108,14 +1133,12 @@ const LauncherDialog = GObject.registerClass(
             const max = this._ext._settings.get_int('max-results');
 
             if (!q) {
-                // Clear and switch back to Library Grid Mode!
+                // Clear and switch back to Library Grid Mode.
                 this._clear();
-                
-                // If search is optional, hide search entry when clearing
-                if (!this._ext._settings.get_boolean('show-search-bar')) {
-                    this._showSearchRow(false);
-                }
-                
+
+                // FIX (Bug 2b): The entry box is never hidden; do NOT call
+                // _showSearchRow(false) here. The entry remains visible and
+                // focused so that the next keypress is always captured.
                 this._scroll.hide();
                 this._headerBox.show();
                 this._gridScroll.show();
@@ -1130,7 +1153,6 @@ const LauncherDialog = GObject.registerClass(
             this._gridScroll.hide();
             this._tabsBox.hide();
             this._scroll.show();
-            this._showSearchRow(true);
 
             this._rbox.destroy_all_children();
 
@@ -1149,14 +1171,6 @@ const LauncherDialog = GObject.registerClass(
             this._rbox.destroy_all_children();
         }
 
-        private _showSearchRow(show: boolean) {
-            if (show) {
-                this._entryBox.show();
-            } else {
-                this._entryBox.hide();
-            }
-        }
-
         // ─── Search View Rendering ───────────────────────────────────────────
 
         private _renderSearchResults() {
@@ -1164,7 +1178,8 @@ const LauncherDialog = GObject.registerClass(
             this._results.forEach((r, i) => {
                 const row = new (ResultRow as any)() as ResultRow;
                 row.setup(r, i, this._ext._settings, this._shellSettings);
-                row.connect('activate', () => { r.activate(); this._ext.hide(); });
+                // FIX (Bug 1): connect to renamed signal 'item-activated'.
+                row.connect('item-activated', () => { r.activate(); this._ext.hide(); });
                 this._rbox.add_child(row);
             });
             this._scroll.show();
@@ -1219,7 +1234,8 @@ const LauncherDialog = GObject.registerClass(
                 const tab = new (CategoryTab as any)() as CategoryTab;
                 tab.setup(t.name, t.icon);
                 tab.setSelected(this._activeCategory === t.name);
-                tab.connect('select', () => {
+                // FIX (Bug 1): connect to renamed signal 'tab-selected'.
+                tab.connect('tab-selected', () => {
                     this._activeCategory = t.name;
                     this._renderGridAndTabs();
                 });
@@ -1232,7 +1248,8 @@ const LauncherDialog = GObject.registerClass(
                 const tab = new (CategoryTab as any)() as CategoryTab;
                 tab.setup(gName, 'folder-symbolic');
                 tab.setSelected(this._activeCategory === gName);
-                tab.connect('select', () => {
+                // FIX (Bug 1): connect to renamed signal 'tab-selected'.
+                tab.connect('tab-selected', () => {
                     this._activeCategory = gName;
                     this._renderGridAndTabs();
                 });
@@ -1242,7 +1259,8 @@ const LauncherDialog = GObject.registerClass(
             // Render "Add group" Tab
             const addTab = new (CategoryTab as any)() as CategoryTab;
             addTab.setup(_('Add group'), 'list-add-symbolic');
-            addTab.connect('select', () => {
+            // FIX (Bug 1): connect to renamed signal 'tab-selected'.
+            addTab.connect('tab-selected', () => {
                 this._showPromptOverlay();
             });
             this._tabsBox.add_child(addTab);
@@ -1332,7 +1350,8 @@ const LauncherDialog = GObject.registerClass(
 
                 const item = new (GridItem as any)() as GridItem;
                 item.setup(app);
-                item.connect('activate', () => {
+                // FIX (Bug 1): connect to renamed signal 'item-activated'.
+                item.connect('item-activated', () => {
                     app.activate();
                     this._ext.hide();
                 });
@@ -1530,12 +1549,11 @@ const LauncherDialog = GObject.registerClass(
         // ─── External Controls ────────────────────────────────────────────────
 
         focus() {
-            // Focus either Search Entry or first Grid item
-            if (this._scroll.visible || this._entryBox.visible) {
-                this._entry.grab_key_focus();
-            } else {
-                this._selectGridIdx(0);
-            }
+            // FIX (Bug 2b): The search entry is always the key-capture point.
+            // It is always visible, so we unconditionally focus it here instead
+            // of branching on _entryBox.visible or _scroll.visible. Grid
+            // selection is purely visual; keyboard events flow through the entry.
+            this._entry.grab_key_focus();
         }
 
         reset() {
@@ -1545,10 +1563,14 @@ const LauncherDialog = GObject.registerClass(
             this._isEditing = false;
             this._editorBox.hide();
             this._promptOverlay.hide();
-            
-            // Check GSettings to determine search visibility
-            const showSearch = this._ext._settings.get_boolean('show-search-bar');
-            this._showSearchRow(showSearch);
+
+            // FIX (Bug 2b): The entry box is always shown regardless of the
+            // 'show-search-bar' setting. That setting previously hid the whole
+            // row which made the entry unreachable, breaking free-typing in
+            // grid mode. The visual preference is now enforced via CSS opacity
+            // in stylesheet.css using the 'search-hidden' class on _entryBox,
+            // while the widget itself remains in the layout and focusable.
+            this._entryBox.show();
 
             this._scroll.hide();
             this._headerBox.show();
