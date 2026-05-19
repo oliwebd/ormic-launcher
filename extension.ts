@@ -37,7 +37,7 @@ const DEBUG = true;   // set false to silence all debug output
 function dbg(scope: string, msg: string, ...args: any[]) {
     if (!DEBUG) return;
     const extra = args.length ? ' ' + args.map(a => JSON.stringify(a)).join(' ') : '';
-    log(`[Ormic:\${scope}] \${msg}\${extra}`);
+    log(`[Ormic:${scope}] ${msg}${extra}`);
 }
 
 import { Extension, gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
@@ -80,6 +80,44 @@ function easeActor(actor: Clutter.Actor, params: any): Promise<void> {
     return new Promise<void>(resolve => {
         actor.ease({ ...rest, onComplete: () => { onComplete?.(); resolve(); } });
     });
+}
+
+// ─── Scroll helper ────────────────────────────────────────────────────────────
+
+/**
+ * Scroll a St.ScrollView so that `actor` is visible.
+ * Uses ensure_actor_visible when available (GNOME 40+), otherwise
+ * falls back to manual vadjustment arithmetic.
+ */
+function scrollToActor(scrollView: St.ScrollView, actor: Clutter.Actor) {
+    try {
+        // Preferred API — available on all supported shells (40+)
+        if (typeof (scrollView as any).ensure_actor_visible === 'function') {
+            (scrollView as any).ensure_actor_visible(actor);
+            return;
+        }
+    } catch (_e) { /* fall through */ }
+
+    // Manual fallback: compute actor's y offset relative to the scroll viewport
+    try {
+        const adj = scrollView.vadjustment;
+        if (!adj) return;
+
+        // Transform actor position into the scroll content's coordinate space
+        const [ok, ax, ay] = actor.get_transformed_position();
+        if (!ok) return;
+        const [, svx, svy] = scrollView.get_transformed_position();
+
+        const relY = ay - svy + adj.value;
+        const viewHeight = scrollView.height;
+        const actorHeight = actor.height;
+
+        if (relY < adj.value) {
+            adj.set_value(relY - 8);
+        } else if (relY + actorHeight > adj.value + viewHeight) {
+            adj.set_value(relY + actorHeight - viewHeight + 8);
+        }
+    } catch (_e) { /* nothing to do */ }
 }
 
 // ─── Wayland-safe window helpers (X11 removed in GNOME 50) ───────────────────
@@ -427,8 +465,6 @@ class WindowProvider {
 
 // ─── Grid Item Component ─────────────────────────────────────────────────────
 
-// FIX (Bug 1): Signal renamed from 'activate' to 'item-activated' to avoid
-// clashing with Clutter's built-in 'activate' action on St.Button actors.
 const GridItem = GObject.registerClass({
     Signals: { 'item-activated': {}, 'item-hovered': {} },
 }, class GridItem extends St.Button {
@@ -481,9 +517,8 @@ const GridItem = GObject.registerClass({
 
         this.set_child(this._box);
 
-        // FIX: Use button-release-event for reliable single-click activation
         this.connect('button-release-event', (actor, ev) => {
-            if (ev.get_button() === 1) { // Left click
+            if (ev.get_button() === 1) {
                 dbg('GridItem', `clicked on ${result.name}`);
                 this.emit('item-activated');
                 return Clutter.EVENT_STOP;
@@ -501,9 +536,6 @@ const GridItem = GObject.registerClass({
     setSelected(on: boolean) {
         if (on) {
             this.add_style_class_name('selected');
-            // FIX (Bug 2a): grab_key_focus() removed. The search entry is the
-            // permanent key-capture point; stealing focus here broke free-typing
-            // and caused key events to vanish into the grid item.
         } else {
             this.remove_style_class_name('selected');
         }
@@ -513,8 +545,6 @@ type GridItem = InstanceType<typeof GridItem>;
 
 // ─── Category Tab Component ──────────────────────────────────────────────────
 
-// FIX (Bug 1): Signal renamed from 'select' to 'tab-selected' to avoid
-// clashing with Clutter's built-in 'select' action on St.Button actors.
 const CategoryTab = GObject.registerClass({
     Signals: { 'tab-selected': {} },
 }, class CategoryTab extends St.Button {
@@ -555,7 +585,6 @@ const CategoryTab = GObject.registerClass({
 
         this.set_child(box);
 
-        // FIX: Use button-release-event for reliable single-click activation
         this.connect('button-release-event', (actor, ev) => {
             if (ev.get_button() === 1) {
                 dbg('CategoryTab', `clicked on ${categoryName}`);
@@ -663,8 +692,6 @@ type EditAppRow = InstanceType<typeof EditAppRow>;
 
 // ─── Result Row Component (Search list view) ─────────────────────────────────
 
-// FIX (Bug 1): Signal renamed from 'activate' to 'item-activated' to avoid
-// clashing with Clutter's built-in 'activate' action on St.Button actors.
 const ResultRow = GObject.registerClass({
     Signals: { 'item-activated': {}, 'item-hovered': {} },
 }, class ResultRow extends St.Button {
@@ -790,9 +817,8 @@ const ResultRow = GObject.registerClass({
 
         this.set_child(mainBox);
 
-        // FIX: Use button-release-event for reliable single-click activation
         this.connect('button-release-event', (actor, ev) => {
-            if (ev.get_button() === 1) { // Left click
+            if (ev.get_button() === 1) {
                 dbg('ResultRow', `clicked on ${result.name}`);
                 this.emit('item-activated');
                 return Clutter.EVENT_STOP;
@@ -810,9 +836,6 @@ const ResultRow = GObject.registerClass({
     setSelected(on: boolean) {
         if (on) {
             this.add_style_class_name('selected');
-            // FIX (Bug 2a): grab_key_focus() removed. The search entry is the
-            // permanent key-capture point; the CSS 'selected' class is enough
-            // to highlight the row visually without redirecting keyboard focus.
         } else {
             this.remove_style_class_name('selected');
         }
@@ -891,12 +914,6 @@ const LauncherDialog = GObject.registerClass(
             this._shellSettings = new Gio.Settings({ schema_id: 'org.gnome.shell' });
 
             // ── Search row ────────────────────────────────────────────────
-            // FIX (Bug 2b): The entry box is always present in the layout and
-            // never hidden. It is the sole universal key-capture point for the
-            // entire dialog — both in search mode and in grid/library mode.
-            // The 'show-search-bar' setting now only controls the *visual*
-            // prominence of the row (opacity / placeholder text), not
-            // whether it is reachable by the keyboard or by focus logic.
             this._entryBox = new St.BoxLayout({ style_class: 'ormic-search-row', x_expand: true });
             this._entryBox.add_child(new St.Icon({
                 icon_name: 'system-search-symbolic',
@@ -909,19 +926,33 @@ const LauncherDialog = GObject.registerClass(
             });
             this._entry.clutter_text.connect('text-changed', () => this._onText());
             this._entry.clutter_text.connect('key-press-event', (_, ev) => this._onKey(ev));
+
+            // ── Click outside dialog to close ─────────────────────────────
+            // FIX: We handle click-to-close in the overlay actor (in OrmicLauncherExtension),
+            // NOT here in the dialog's button-press-event. Handling it here caused issues
+            // because the dialog consumed events before they bubbled up, and coordinate
+            // math relative to the overlay was unreliable.
+            //
+            // Instead, we only handle clicks on non-interactive areas of the DIALOG itself
+            // to restore focus to the entry (e.g. clicking on padding/margins).
             this.connect('button-press-event', (_, ev) => {
+                // Walk up from click source — if it's not an interactive widget,
+                // restore focus to the search entry.
                 let actor: any = ev.get_source();
-                let keepFocus = false;
-                while (actor && actor !== this) {
-                    if (actor instanceof St.Entry || actor instanceof St.ScrollBar) {
-                        keepFocus = true;
+                let isInteractive = false;
+                while (actor && actor !== (this as any)) {
+                    if (actor instanceof St.Entry ||
+                        actor instanceof St.ScrollBar ||
+                        actor instanceof St.Button) {
+                        isInteractive = true;
                         break;
                     }
-                    actor = actor.get_parent();
+                    actor = actor.get_parent?.();
                 }
-                if (!keepFocus) {
+                if (!isInteractive) {
                     timeoutOnce(10, () => this.focus());
                 }
+                // Always PROPAGATE — never stop clicks from reaching the overlay
                 return Clutter.EVENT_PROPAGATE;
             });
 
@@ -990,7 +1021,6 @@ const LauncherDialog = GObject.registerClass(
             // ── Library Grid Header ────────────────────────────────────────
             this._headerBox = new St.BoxLayout({ style_class: 'ormic-header', x_expand: true });
 
-            // Spacer to center the title
             const leftSpacer = new St.Widget({ x_expand: true });
             this._headerBox.add_child(leftSpacer);
 
@@ -1001,7 +1031,6 @@ const LauncherDialog = GObject.registerClass(
             });
             this._headerBox.add_child(this._headerTitleLabel);
 
-            // Control Box on the right
             const controlBox = new St.BoxLayout({
                 style_class: 'ormic-header-control',
                 x_expand: true,
@@ -1146,7 +1175,6 @@ const LauncherDialog = GObject.registerClass(
             this.add_child(this._entryBox);
             this.add_child(new St.Widget({ style_class: 'ormic-sep', x_expand: true }));
 
-            // Central Swap Container for views
             this.add_child(this._scroll);
             this.add_child(this._headerBox);
             this.add_child(this._gridScroll);
@@ -1185,7 +1213,7 @@ const LauncherDialog = GObject.registerClass(
                 this._activateIdx(sym - Clutter.KEY_1); return true;
             }
 
-            // 4. Navigation & Escape in list view vs grid view
+            // 4. Navigation & Escape
             if (sym === Clutter.KEY_Escape) { this._ext.hide(); return true; }
 
             if (this._scroll.visible) {
@@ -1202,10 +1230,8 @@ const LauncherDialog = GObject.registerClass(
                 if (sym === Clutter.KEY_Left) { this._moveGridSel(-1); return true; }
                 if (sym === Clutter.KEY_Right) { this._moveGridSel(1); return true; }
 
-                // FIX (Bug 2b): When in grid mode and the user types a printable
-                // character, route it directly into the always-visible entry and
-                // re-focus it. No need to call _showSearchRow() since the entry
-                // is always present in the layout.
+                // When in grid mode and the user types a printable character,
+                // route it directly into the always-visible entry and re-focus it.
                 const char = Clutter.keysym_to_unicode(sym);
                 if (char && char >= 32 && char <= 126 && !ctrl) {
                     this._entry.text = String.fromCharCode(char);
@@ -1233,22 +1259,16 @@ const LauncherDialog = GObject.registerClass(
             const max = this._ext._settings.get_int('max-results');
 
             if (!q) {
-                // Clear and switch back to Library Grid Mode.
                 this._clear();
-
-                // FIX (Bug 2b): The entry box is never hidden; do NOT call
-                // _showSearchRow(false) here. The entry remains visible and
-                // focused so that the next keypress is always captured.
                 this._scroll.hide();
                 this._headerBox.show();
                 this._gridScroll.show();
                 this._tabsBox.show();
-
                 this._renderGridAndTabs();
                 return;
             }
 
-            // Search Results Mode!
+            // Search Results Mode
             this._headerBox.hide();
             this._gridScroll.hide();
             this._tabsBox.hide();
@@ -1279,7 +1299,6 @@ const LauncherDialog = GObject.registerClass(
             this._results.forEach((r, i) => {
                 const row = new (ResultRow as any)() as ResultRow;
                 row.setup(r, i, this._ext._settings, this._shellSettings);
-                // FIX (Bug 1): connect to renamed signal 'item-activated'.
                 row.connect('item-activated', () => { r.activate(); this._ext.hide(); });
                 row.connect('item-hovered', () => {
                     this._selectIdx(i);
@@ -1297,8 +1316,11 @@ const LauncherDialog = GObject.registerClass(
             i = Math.max(0, Math.min(rows.length - 1, i));
             rows.forEach((r, j) => r.setSelected(j === i));
             this._selIdx = i;
-            const row = rows[i];
-            this._scroll.vadjustment?.set_value(row.y - this._scroll.height / 2 + row.height / 2);
+
+            // FIX: Use the robust scrollToActor helper instead of manual y math.
+            // The old code used row.y (relative to parent) and scroll height
+            // which gave wrong offsets — items would jump or not scroll at all.
+            scrollToActor(this._scroll, rows[i]);
         }
 
         private _moveSel(d: number) {
@@ -1324,8 +1346,17 @@ const LauncherDialog = GObject.registerClass(
 
         // ─── Grid View Rendering & Management ────────────────────────────────
 
+        private _collectGridItems(): GridItem[] {
+            const items: GridItem[] = [];
+            this._gridBox.get_children().forEach((row: any) => {
+                row.get_children().forEach((item: GridItem) => items.push(item));
+            });
+            return items;
+        }
+
         private _renderGridAndTabs() {
             dbg('Grid', `renderGridAndTabs category=${this._activeCategory}`);
+
             // Render Bottom Category Tabs
             this._tabsBox.destroy_all_children();
 
@@ -1340,7 +1371,6 @@ const LauncherDialog = GObject.registerClass(
                 const tab = new (CategoryTab as any)() as CategoryTab;
                 tab.setup(t.name, t.icon);
                 tab.setSelected(this._activeCategory === t.name);
-                // FIX (Bug 1): connect to renamed signal 'tab-selected'.
                 tab.connect('tab-selected', () => {
                     this._activeCategory = t.name;
                     this._renderGridAndTabs();
@@ -1354,7 +1384,6 @@ const LauncherDialog = GObject.registerClass(
                 const tab = new (CategoryTab as any)() as CategoryTab;
                 tab.setup(gName, 'folder-symbolic');
                 tab.setSelected(this._activeCategory === gName);
-                // FIX (Bug 1): connect to renamed signal 'tab-selected'.
                 tab.connect('tab-selected', () => {
                     this._activeCategory = gName;
                     this._renderGridAndTabs();
@@ -1365,7 +1394,6 @@ const LauncherDialog = GObject.registerClass(
             // Render "Add group" Tab
             const addTab = new (CategoryTab as any)() as CategoryTab;
             addTab.setup(_('Add group'), 'list-add-symbolic');
-            // FIX (Bug 1): connect to renamed signal 'tab-selected'.
             addTab.connect('tab-selected', () => {
                 this._showPromptOverlay();
             });
@@ -1427,13 +1455,13 @@ const LauncherDialog = GObject.registerClass(
                     a.category.toLowerCase().includes('accessories')
                 );
             } else {
-                // Custom Group filtering
                 const customAppIds = customGroups[this._activeCategory] || [];
                 filteredApps = apps.filter(a => customAppIds.includes(a.desktopId ?? ''));
             }
 
             // Render Grid Box
             this._gridBox.destroy_all_children();
+            this._gridSelIdx = -1;
 
             if (!filteredApps.length) {
                 const emptyLabel = new St.Label({
@@ -1443,7 +1471,6 @@ const LauncherDialog = GObject.registerClass(
                     y_align: Clutter.ActorAlign.CENTER,
                 });
                 this._gridBox.add_child(emptyLabel);
-                this._gridSelIdx = -1;
                 return;
             }
 
@@ -1459,44 +1486,43 @@ const LauncherDialog = GObject.registerClass(
 
                 const item = new (GridItem as any)() as GridItem;
                 item.setup(app);
-                // FIX (Bug 1): connect to renamed signal 'item-activated'.
                 item.connect('item-activated', () => {
                     app.activate();
                     this._ext.hide();
                 });
                 item.connect('item-hovered', () => {
-                    this._selectGridIdx(i);
+                    // FIX: find the flat index of this item so _gridSelIdx stays in sync
+                    const allItems = this._collectGridItems();
+                    const idx = allItems.indexOf(item);
+                    if (idx >= 0) this._selectGridIdx(idx);
                 });
                 currentRow.add_child(item);
             });
 
-            this._gridSelIdx = -1;
-            this._selectGridIdx(0);
+            // FIX: Defer initial grid selection until after the scene graph has
+            // laid out the items. Selecting at index 0 immediately means all
+            // items have height=0, so ensure_actor_visible does nothing useful.
+            // A short idle gives Clutter one frame to measure everything.
+            timeoutOnce(50, () => {
+                if (this._gridSelIdx === -1 && this._gridScroll.visible) {
+                    this._selectGridIdx(0);
+                }
+            });
         }
 
         private _selectGridIdx(i: number) {
-            const items: GridItem[] = [];
-            this._gridBox.get_children().forEach((row: any) => {
-                row.get_children().forEach((item: GridItem) => items.push(item));
-            });
-
+            const items = this._collectGridItems();
             if (!items.length) return;
             i = Math.max(0, Math.min(items.length - 1, i));
             items.forEach((item, idx) => item.setSelected(idx === i));
             this._gridSelIdx = i;
 
-            const selectedItem = items[i];
-            this._gridScroll.vadjustment?.set_value(
-                selectedItem.y - this._gridScroll.height / 2 + selectedItem.height / 2
-            );
+            // FIX: Use the robust scrollToActor helper (same fix as list view).
+            scrollToActor(this._gridScroll, items[i]);
         }
 
         private _moveGridSel(d: number) {
-            const items: GridItem[] = [];
-            this._gridBox.get_children().forEach((row: any) => {
-                row.get_children().forEach((item: GridItem) => items.push(item));
-            });
-
+            const items = this._collectGridItems();
             const n = items.length;
             if (n) {
                 this._selectGridIdx((this._gridSelIdx + d + n) % n);
@@ -1505,11 +1531,7 @@ const LauncherDialog = GObject.registerClass(
 
         private _activateGridSel() {
             dbg('Activate', 'grid sel', this._gridSelIdx);
-            const items: GridItem[] = [];
-            this._gridBox.get_children().forEach((row: any) => {
-                row.get_children().forEach((item: GridItem) => items.push(item));
-            });
-
+            const items = this._collectGridItems();
             const selected = items[this._gridSelIdx];
             if (selected) {
                 selected.result.activate();
@@ -1528,7 +1550,6 @@ const LauncherDialog = GObject.registerClass(
             this._editorNameEntry.text = this._activeCategory;
             this._editorAppsContainer.destroy_all_children();
 
-            // Load all apps
             const apps: SearchResult[] = [];
             const appProv = this._providers.find(p => p.id === 'apps') as AppProvider | undefined;
             if (appProv) {
@@ -1574,7 +1595,6 @@ const LauncherDialog = GObject.registerClass(
                 const newName = this._editorNameEntry.text.trim();
                 const customGroups = this._getCustomGroups();
 
-                // Gather all checked app IDs
                 const selectedIds: string[] = [];
                 this._editorAppsContainer.get_children().forEach((child: any) => {
                     const row = child as EditAppRow;
@@ -1584,12 +1604,10 @@ const LauncherDialog = GObject.registerClass(
                 });
 
                 if (newName && newName !== this._activeCategory) {
-                    // Rename group (delete old key, add new)
                     delete customGroups[this._activeCategory];
                     customGroups[newName] = selectedIds;
                     this._activeCategory = newName;
                 } else if (newName) {
-                    // Save apps under same name
                     customGroups[this._activeCategory] = selectedIds;
                 }
 
@@ -1629,7 +1647,6 @@ const LauncherDialog = GObject.registerClass(
                     this._saveCustomGroups(customGroups);
                     this._activeCategory = gName;
 
-                    // Switch to group editor checklists immediately!
                     this._renderGridAndTabs();
                     this._startEditing();
                     return;
@@ -1665,8 +1682,6 @@ const LauncherDialog = GObject.registerClass(
 
         focus() {
             dbg('Focus', 'grab_key_focus');
-            // Ensure the appropriate text entry has focus to prevent keyboard
-            // capture loss during clicks or scrolls.
             if (this._promptOverlay && this._promptOverlay.visible && this._promptEntry) {
                 global.stage.set_key_focus(this._promptEntry);
                 this._promptEntry.grab_key_focus();
@@ -1684,15 +1699,10 @@ const LauncherDialog = GObject.registerClass(
             this._entry.text = '';
             this._activeCategory = 'Library Home';
             this._isEditing = false;
+            this._gridSelIdx = -1;
             this._editorBox.hide();
             this._promptOverlay.hide();
 
-            // FIX (Bug 2b): The entry box is always shown regardless of the
-            // 'show-search-bar' setting. That setting previously hid the whole
-            // row which made the entry unreachable, breaking free-typing in
-            // grid mode. The visual preference is now enforced via CSS opacity
-            // in stylesheet.css using the 'search-hidden' class on _entryBox,
-            // while the widget itself remains in the layout and focusable.
             this._entryBox.show();
 
             this._scroll.hide();
@@ -1753,11 +1763,35 @@ export default class OrmicLauncherExtension extends Extension {
             style_class: 'ormic-overlay', reactive: true, visible: false,
             x: 0, y: 0, opacity: 0,
         });
+
+        // FIX: Click-outside-to-close lives here on the overlay, not on the
+        // dialog. The overlay covers the full monitor. We check whether the
+        // press landed inside the dialog's bounding box using absolute screen
+        // coordinates from get_transformed_position() + width/height — this is
+        // reliable because the overlay's own transform is identity (no scale,
+        // no rotation). We must also stop the event here so it doesn't reach
+        // the shell behind the launcher (which could accidentally activate
+        // panel items or trigger other actions).
         this._overlay.connect('button-press-event', (_, ev) => {
             const [cx, cy] = ev.get_coords();
-            const d = this._dialog!;
-            const [dx, dy] = d.get_transformed_position();
-            if (cx < dx || cx > dx + d.width || cy < dy || cy > dy + d.height) this.hide();
+            const d = this._dialog;
+            if (!d) { this.hide(); return Clutter.EVENT_STOP; }
+
+            // get_transformed_position returns absolute screen coords
+            const [ok, dx, dy] = d.get_transformed_position();
+            if (!ok) { this.hide(); return Clutter.EVENT_STOP; }
+
+            const dw = d.width;
+            const dh = d.height;
+
+            const insideDialog =
+                cx >= dx && cx <= dx + dw &&
+                cy >= dy && cy <= dy + dh;
+
+            if (!insideDialog) {
+                this.hide();
+            }
+            // Always stop so nothing behind the overlay gets the click
             return Clutter.EVENT_STOP;
         });
 
@@ -1849,7 +1883,6 @@ export default class OrmicLauncherExtension extends Extension {
         if (!this._dialog || !this._overlay) return;
         this._visible = false;
         Main.popModal(this._overlay);
-        // Capture refs — safe if disable() runs mid-animation
         const ov = this._overlay, dl = this._dialog;
         easeActor(dl, {
             opacity: 0, translation_y: -14, duration: 120, mode: Clutter.AnimationMode.EASE_IN_QUAD,
