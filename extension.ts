@@ -104,9 +104,9 @@ function scrollToActor(scrollView: St.ScrollView, actor: Clutter.Actor) {
         if (!adj) return;
 
         // Transform actor position into the scroll content's coordinate space
-        const [ok, ax, ay] = actor.get_transformed_position();
+        const [ok, ax, ay] = actor.get_transformed_position() as unknown as [boolean, number, number];
         if (!ok) return;
-        const [, svx, svy] = scrollView.get_transformed_position();
+        const [, , svy] = scrollView.get_transformed_position() as unknown as [boolean, number, number];
 
         const relY = ay - svy + adj.value;
         const viewHeight = scrollView.height;
@@ -228,7 +228,7 @@ class AppProvider {
                         }
                     }
                     this._loadCategory(root, _('App'), false);
-                dbg('AppProvider', `cache size after reload: ${this._appsCache.size}`);
+                    dbg('AppProvider', `cache size after reload: ${this._appsCache.size}`);
                 }
             }
         } catch (e: any) {
@@ -1778,9 +1778,8 @@ export default class OrmicLauncherExtension extends Extension {
             if (!d) { this.hide(); return Clutter.EVENT_STOP; }
 
             // get_transformed_position returns absolute screen coords
-            const [ok, dx, dy] = d.get_transformed_position();
+            const [ok, dx, dy] = d.get_transformed_position() as unknown as [boolean, number, number];
             if (!ok) { this.hide(); return Clutter.EVENT_STOP; }
-
             const dw = d.width;
             const dh = d.height;
 
