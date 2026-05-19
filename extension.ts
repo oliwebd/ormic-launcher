@@ -71,10 +71,13 @@ function timeoutOnce(ms: number, fn: () => void): number | undefined {
  *   GNOME <50  → actor.ease() wrapped in a Promise
  */
 function easeActor(actor: Clutter.Actor, params: any): Promise<void> {
-    if (IS_50_PLUS && typeof (actor as any).easeAsync === 'function')
-        return (actor as any).easeAsync(params);
+    const { onComplete, ...rest } = params;
+    if (IS_50_PLUS && typeof (actor as any).easeAsync === 'function') {
+        return (actor as any).easeAsync(rest).then(() => {
+            if (onComplete) onComplete();
+        });
+    }
     return new Promise<void>(resolve => {
-        const { onComplete, ...rest } = params;
         actor.ease({ ...rest, onComplete: () => { onComplete?.(); resolve(); } });
     });
 }
@@ -125,6 +128,7 @@ export interface SearchResult {
     score: number;
     providerPriority: number;   // secondary sort key
     icon?: any;      // pre-rendered Clutter texture
+    createIcon?: (size: number) => any; // function to lazily create the icon
     iconName?: string;   // symbolic fallback
     categoryIcon: string;
     category: string;   // right-pill label: "App", "Web", "Window", …
@@ -140,7 +144,11 @@ class AppProvider {
     private _tree: any = null;
     private _treeChangedId = 0;
     private _installedChangedId = 0;
-    _appsCache: Map<string, { app: any; category: string }> = new Map();
+    _appsCache: Map<string, {
+        app: any; category: string;
+        name: string; desc: string; exec: string; kw: string;
+        displayName: string; displayDesc: string;
+    }> = new Map();
 
     constructor() {
         this._tree = new GMenu.Tree({ menu_basename: 'applications.menu' });
@@ -215,7 +223,17 @@ class AppProvider {
                     }
                 }
                 if (app && app.get_app_info()?.should_show()) {
-                    this._appsCache.set(id, { app, category: categoryName });
+                    const info = app.get_app_info();
+                    this._appsCache.set(id, {
+                        app,
+                        category: categoryName,
+                        name: (info.get_name() ?? '').toLowerCase(),
+                        desc: (info.get_description() ?? '').toLowerCase(),
+                        exec: (info.get_executable() ?? '').toLowerCase(),
+                        kw: (info.get_keywords() ?? []).join(' ').toLowerCase(),
+                        displayName: info.get_name() ?? id,
+                        displayDesc: info.get_description() ?? '',
+                    });
                 }
             } else if (recursive && type === GMenu.TreeItemType.DIRECTORY) {
                 const subdir = iter.get_directory();
@@ -231,14 +249,7 @@ class AppProvider {
         const lq = q.toLowerCase().trim();
         const out: SearchResult[] = [];
         for (const [id, cached] of this._appsCache.entries()) {
-            const { app, category } = cached;
-            const info = app.get_app_info();
-            if (!info) continue;
-
-            const name = (info.get_name() ?? '').toLowerCase();
-            const desc = (info.get_description() ?? '').toLowerCase();
-            const exec = (info.get_executable() ?? '').toLowerCase();
-            const kw = (info.get_keywords() ?? []).join(' ').toLowerCase();
+            const { app, category, name, desc, exec, kw, displayName, displayDesc } = cached;
 
             const score =
                 name === lq ? 100 :
@@ -251,13 +262,16 @@ class AppProvider {
 
             out.push({
                 id: `app:${id}`, desktopId: id,
-                name: info.get_name() ?? id,
-                description: info.get_description() ?? '',
+                name: displayName,
+                description: displayDesc,
                 score, providerPriority: this.priority,
-                icon: app.create_icon_texture(48),
+                createIcon: (s: number) => app.create_icon_texture(s),
                 categoryIcon: 'application-x-executable-symbolic',
                 category: category,
-                activate: () => app.activate(),
+                activate: () => {
+                    dbg('AppProvider', `activate: ${displayName}`);
+                    app.activate();
+                },
             });
         }
         return out.sort((a, b) => b.score - a.score).slice(0, 8);
@@ -416,7 +430,7 @@ class WindowProvider {
 // FIX (Bug 1): Signal renamed from 'activate' to 'item-activated' to avoid
 // clashing with Clutter's built-in 'activate' action on St.Button actors.
 const GridItem = GObject.registerClass({
-    Signals: { 'item-activated': {} },
+    Signals: { 'item-activated': {}, 'item-hovered': {} },
 }, class GridItem extends St.Button {
     private _result!: SearchResult;
     private _box!: St.BoxLayout;
@@ -424,7 +438,7 @@ const GridItem = GObject.registerClass({
     _init() {
         super._init({
             style_class: 'ormic-grid-item',
-            reactive: true, track_hover: true, can_focus: true,
+            reactive: true, track_hover: true, can_focus: false,
         });
     }
 
@@ -438,7 +452,13 @@ const GridItem = GObject.registerClass({
         });
 
         const iconBin = new St.Bin({ style_class: 'ormic-grid-icon-bin' });
-        if (result.icon) {
+        if (result.createIcon) {
+            const texture = result.createIcon(56);
+            if (texture) {
+                texture.set_size(56, 56);
+                iconBin.set_child(texture);
+            }
+        } else if (result.icon) {
             result.icon.set_size(56, 56);
             iconBin.set_child(result.icon);
         } else {
@@ -461,9 +481,18 @@ const GridItem = GObject.registerClass({
 
         this.set_child(this._box);
 
-        // FIX (Bug 1): emit renamed signal 'item-activated'.
-        this.connect('clicked', () => {
-            this.emit('item-activated');
+        // FIX: Use button-release-event for reliable single-click activation
+        this.connect('button-release-event', (actor, ev) => {
+            if (ev.get_button() === 1) { // Left click
+                dbg('GridItem', `clicked on ${result.name}`);
+                this.emit('item-activated');
+                return Clutter.EVENT_STOP;
+            }
+            return Clutter.EVENT_PROPAGATE;
+        });
+
+        this.connect('notify::hover', () => {
+            if (this.hover) this.emit('item-hovered');
         });
     }
 
@@ -526,9 +555,14 @@ const CategoryTab = GObject.registerClass({
 
         this.set_child(box);
 
-        // FIX (Bug 1): emit renamed signal 'tab-selected'.
-        this.connect('clicked', () => {
-            this.emit('tab-selected');
+        // FIX: Use button-release-event for reliable single-click activation
+        this.connect('button-release-event', (actor, ev) => {
+            if (ev.get_button() === 1) {
+                dbg('CategoryTab', `clicked on ${categoryName}`);
+                this.emit('tab-selected');
+                return Clutter.EVENT_STOP;
+            }
+            return Clutter.EVENT_PROPAGATE;
         });
     }
 
@@ -553,7 +587,7 @@ const EditAppRow = GObject.registerClass({
     _init() {
         super._init({
             style_class: 'ormic-edit-row',
-            reactive: true, track_hover: true, can_focus: true,
+            reactive: true, track_hover: true, can_focus: false,
         });
     }
 
@@ -568,7 +602,13 @@ const EditAppRow = GObject.registerClass({
         });
 
         const iconBin = new St.Bin({ style_class: 'ormic-edit-icon-bin' });
-        if (result.icon) {
+        if (result.createIcon) {
+            const texture = result.createIcon(32);
+            if (texture) {
+                texture.set_size(32, 32);
+                iconBin.set_child(texture);
+            }
+        } else if (result.icon) {
             result.icon.set_size(32, 32);
             iconBin.set_child(result.icon);
         } else {
@@ -598,9 +638,14 @@ const EditAppRow = GObject.registerClass({
 
         if (this._selected) this.add_style_class_name('selected');
 
-        this.connect('clicked', () => {
-            this.toggle();
-            this.emit('toggle');
+        this.connect('button-release-event', (actor, ev) => {
+            if (ev.get_button() === 1) {
+                dbg('EditAppRow', `clicked on ${result.name}`);
+                this.toggle();
+                this.emit('toggle');
+                return Clutter.EVENT_STOP;
+            }
+            return Clutter.EVENT_PROPAGATE;
         });
     }
 
@@ -621,7 +666,7 @@ type EditAppRow = InstanceType<typeof EditAppRow>;
 // FIX (Bug 1): Signal renamed from 'activate' to 'item-activated' to avoid
 // clashing with Clutter's built-in 'activate' action on St.Button actors.
 const ResultRow = GObject.registerClass({
-    Signals: { 'item-activated': {} },
+    Signals: { 'item-activated': {}, 'item-hovered': {} },
 }, class ResultRow extends St.Button {
     private _result!: SearchResult;
     private _accentBar!: St.Widget;
@@ -630,7 +675,7 @@ const ResultRow = GObject.registerClass({
     _init() {
         super._init({
             style_class: 'ormic-result',
-            reactive: true, track_hover: true, can_focus: true,
+            reactive: true, track_hover: true, can_focus: false,
         });
     }
 
@@ -651,7 +696,13 @@ const ResultRow = GObject.registerClass({
         mainBox.add_child(this._accentBar);
 
         const iconBin = new St.Bin({ style_class: 'ormic-icon-bin' });
-        if (result.icon) {
+        if (result.createIcon) {
+            const texture = result.createIcon(48);
+            if (texture) {
+                texture.set_size(48, 48);
+                iconBin.set_child(texture);
+            }
+        } else if (result.icon) {
             result.icon.set_size(48, 48);
             iconBin.set_child(result.icon);
         } else {
@@ -739,9 +790,18 @@ const ResultRow = GObject.registerClass({
 
         this.set_child(mainBox);
 
-        // FIX (Bug 1): emit renamed signal 'item-activated'.
-        this.connect('clicked', () => {
-            this.emit('item-activated');
+        // FIX: Use button-release-event for reliable single-click activation
+        this.connect('button-release-event', (actor, ev) => {
+            if (ev.get_button() === 1) { // Left click
+                dbg('ResultRow', `clicked on ${result.name}`);
+                this.emit('item-activated');
+                return Clutter.EVENT_STOP;
+            }
+            return Clutter.EVENT_PROPAGATE;
+        });
+
+        this.connect('notify::hover', () => {
+            if (this.hover) this.emit('item-hovered');
         });
     }
 
@@ -808,6 +868,17 @@ const LauncherDialog = GObject.registerClass(
 
         _init() {
             super._init({ style_class: 'ormic-dialog', vertical: true, reactive: true });
+            try {
+                const blur = new Shell.BlurEffect({
+                    brightness: 0.95,
+                    mode: Shell.BlurMode.BACKGROUND,
+                });
+                // @ts-ignore
+                blur.sigma = 65;
+                this.add_effect_with_name('blur', blur);
+            } catch (e: any) {
+                log(`Ormic Launcher: blur effect error: ${e.message}`);
+            }
         }
 
         setup(ext: OrmicLauncherExtension) {
@@ -838,15 +909,57 @@ const LauncherDialog = GObject.registerClass(
             });
             this._entry.clutter_text.connect('text-changed', () => this._onText());
             this._entry.clutter_text.connect('key-press-event', (_, ev) => this._onKey(ev));
-            this.connect('button-press-event', () => {
-                this._entry.grab_key_focus();
+            this.connect('button-press-event', (_, ev) => {
+                let actor: any = ev.get_source();
+                let keepFocus = false;
+                while (actor && actor !== this) {
+                    if (actor instanceof St.Entry || actor instanceof St.ScrollBar) {
+                        keepFocus = true;
+                        break;
+                    }
+                    actor = actor.get_parent();
+                }
+                if (!keepFocus) {
+                    timeoutOnce(10, () => this.focus());
+                }
                 return Clutter.EVENT_PROPAGATE;
             });
-            this.connect('button-press-event', () => {
-                this._entry.grab_key_focus();
+
+            this.connect('scroll-event', (_, ev) => {
+                let sv: St.ScrollView | null = null;
+                if (this._scroll.visible) sv = this._scroll;
+                else if (this._gridScroll.visible) sv = this._gridScroll;
+                else if (this._editorScroll.visible) sv = this._editorScroll;
+
+                if (sv && sv.vscrollbar_visible && sv.vadjustment) {
+                    const adj = sv.vadjustment;
+                    const dir = ev.get_scroll_direction();
+                    const step = adj.step_increment * 2.5;
+                    if (dir === Clutter.ScrollDirection.UP) {
+                        adj.set_value(adj.value - step);
+                        return Clutter.EVENT_STOP;
+                    } else if (dir === Clutter.ScrollDirection.DOWN) {
+                        adj.set_value(adj.value + step);
+                        return Clutter.EVENT_STOP;
+                    } else if (dir === Clutter.ScrollDirection.SMOOTH) {
+                        const [dx, dy] = ev.get_scroll_delta();
+                        adj.set_value(adj.value + dy * step);
+                        return Clutter.EVENT_STOP;
+                    }
+                }
                 return Clutter.EVENT_PROPAGATE;
             });
+
             this._entryBox.add_child(this._entry);
+
+            const closeBtn = new St.Button({
+                child: new St.Icon({ icon_name: 'window-close-symbolic', icon_size: 18 }),
+                style_class: 'ormic-close-btn',
+                reactive: true, track_hover: true, can_focus: false,
+                y_align: Clutter.ActorAlign.CENTER,
+            });
+            closeBtn.connect('clicked', () => this._ext.hide());
+            this._entryBox.add_child(closeBtn);
 
             // ── Search Results ────────────────────────────────────────────
             this._scroll = new St.ScrollView({
@@ -1168,6 +1281,9 @@ const LauncherDialog = GObject.registerClass(
                 row.setup(r, i, this._ext._settings, this._shellSettings);
                 // FIX (Bug 1): connect to renamed signal 'item-activated'.
                 row.connect('item-activated', () => { r.activate(); this._ext.hide(); });
+                row.connect('item-hovered', () => {
+                    this._selectIdx(i);
+                });
                 this._rbox.add_child(row);
             });
             this._scroll.show();
@@ -1276,13 +1392,16 @@ const LauncherDialog = GObject.registerClass(
                     if (!info) continue;
                     apps.push({
                         id: `app:${id}`, desktopId: id,
-                        name: info.get_name() ?? id,
-                        description: info.get_description() ?? '',
+                        name: cached.displayName ?? info.get_name() ?? id,
+                        description: cached.displayDesc ?? info.get_description() ?? '',
                         score: 0, providerPriority: 10,
-                        icon: app.create_icon_texture(48),
+                        createIcon: (s: number) => app.create_icon_texture(s),
                         categoryIcon: 'application-x-executable-symbolic',
                         category: category,
-                        activate: () => app.activate(),
+                        activate: () => {
+                            dbg('LibraryGrid', `activate: ${id}`);
+                            app.activate();
+                        },
                     });
                 }
             }
@@ -1344,6 +1463,9 @@ const LauncherDialog = GObject.registerClass(
                 item.connect('item-activated', () => {
                     app.activate();
                     this._ext.hide();
+                });
+                item.connect('item-hovered', () => {
+                    this._selectGridIdx(i);
                 });
                 currentRow.add_child(item);
             });
@@ -1416,10 +1538,10 @@ const LauncherDialog = GObject.registerClass(
                     if (!info) continue;
                     apps.push({
                         id: `app:${id}`, desktopId: id,
-                        name: info.get_name() ?? id,
-                        description: info.get_description() ?? '',
+                        name: cached.displayName ?? info.get_name() ?? id,
+                        description: cached.displayDesc ?? info.get_description() ?? '',
                         score: 0, providerPriority: 10,
-                        icon: app.create_icon_texture(48),
+                        createIcon: (s: number) => app.create_icon_texture(s),
                         categoryIcon: 'application-x-executable-symbolic',
                         category: category,
                         activate: () => app.activate(),
@@ -1542,12 +1664,19 @@ const LauncherDialog = GObject.registerClass(
         // ─── External Controls ────────────────────────────────────────────────
 
         focus() {
-            dbg('Focus', 'grab_key_focus → entry');
-            // FIX (Bug 2b): The search entry is always the key-capture point.
-            // It is always visible, so we unconditionally focus it here instead
-            // of branching on _entryBox.visible or _scroll.visible. Grid
-            // selection is purely visual; keyboard events flow through the entry.
-            this._entry.grab_key_focus();
+            dbg('Focus', 'grab_key_focus');
+            // Ensure the appropriate text entry has focus to prevent keyboard
+            // capture loss during clicks or scrolls.
+            if (this._promptOverlay && this._promptOverlay.visible && this._promptEntry) {
+                global.stage.set_key_focus(this._promptEntry);
+                this._promptEntry.grab_key_focus();
+            } else if (this._editorBox && this._editorBox.visible && this._isEditing && this._editorNameEntry) {
+                global.stage.set_key_focus(this._editorNameEntry);
+                this._editorNameEntry.grab_key_focus();
+            } else if (this._entry) {
+                global.stage.set_key_focus(this._entry);
+                this._entry.grab_key_focus();
+            }
         }
 
         reset() {
@@ -1585,7 +1714,7 @@ const OrmicIndicator = GObject.registerClass(
         _ext!: OrmicLauncherExtension;
         _init() {
             super._init(0.0, 'Ormic Launcher', true);
-            this.add_child(new St.Icon({ icon_name: 'system-search-symbolic', style_class: 'system-status-icon' }));
+            this.add_child(new St.Icon({ icon_name: 'view-app-grid-symbolic', style_class: 'system-status-icon' }));
             this.connect('button-press-event', (_, ev) => {
                 if ((typeof ev.get_button === 'function' ? ev.get_button() : 1) === 1) {
                     this._ext.toggle(); return Clutter.EVENT_STOP;
@@ -1709,15 +1838,17 @@ export default class OrmicLauncherExtension extends Extension {
         this._overlay.show();
         this._dialog.opacity = 0;
         this._dialog.translation_y = -20;
+        Main.pushModal(this._overlay);
         easeActor(this._overlay, { opacity: 255, duration: 150, mode: Clutter.AnimationMode.EASE_OUT_QUAD });
         easeActor(this._dialog, { opacity: 255, translation_y: 0, duration: 200, mode: Clutter.AnimationMode.EASE_OUT_EXPO });
-        timeoutOnce(10, () => this._dialog?.grab_key_focus());
+        timeoutOnce(10, () => this._dialog?.focus());
     }
 
     hide() {
         dbg('Launcher', 'hide()');
         if (!this._dialog || !this._overlay) return;
         this._visible = false;
+        Main.popModal(this._overlay);
         // Capture refs — safe if disable() runs mid-animation
         const ov = this._overlay, dl = this._dialog;
         easeActor(dl, {
