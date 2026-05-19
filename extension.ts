@@ -1794,6 +1794,15 @@ export default class OrmicLauncherExtension extends Extension {
             return Clutter.EVENT_STOP;
         });
 
+// Handle key-press on the overlay actor; guard against pushModal failure
+this._overlay.connect('key-press-event', (_, ev) => {
+    if (ev.get_key_symbol() === Clutter.KEY_Escape) {
+        this.hide();
+        return Clutter.EVENT_STOP;
+    }
+    return Clutter.EVENT_PROPAGATE;
+});
+
         this._dialog = new (LauncherDialog as any)() as LauncherDialog;
         this._dialog.setup(this);
         this._overlay.add_child(this._dialog);
@@ -1864,18 +1873,26 @@ export default class OrmicLauncherExtension extends Extension {
     toggle() { this._visible ? this.hide() : this.show(); }
 
     show() {
-        dbg('Launcher', 'show()');
-        if (!this._dialog || !this._overlay) return;
-        this._visible = true;
-        this._dialog.reset();
-        this._overlay.show();
-        this._dialog.opacity = 0;
-        this._dialog.translation_y = -20;
-        Main.pushModal(this._overlay);
-        easeActor(this._overlay, { opacity: 255, duration: 150, mode: Clutter.AnimationMode.EASE_OUT_QUAD });
-        easeActor(this._dialog, { opacity: 255, translation_y: 0, duration: 200, mode: Clutter.AnimationMode.EASE_OUT_EXPO });
-        timeoutOnce(10, () => this._dialog?.focus());
+    dbg('Launcher', 'show()');
+    if (!this._dialog || !this._overlay) return;
+    this._visible = true;
+    this._dialog.reset();
+    this._overlay.show();
+    this._dialog.opacity = 0;
+    this._dialog.translation_y = -20;
+
+    // GNOME 50 Wayland: pushModal can fail (e.g. another modal is active).
+    // If it does, bail out cleanly instead of leaving a frozen overlay.
+    if (!Main.pushModal(this._overlay)) {
+        this._visible = false;
+        this._overlay.hide();
+        return;
     }
+
+    easeActor(this._overlay, { opacity: 255, duration: 150, mode: Clutter.AnimationMode.EASE_OUT_QUAD });
+    easeActor(this._dialog, { opacity: 255, translation_y: 0, duration: 200, mode: Clutter.AnimationMode.EASE_OUT_EXPO });
+    timeoutOnce(10, () => this._dialog?.focus());
+},
 
     hide() {
         dbg('Launcher', 'hide()');
