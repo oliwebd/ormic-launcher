@@ -1892,7 +1892,7 @@ this._overlay.connect('key-press-event', (_, ev) => {
     easeActor(this._overlay, { opacity: 255, duration: 150, mode: Clutter.AnimationMode.EASE_OUT_QUAD });
     easeActor(this._dialog, { opacity: 255, translation_y: 0, duration: 200, mode: Clutter.AnimationMode.EASE_OUT_EXPO });
     timeoutOnce(10, () => this._dialog?.focus());
-},
+}
 
     hide() {
         dbg('Launcher', 'hide()');
