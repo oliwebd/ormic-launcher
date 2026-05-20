@@ -541,7 +541,7 @@ type GridItem = InstanceType<typeof GridItem>;
 // ─── Category Tab Component ──────────────────────────────────────────────────
 
 const CategoryTab = GObject.registerClass({
-    Signals: { 'tab-selected': {} },
+    Signals: { 'tab-selected': {}, 'tab-hovered': {} },
 }, class CategoryTab extends St.Button {
     private _categoryName!: string;
     private _iconName!: string;
@@ -551,6 +551,10 @@ const CategoryTab = GObject.registerClass({
             style_class: 'ormic-category-tab',
             reactive: true, track_hover: true, can_focus: false,
             x_expand: true, x_align: Clutter.ActorAlign.FILL,
+        });
+
+        this.connect('notify::hover', () => {
+            if (this.hover) this.emit('tab-hovered');
         });
     }
 
@@ -1443,6 +1447,12 @@ const LauncherDialog = GObject.registerClass(
                     this._renderGridAndTabs();
                     this.focus();
                 });
+                tab.connect('tab-hovered', () => {
+                    if (this._activeCategory === t.name) return;
+                    this._activeCategory = t.name;
+                    this._renderGridAndTabs();
+                    this.focus();
+                });
                 this._tabsBox.add_child(tab);
             });
 
@@ -1453,6 +1463,12 @@ const LauncherDialog = GObject.registerClass(
                 tab.setup(gName, 'folder-symbolic');
                 tab.setSelected(this._activeCategory === gName);
                 tab.connect('tab-selected', () => {
+                    this._activeCategory = gName;
+                    this._renderGridAndTabs();
+                    this.focus();
+                });
+                tab.connect('tab-hovered', () => {
+                    if (this._activeCategory === gName) return;
                     this._activeCategory = gName;
                     this._renderGridAndTabs();
                     this.focus();
