@@ -935,6 +935,9 @@ const LauncherDialog = GObject.registerClass(
             // Instead, we only handle clicks on non-interactive areas of the DIALOG itself
             // to restore focus to the entry (e.g. clicking on padding/margins).
             this.connect('button-press-event', (_, ev) => {
+                // Set click guard on the extension to prevent key-focus watcher from closing the dialog
+                this._ext._setClickGuard();
+
                 // Walk up from click source — if it's not an interactive widget,
                 // restore focus to the search entry.
                 let actor: any = ev.get_source();
@@ -1741,6 +1744,8 @@ export default class OrmicLauncherExtension extends Extension {
     providers!: any[];
     _visible!: boolean;
     _isModal = false;
+    _clickGuard = false;
+    _clickGuardTimer: number | null | undefined = null;
     _settings!: Gio.Settings;
     _overlay!: St.Widget | null;
     _dialog!: LauncherDialog | null;
@@ -1776,11 +1781,16 @@ export default class OrmicLauncherExtension extends Extension {
             const d = this._dialog;
             if (!d) { this.hide(); return Clutter.EVENT_STOP; }
 
-            const source = ev.get_source();
-            const insideDialog = source && (d === source || d.contains(source));
+            const [x, y] = ev.get_coords();
+            const [success, lx, ly] = d.transform_stage_point(x, y);
+            const insideDialog = success && lx >= 0 && lx <= d.width && ly >= 0 && ly <= d.height;
 
             if (!insideDialog) {
                 this.hide();
+            } else {
+                // Set click guard: suppress the focus-watcher while
+                // Clutter processes this button event chain (press → release).
+                this._setClickGuard();
             }
             // Always stop so nothing behind the overlay gets the click
             return Clutter.EVENT_STOP;
@@ -1819,6 +1829,10 @@ this._overlay.connect('key-press-event', (_, ev) => {
 
         this._focusId = global.stage.connect('notify::key-focus', () => {
             if (!this._visible || !this._overlay) return;
+            // Skip if a mouse click is being processed — focus shifts
+            // transiently during Clutter button events and would cause
+            // the launcher to close before item-activated fires.
+            if (this._clickGuard) return;
             const focus = global.stage.key_focus;
             if (focus && focus !== this._overlay && !this._overlay.contains(focus)) {
                 dbg('Extension', 'Focus moved outside launcher overlay, hiding');
@@ -1907,6 +1921,11 @@ this._overlay.connect('key-press-event', (_, ev) => {
         if (!this._visible) return;
         if (!this._dialog || !this._overlay) return;
         this._visible = false;
+        this._clickGuard = false;
+        if (this._clickGuardTimer != null) {
+            GLib.source_remove(this._clickGuardTimer as number);
+            this._clickGuardTimer = null;
+        }
         if (this._isModal) {
             this._isModal = false;
             try {
@@ -1921,5 +1940,18 @@ this._overlay.connect('key-press-event', (_, ev) => {
             onComplete: () => { ov.hide(); dl.reset(); dl.opacity = 255; dl.translation_y = 0; },
         });
         easeActor(ov, { opacity: 0, duration: 120, mode: Clutter.AnimationMode.EASE_IN_QUAD });
+    }
+
+    /** Briefly suppress the focus-watcher so click → activate works. */
+    _setClickGuard() {
+        this._clickGuard = true;
+        if (this._clickGuardTimer != null) {
+            GLib.source_remove(this._clickGuardTimer as number);
+        }
+        this._clickGuardTimer = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 300, () => {
+            this._clickGuard = false;
+            this._clickGuardTimer = null;
+            return GLib.SOURCE_REMOVE;
+        });
     }
 }
