@@ -181,6 +181,7 @@ class AppProvider {
     private _tree: any = null;
     private _treeChangedId = 0;
     private _installedChangedId = 0;
+    private _dirty = true;
     _appsCache: Map<string, {
         app: any; category: string;
         name: string; desc: string; exec: string; kw: string;
@@ -189,8 +190,14 @@ class AppProvider {
 
     constructor() {
         this._tree = new GMenu.Tree({ menu_basename: 'applications.menu' });
-        this._treeChangedId = this._tree.connect('changed', () => this.reload());
-        this._installedChangedId = this._sys.connect('installed-changed', () => this.reload());
+        this._treeChangedId = this._tree.connect('changed', () => {
+            dbg('AppProvider', 'tree changed — marking dirty');
+            this._dirty = true;
+        });
+        this._installedChangedId = this._sys.connect('installed-changed', () => {
+            dbg('AppProvider', 'installed-changed — marking dirty');
+            this._dirty = true;
+        });
         this.reload();
     }
 
@@ -209,8 +216,15 @@ class AppProvider {
         this._appsCache.clear();
     }
 
+    onOpen() {
+        if (this._dirty) {
+            this.reload();
+        }
+    }
+
     reload() {
         dbg('AppProvider', 'reload() — clearing cache');
+        this._dirty = false;
         this._appsCache.clear();
         try {
             if (this._tree && this._tree.load_sync()) {
@@ -282,6 +296,9 @@ class AppProvider {
     }
 
     search(q: string): SearchResult[] {
+        if (this._dirty) {
+            this.reload();
+        }
         if (!q) return [];
         const lq = q.toLowerCase().trim();
         const out: SearchResult[] = [];
@@ -364,32 +381,55 @@ class CalcProvider {
 class RecentProvider {
     id = 'recent'; priority = 3;
     private xbel = GLib.build_filenamev([GLib.get_home_dir(), '.local', 'share', 'recently-used.xbel']);
-    constructor(private _s: Gio.Settings) { }
+    private _cachedRecent: { uri: string; name: string; path: string }[] = [];
+
+    constructor(private _s: Gio.Settings) {
+        this.onOpen();
+    }
+
+    onOpen() {
+        if (!this._s.get_boolean('enable-recent-files')) {
+            this._cachedRecent = [];
+            return;
+        }
+        try {
+            const bm = new GLib.BookmarkFile();
+            bm.load_from_file(this.xbel);
+            const items: { uri: string; name: string; path: string }[] = [];
+            for (const uri of bm.get_uris()) {
+                const res = GLib.filename_from_uri(uri);
+                const path = res?.[0];
+                if (!path) continue;
+                const base = GLib.path_get_basename(path);
+                items.push({ uri, name: base, path });
+            }
+            this._cachedRecent = items;
+        } catch (_e) {
+            this._cachedRecent = [];
+        }
+    }
 
     search(query: string): SearchResult[] {
         if (!this._s.get_boolean('enable-recent-files')) return [];
         const q = query.toLowerCase().trim();
         if (!q || q.length < 2) return [];
-        try {
-            const bm = new GLib.BookmarkFile();
-            bm.load_from_file(this.xbel);
-            const out: SearchResult[] = [];
-            for (const uri of bm.get_uris()) {
-                const res = GLib.filename_from_uri(uri);
-                const path = res?.[0]; if (!path) continue;
-                const base = GLib.path_get_basename(path).toLowerCase();
-                if (!base.includes(q)) continue;
-                out.push({
-                    id: `recent:${uri}`, name: GLib.path_get_basename(path),
-                    description: path, score: base.startsWith(q) ? 35 : 20,
-                    providerPriority: this.priority,
-                    iconName: 'document-open-recent-symbolic',
-                    categoryIcon: 'document-open-recent-symbolic', category: _('Recent'),
-                    activate: () => Gio.app_info_launch_default_for_uri(uri, null),
-                });
-            }
-            return out.sort((a, b) => b.score - a.score).slice(0, 5);
-        } catch (_e) { return []; }
+        const out: SearchResult[] = [];
+        for (const item of this._cachedRecent) {
+            const base = item.name.toLowerCase();
+            if (!base.includes(q)) continue;
+            out.push({
+                id: `recent:${item.uri}`,
+                name: item.name,
+                description: item.path,
+                score: base.startsWith(q) ? 35 : 20,
+                providerPriority: this.priority,
+                iconName: 'document-open-recent-symbolic',
+                categoryIcon: 'document-open-recent-symbolic',
+                category: _('Recent'),
+                activate: () => Gio.app_info_launch_default_for_uri(item.uri, null),
+            });
+        }
+        return out.sort((a, b) => b.score - a.score).slice(0, 5);
     }
 }
 
@@ -862,6 +902,7 @@ const LauncherDialog = GObject.registerClass(
         private _tid!: number | null | undefined;
         private _gen!: number;
         _shellSettings!: Gio.Settings;
+        private _gridItemsCache!: Map<string, GridItem>;
 
         // Dynamic multi-view state
         private _activeCategory = 'Library Home';
@@ -921,6 +962,7 @@ const LauncherDialog = GObject.registerClass(
             this._tid = null;
             this._gen = 0;
             this._shellSettings = new Gio.Settings({ schema_id: 'org.gnome.shell' });
+            this._gridItemsCache = new Map();
 
             // ── Search row ────────────────────────────────────────────────
             this._entryBox = new St.BoxLayout({ style_class: 'ormic-search-row', x_expand: true });
@@ -1131,8 +1173,7 @@ const LauncherDialog = GObject.registerClass(
                     const idx = cats.indexOf(this._activeCategory);
                     if (idx > -1) {
                         const n = cats.length;
-                        this._activeCategory = cats[(idx + delta + n) % n];
-                        this._renderGridAndTabs();
+                        this._selectCategory(cats[(idx + delta + n) % n]);
                         this.focus();
                         return Clutter.EVENT_STOP;
                     }
@@ -1329,8 +1370,7 @@ const LauncherDialog = GObject.registerClass(
                 const cats = this._getCategoriesList();
                 const idx = cats.indexOf(this._activeCategory);
                 if (idx > -1) {
-                    this._activeCategory = cats[(idx + 1) % cats.length];
-                    this._renderGridAndTabs();
+                    this._selectCategory(cats[(idx + 1) % cats.length]);
                     this.focus();
                     return true;
                 }
@@ -1487,68 +1527,22 @@ const LauncherDialog = GObject.registerClass(
             return items;
         }
 
-        private _renderGridAndTabs() {
-            dbg('Grid', `renderGridAndTabs category=${this._activeCategory}`);
+        private _selectCategory(categoryName: string) {
+            if (this._activeCategory === categoryName) return;
+            this._activeCategory = categoryName;
 
-            // Render Bottom Category Tabs
-            this._tabsBox.destroy_all_children();
-
-            const staticTabs = [
-                { name: 'Library Home', icon: 'go-home-symbolic' },
-                { name: 'Office', icon: 'x-office-document-symbolic' },
-                { name: 'System', icon: 'emblem-system-symbolic' },
-                { name: 'Utilities', icon: 'accessories-calculator-symbolic' },
-            ];
-
-            staticTabs.forEach(t => {
-                const tab = new (CategoryTab as any)() as CategoryTab;
-                tab.setup(t.name, t.icon);
-                tab.setSelected(this._activeCategory === t.name);
-                tab.connect('tab-selected', () => {
-                    this._activeCategory = t.name;
-                    this._renderGridAndTabs();
-                    this.focus();
-                });
-                tab.connect('tab-hovered', () => {
-                    if (this._activeCategory === t.name) return;
-                    this._activeCategory = t.name;
-                    this._renderGridAndTabs();
-                    this.focus();
-                });
-                this._tabsBox.add_child(tab);
+            // 1. Update tabs selected state without rebuilding them
+            const tabs = this._tabsBox.get_children() as CategoryTab[];
+            tabs.forEach(tab => {
+                if (typeof tab.setSelected === 'function') {
+                    tab.setSelected(tab.categoryName === categoryName);
+                }
             });
 
-            // Render Custom Category Tabs
-            const customGroups = this._getCustomGroups();
-            for (const gName of Object.keys(customGroups)) {
-                const tab = new (CategoryTab as any)() as CategoryTab;
-                tab.setup(gName, 'folder-symbolic');
-                tab.setSelected(this._activeCategory === gName);
-                tab.connect('tab-selected', () => {
-                    this._activeCategory = gName;
-                    this._renderGridAndTabs();
-                    this.focus();
-                });
-                tab.connect('tab-hovered', () => {
-                    if (this._activeCategory === gName) return;
-                    this._activeCategory = gName;
-                    this._renderGridAndTabs();
-                    this.focus();
-                });
-                this._tabsBox.add_child(tab);
-            }
-
-            // Render "Add group" Tab
-            const addTab = new (CategoryTab as any)() as CategoryTab;
-            addTab.setup(_('Add group'), 'list-add-symbolic');
-            addTab.connect('tab-selected', () => {
-                this._showPromptOverlay();
-            });
-            this._tabsBox.add_child(addTab);
-
-            // Update Header Area
+            // 2. Update Header Area
             this._headerTitleLabel.text = this._activeCategory;
-            const isCustom = !staticTabs.some(t => t.name === this._activeCategory);
+            const staticTabs = ['Library Home', 'Office', 'System', 'Utilities'];
+            const isCustom = !staticTabs.includes(this._activeCategory);
             if (isCustom) {
                 this._editBtn.show();
                 this._deleteBtn.show();
@@ -1557,6 +1551,11 @@ const LauncherDialog = GObject.registerClass(
                 this._deleteBtn.hide();
             }
 
+            // 3. Render grid only
+            this._renderGridOnly();
+        }
+
+        private _renderGridOnly() {
             // Fetch applications cache
             const apps: SearchResult[] = [];
             const appProv = this._providers.find(p => p.id === 'apps') as AppProvider | undefined;
@@ -1602,11 +1601,20 @@ const LauncherDialog = GObject.registerClass(
                     a.category.toLowerCase().includes('accessories')
                 );
             } else {
+                const customGroups = this._getCustomGroups();
                 const customAppIds = customGroups[this._activeCategory] || [];
                 filteredApps = apps.filter(a => customAppIds.includes(a.desktopId ?? ''));
             }
 
             // Render Grid Box
+            // Detach cached items from rows before destroying rows to avoid destroying cached items
+            this._gridBox.get_children().forEach((row: any) => {
+                if (row.get_children) {
+                    row.get_children().forEach((child: any) => {
+                        row.remove_child(child);
+                    });
+                }
+            });
             this._gridBox.destroy_all_children();
             this._gridSelIdx = -1;
 
@@ -1631,18 +1639,22 @@ const LauncherDialog = GObject.registerClass(
                     this._gridBox.add_child(currentRow);
                 }
 
-                const item = new (GridItem as any)() as GridItem;
-                item.setup(app);
-                item.connect('item-activated', () => {
-                    this._ext.hide();
-                    app.activate();
-                });
-                item.connect('item-hovered', () => {
-                    // FIX: find the flat index of this item so _gridSelIdx stays in sync
-                    const allItems = this._collectGridItems();
-                    const idx = allItems.indexOf(item);
-                    if (idx >= 0) this._selectGridIdx(idx);
-                });
+                let item = this._gridItemsCache.get(app.id);
+                if (!item) {
+                    const newItem = new (GridItem as any)() as GridItem;
+                    newItem.setup(app);
+                    newItem.connect('item-activated', () => {
+                        this._ext.hide();
+                        app.activate();
+                    });
+                    newItem.connect('item-hovered', () => {
+                        const allItems = this._collectGridItems();
+                        const idx = allItems.indexOf(newItem);
+                        if (idx >= 0) this._selectGridIdx(idx);
+                    });
+                    this._gridItemsCache.set(app.id, newItem);
+                    item = newItem;
+                }
                 currentRow.add_child(item);
             });
 
@@ -1655,6 +1667,74 @@ const LauncherDialog = GObject.registerClass(
                     this._selectGridIdx(0);
                 }
             });
+        }
+
+        private _renderGridAndTabs() {
+            dbg('Grid', `renderGridAndTabs category=${this._activeCategory}`);
+
+            // Render Bottom Category Tabs
+            this._tabsBox.destroy_all_children();
+
+            const staticTabs = [
+                { name: 'Library Home', icon: 'go-home-symbolic' },
+                { name: 'Office', icon: 'x-office-document-symbolic' },
+                { name: 'System', icon: 'emblem-system-symbolic' },
+                { name: 'Utilities', icon: 'accessories-calculator-symbolic' },
+            ];
+
+            staticTabs.forEach(t => {
+                const tab = new (CategoryTab as any)() as CategoryTab;
+                tab.setup(t.name, t.icon);
+                tab.setSelected(this._activeCategory === t.name);
+                tab.connect('tab-selected', () => {
+                    this._selectCategory(t.name);
+                    this.focus();
+                });
+                tab.connect('tab-hovered', () => {
+                    this._selectCategory(t.name);
+                    this.focus();
+                });
+                this._tabsBox.add_child(tab);
+            });
+
+            // Render Custom Category Tabs
+            const customGroups = this._getCustomGroups();
+            for (const gName of Object.keys(customGroups)) {
+                const tab = new (CategoryTab as any)() as CategoryTab;
+                tab.setup(gName, 'folder-symbolic');
+                tab.setSelected(this._activeCategory === gName);
+                tab.connect('tab-selected', () => {
+                    this._selectCategory(gName);
+                    this.focus();
+                });
+                tab.connect('tab-hovered', () => {
+                    this._selectCategory(gName);
+                    this.focus();
+                });
+                this._tabsBox.add_child(tab);
+            }
+
+            // Render "Add group" Tab
+            const addTab = new (CategoryTab as any)() as CategoryTab;
+            addTab.setup(_('Add group'), 'list-add-symbolic');
+            addTab.connect('tab-selected', () => {
+                this._showPromptOverlay();
+            });
+            this._tabsBox.add_child(addTab);
+
+            // Update Header Area
+            this._headerTitleLabel.text = this._activeCategory;
+            const isCustom = !staticTabs.some(t => t.name === this._activeCategory);
+            if (isCustom) {
+                this._editBtn.show();
+                this._deleteBtn.show();
+            } else {
+                this._editBtn.hide();
+                this._deleteBtn.hide();
+            }
+
+            // Render Grid Box
+            this._renderGridOnly();
         }
 
         private _selectGridIdx(i: number) {
@@ -1851,6 +1931,20 @@ const LauncherDialog = GObject.registerClass(
         }
 
         reset() {
+            if (this._gridItemsCache) {
+                this._gridItemsCache.clear();
+            }
+            if (this._providers) {
+                for (const p of this._providers) {
+                    try {
+                        if (typeof p.onOpen === 'function') {
+                            p.onOpen();
+                        }
+                    } catch (e: any) {
+                        log(`Ormic Launcher: Error calling onOpen on provider: ${e.message}`);
+                    }
+                }
+            }
             this._clear();
             this._entry.text = '';
             this._activeCategory = 'Library Home';

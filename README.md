@@ -1,6 +1,8 @@
-# Ormic Launcher — GNOME Shell Extension [BETA]
+# Ormic Launcher — GNOME Shell Extension
 
-A modular, floating application launcher for GNOME Shell **45 – 50**, inspired by the [pop-os/launcher](https://github.com/pop-os/launcher) project architecture. Re-engineered in pure TypeScript and standard GJS, it matches the premium glassmorphic dark theme and features of the Pop!_OS Launcher window.
+A modular, floating application launcher for GNOME Shell **45 – 50**, inspired by the premium aesthetics and pluggable provider architecture of the COSMIC/Pop!_OS Launcher. Re-engineered in pure TypeScript and standard GJS (GNOME JavaScript), it features a fully adaptive, glassmorphic layout, custom application grouping, and responsive mouse and keyboard event handling.
+
+---
 
 ## Supported GNOME Versions
 
@@ -13,171 +15,127 @@ A modular, floating application launcher for GNOME Shell **45 – 50**, inspired
 | GNOME 49 | Ubuntu 25.10 | ✅ Supported |
 | GNOME 50 | Ubuntu 26.04 LTS | ✅ Supported |
 
-## Features
+---
 
-| Feature | Description | Example |
+## Key Features & Providers
+
+| Feature | Description | Example Query |
 |---|---|---|
-| **Apps (GMenu)** | Standard GUI apps loaded recursively from `GMenu.Tree` | `firefox`, `gimp` |
-| **Library Grid View** | Switch between the search list and a full application library grid view categorized by tabs | Library Home, Office, System, etc. |
-| **Custom App Groups** | Create, rename, edit, and delete custom application groups using a built-in checklist editor | Click the "+" tab or edit icon |
-| **Window Switcher** | Find and focus currently open windows using title or WM class, or trigger explicitly with `win ` | `win firefox`, `terminal` |
-| **Favorites First** | Empty search shows your **Favorite Apps** prioritized at the top | Direct launch |
-| **Calculator** | Evaluates math expressions securely with fallback | `2 + 2`, `sqrt(144)`, `sin(90) * pi` |
-| **Recent Files** | Search files you have recently opened (≥2 chars) | `report`, `screenshot` |
-| **Shell Command** | Run shell commands directly with `> ` trigger | `> systemctl restart bluetooth` |
+| **GUI Applications (GMenu)** | Scans and lists installed GUI apps recursively from GNOME's desktop entries. Caches data lazily to keep performance fast. | `gimp`, `firefox` |
+| **Library Grid View** | Grid containing all installed apps, grouped into category tabs in a left sidebar. | Library Home, Office, etc. |
+| **Custom App Groups** | Fully interactive group editor. Create, rename, edit, or delete groups and select which apps belong in them. | Click **Edit** (pencil) or **New Group** (+) |
+| **Window Switcher (`win `)** | Instantly search for and jump to open windows by their title or WM class. Type `win ` or enter a query. | `win terminal` |
+| **Favorites First** | Empty search shows your pinned **Favorite Apps** at the top of the results list. | Direct launch |
+| **Secure Calculator** | Evaluates math formulas using mathjs-like capabilities. | `2 * pi * 15`, `sqrt(144)` |
+| **Recent Files** | Search and open recently used files (requires at least 2 characters). | `invoice`, `screenshot.png` |
+| **Terminal Commands (`> `)** | Run shell commands directly inside GNOME Shell via GLib spawning. | `> systemctl restart bluetooth` |
 
-*Each search result highlights its source on the right side of the list (e.g. `Window`, `Office`, `Calc`, `Command`, `Recent`) matching the premium look of the Pop!_OS Launcher.*
+---
+
+## Adaptive Design & Interaction Details
+
+Ormic Launcher is designed to be highly adaptive and robust across multiple user input styles, layout structures, and API differences between GNOME versions:
+
+### 1. Adaptive Compatibility Shims
+The extension uses a set of runtime shims to seamlessly adapt to changes in GNOME GJS API versions (from GNOME 45 up to 50+):
+- **`timeoutOnce(ms, fn)`**: Dynamically maps to the new `GLib.timeout_add_once` on modern systems, falling back to `GLib.timeout_add` on older shells.
+- **`idleOnce(fn)`**: Seamlessly falls back from `GLib.idle_add_once` to `GLib.idle_add`.
+- **`easeActor(actor, params)`**: Wraps `actor.easeAsync` on newer engines and transparently falls back to Clutter's traditional promise-wrapped `actor.ease` on older versions.
+
+### 2. Sizing & Grid Layout
+- **Dynamic Columns**: Displays items in a clean 7-column layout that scales to fit various display resolutions and aspect ratios.
+- **Visual Sizing**: Spaced generously with an aspect ratio and width designed to fit search results and the application library sidebar cleanly on both high-DPI displays and standard monitors.
+- **Glassmorphic Theme**: Relies on a customized translucent styling system with subtle gradients, active border highlights, and CSS animations.
+
+### 3. Mouse Interaction & Input Grabbing
+- **Input Grab Guard**: Uses GNOME Shell's `Main.pushModal` to lock input focus to the launcher. All interactive UI elements (`GridItem`, `CategoryTab`, `ResultRow`, etc.) are configured with `can_focus: false` to ensure that key-focus remains centered on the text entry at all times.
+- **Low-Level Button Releases**: Because focus grabbing restricts standard high-level button clicks on unfocused widgets, all clickable items are bound directly to `button-release-event` listeners. This guarantees that mouse clicks are registered reliably under the modal grab.
+- **Focus Watcher Click Guard**: An internal 300ms click guard suppresses the extension's key-focus monitor during clicks. This prevents transient focus losses (caused by mouse presses) from triggering a premature closure of the launcher before actions complete.
+
+### 4. Sidebar Category Selection
+- **Hover Switching**: Moving the mouse cursor over a sidebar category tab automatically activates it, allowing swift browsing without needing explicit clicks.
+- **Scroll Support**: Use the mouse scroll wheel over the sidebar to browse categories sequentially.
+- **Keyboard & Shortcuts**: Press the **Left/Right arrow keys** or the **Shift key** (when the search entry is empty) to switch active category groups instantly.
+
+---
 
 ## Keyboard Shortcuts
 
-| Key | Action | Mode |
+| Shortcut | Action | Scope / Context |
 |---|---|---|
-| `Super+Space` | Toggle launcher | System-wide |
-| `↑` / `↓` | Navigate search results or move up/down in the library grid | Search / Grid |
-| `←` / `→` | Navigate left/right in the library grid | Grid |
-| `Enter` | Activate selected result / Accept modal actions | All |
-| `Tab` | Auto-complete selected name | Search |
-| `Ctrl + 1..9` | Quick-select and launch search results instantly | Search |
-| `Esc` | Close launcher / Cancel modal editing | All |
-| *Any character* | Typing automatically focuses and routes input to the search bar | Grid |
+| `Super + Space` | Toggle the launcher overlay open/closed | System-wide |
+| `↑` / `↓` | Move selection up/down in list views or navigate grids | Search / Grid |
+| `←` / `→` | Move selection left/right | Library Grid |
+| `Enter` | Activate selected item / Submit input in dialogs | Dialog active |
+| `Tab` | Autocomplete search queries | Search list |
+| `Ctrl + 1..9` | Launch the corresponding 1st to 9th search result instantly | Search list |
+| `Shift` (L or R) | Cycle to the next category tab | Grid mode (Empty query) |
+| `Esc` | Close launcher / Quit group editor / Hide prompt overlay | Dialog active |
+| *Any character* | Focuses and starts typing into the search entry | Library Grid |
 
-## Installation
+---
 
-### Method 1 — Build and Install (Recommended for Development)
+## Project Structure & Architecture
 
-Ensure you have `pnpm` installed on your machine. This method compiles the TypeScript code, bundles GSettings schemas, and installs the extension locally:
-
-```bash
-# 1. Build the extension (compiles TypeScript to dist/)
-make build
-
-# 2. Copy compiled artifacts to local GNOME directory
-make install
-
-# 3. Restart GNOME Shell
-#    On Wayland: log out and log back in
-#    On X11:     Alt+F2 → type 'r' → Enter
-
-# 4. Enable the extension
-gnome-extensions enable ormic-launcher@github.com
-# or use GNOME Extensions / Extension Manager app
+```
+ormic-launcher/
+  ├── extension.ts        # Primary extension lifecycle entry point (compiles to dist/extension.js)
+  │     ├── AppProvider     # Recursively indexes GUI application desktop entries
+  │     ├── CalcProvider    # Secure math expression evaluator
+  │     ├── RecentProvider  # Scans ~/.local/share/recently-used.xbel for file paths
+  │     ├── CommandProvider # Spawns CLI commands directly inside the shell environment
+  │     └── WindowProvider  # Searches and switches active window focus
+  │
+  ├── LauncherDialog      # Floating container component managing layout screens:
+  │     ├── St.Entry        # Text input entry with key-event processing
+  │     ├── St.ScrollView   # Handles result lists and grid scrolling
+  │     ├── Library Grid    # App list layout categorized by categories
+  │     ├── Group Editor    # Category checklist editor for custom groups
+  │     └── Tips bar        # Keyboard hint overlay footer
+  │
+  ├── prefs.ts            # GTK/Libadwaita preferences configuration window
+  ├── stylesheet.css      # Glassmorphic dark styling and Pop!_OS accent styles
+  ├── metadata.json       # GNOME extension identifier and version requirements
+  ├── gmenu.d.ts          # GMenu typing definitions for TypeScript
+  └── schemas/            # GSettings schema definition
 ```
 
-### Method 2 — Extension Manager (Zip Archive)
+---
 
-1. Build the project using `make build`.
-2. Package the `dist/` directory into a `.zip` archive.
-3. Open **Extension Manager**, click "Install from file" and select the `.zip` archive.
-4. Toggle the extension on.
+## Installation & Development
 
-### Development & Live Debugging
+### 1. Build and Install (Recommended for Development)
 
-For active development, you can use:
+Ensure you have `pnpm` installed.
+
 ```bash
-# Installs, enables the extension, and tails logs matching 'Ormic'
+# Compile TypeScript files, bundle schemas, and compile GSettings
+make build
+
+# Install files to your local GNOME Shell extensions directory
+make install
+
+# Restart GNOME Shell:
+# - On X11: Alt + F2, type 'r', press Enter
+# - On Wayland: Log out and log back in
+
+# Enable the extension:
+gnome-extensions enable ormic-launcher@github.com
+```
+
+### 2. Live Debugging
+To install the extension, enable it, and tail logs in real-time, run:
+```bash
 make dev-install
 ```
 
-## Preferences
-
-Open the Libadwaita-based settings UI with:
+### 3. Preferences Dialog
+Configure extension options and maximum results:
 ```bash
 gnome-extensions prefs ormic-launcher@github.com
 ```
 
-Or via GNOME Extensions / Extension Manager → ⚙ gear icon.
-
-## Architecture
-
-```
-extension.ts          ← Main TypeScript entry point (compiles to dist/extension.js)
-  ├── AppProvider     ← Caches and indexes GUI apps recursively via GMenu.Tree
-  ├── CalcProvider    ← Evaluates math expressions
-  ├── RecentProvider  ← Reads ~/.local/share/recently-used.xbel
-  ├── CommandProvider ← Runs shell commands via GLib.spawn
-  └── WindowProvider  ← Searches open windows via Meta.Display
-
-LauncherDialog        ← St.BoxLayout floating dialog (Pop!_OS glassmorphic aesthetic)
-  ├── St.Entry        ← Search input with debounced handler
-  ├── St.ScrollView   ← Results list with keyboard navigation
-  ├── Library Grid    ← Grid view of applications categorized by tabs
-  ├── Group Editor    ← Checklist UI to create, rename, edit, and delete custom groups
-  └── Tips bar        ← Keyboard shortcut hints
-
-prefs.ts              ← Adw-based preferences window (Libadwaita UI)
-stylesheet.css        ← COSMIC Dark + Pop!_OS orange accent (#FAB84B)
-gmenu.d.ts            ← Global GMenu typings for TypeScript compilation
-schemas/              ← GSettings schema (keybindings, maximum results, providers)
-```
-
-## GNOME 49 & 50 Porting Notes
-
-### What changed in GNOME 49
-| API | Change | Our handling |
-|---|---|---|
-| `Meta.Rectangle` | Removed — use `Mtk.Rectangle` | Not used; `Mtk` imported with try/catch fallback |
-| `Clutter.ClickAction` / `TapAction` | Removed | Already using `button-press-event` signal instead |
-| `AppMenuButton` | Removed from panel | Not referenced |
-| X11 nested debug | `gnome-shell -r` gone | Use `dbus-run-session gnome-shell --devkit --wayland` |
-| `DoNotDisturbSwitch` | Removed from `calendar.js` | Not used |
-
-### What changed in GNOME 50
-| API | Change | Our handling |
-|---|---|---|
-| `GLib.timeout_add_once()` | New one-shot timer | Adopted via `timeoutOnce()` shim with fallback |
-| `GLib.idle_add_once()` | New one-shot idle | Adopted via `idleOnce()` shim with fallback |
-| `actor.easeAsync()` | Await-able animation | Adopted via `easeActor()` shim with fallback |
-| `libsigcplusplus` / `graphene` | Removed | Not used |
-| X11 | Fully removed | Extension is Wayland-native |
-
-All three shims (`timeoutOnce`, `idleOnce`, `easeActor`) automatically detect the GNOME version at runtime and call the new API when available, falling back to the traditional approach on older shells — **zero code duplication**.
-
-## Customizing styling
-Edit `stylesheet.css` to change colors. The default accent color is `#FAB84B` (Pop!_OS orange). Change every occurrence to your preferred color.
-
-## Adding Custom Providers
-
-A provider is any object with:
-
-```typescript
-class MyProvider {
-  id = 'my-provider';
-  priority = 5; // higher = sorted first on equal score
-
-  /** @param {string} query @returns {SearchResult[]} */
-  search(query: string): SearchResult[] {
-    return [{
-      id: 'my-provider:result-1',
-      name: 'My Result',
-      description: 'A description shown below the name',
-      score: 50,            // 0–100, higher shown first
-      iconName: 'document-symbolic',   // fallback icon
-      categoryIcon: 'document-symbolic',
-      category: 'Custom',
-      activate: () => { /* do something */ },
-    }];
-  }
-}
-```
-
-Then add it to the providers array in `extension.ts`:
-
-```typescript
-this.providers = [
-  new AppProvider(),
-  new MyProvider(),   // ← add here
-  // ...
-];
-```
-
-## Requirements
-
-- GNOME Shell 45, 46, 47, 48, 49, or 50
-- GLib, Gio, St, Clutter, Meta, Shell, and **GMenu** (standard GNOME libraries)
-- No external Rust daemon required — everything runs directly inside GNOME Shell GJS!
-
 ## License
 
-GPL-2.0-or-later — GNOME Shell extensions are inherently derived works of GNOME Shell, which is licensed GPL-2.0-or-later.
-
-Inspired by the modular architecture and pluggable providers concept of the [pop-os/launcher](https://github.com/pop-os/launcher) project (MPL-2.0), but completely and independently reimplemented in original TypeScript & GJS code with no borrowed source code.
+This project is licensed under the GPL-2.0-or-later license.
+Inspired by the modular provider architecture of the Pop!_OS Launcher project, rewritten from scratch in TypeScript and native GJS.
