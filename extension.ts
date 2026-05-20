@@ -1741,6 +1741,9 @@ const LauncherDialog = GObject.registerClass(
                 this._categoryGridBoxes.forEach(box => box.destroy());
                 this._categoryGridBoxes.clear();
             }
+            if (this._gridItemsCache) {
+                this._gridItemsCache.clear();
+            }
 
             // Render Bottom Category Tabs
             this._tabsBox.destroy_all_children();
