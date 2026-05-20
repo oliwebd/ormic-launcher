@@ -1298,7 +1298,7 @@ const LauncherDialog = GObject.registerClass(
             this._results.forEach((r, i) => {
                 const row = new (ResultRow as any)() as ResultRow;
                 row.setup(r, i, this._ext._settings, this._shellSettings);
-                row.connect('item-activated', () => { r.activate(); this._ext.hide(); });
+                row.connect('item-activated', () => { this._ext.hide(); r.activate(); });
                 row.connect('item-hovered', () => {
                     this._selectIdx(i);
                 });
@@ -1330,12 +1330,12 @@ const LauncherDialog = GObject.registerClass(
         private _activateSel() {
             const r = this._results[this._selIdx];
             dbg('Activate', 'list sel', this._selIdx, r?.name ?? 'none');
-            if (r) { r.activate(); this._ext.hide(); }
+            if (r) { this._ext.hide(); r.activate(); }
         }
 
         private _activateIdx(i: number) {
             const r = this._results[i];
-            if (r) { r.activate(); this._ext.hide(); }
+            if (r) { this._ext.hide(); r.activate(); }
         }
 
         private _complete() {
@@ -1486,8 +1486,8 @@ const LauncherDialog = GObject.registerClass(
                 const item = new (GridItem as any)() as GridItem;
                 item.setup(app);
                 item.connect('item-activated', () => {
-                    app.activate();
                     this._ext.hide();
+                    app.activate();
                 });
                 item.connect('item-hovered', () => {
                     // FIX: find the flat index of this item so _gridSelIdx stays in sync
@@ -1533,8 +1533,8 @@ const LauncherDialog = GObject.registerClass(
             const items = this._collectGridItems();
             const selected = items[this._gridSelIdx];
             if (selected) {
-                selected.result.activate();
                 this._ext.hide();
+                selected.result.activate();
             }
         }
 
@@ -1740,6 +1740,7 @@ type OrmicIndicator = InstanceType<typeof OrmicIndicator>;
 export default class OrmicLauncherExtension extends Extension {
     providers!: any[];
     _visible!: boolean;
+    _isModal = false;
     _settings!: Gio.Settings;
     _overlay!: St.Widget | null;
     _dialog!: LauncherDialog | null;
@@ -1862,9 +1863,9 @@ this._overlay.connect('key-press-event', (_, ev) => {
     _pos() {
         if (!this._overlay || !this._dialog) return;
         const mon = Main.layoutManager.primaryMonitor; if (!mon) return;
-        const dw = Math.min(680, mon.width * 0.50);
+        const dw = Math.min(860, mon.width * 0.55);
         const dx = mon.x + Math.floor((mon.width - dw) / 2);
-        const dy = mon.y + Math.floor(mon.height * 0.18);
+        const dy = mon.y + Math.floor(mon.height * 0.14);
         this._overlay.set_position(mon.x, mon.y);
         this._overlay.set_size(mon.width, mon.height);
         this._dialog.set_position(dx - mon.x, dy - mon.y);
@@ -1890,9 +1891,11 @@ this._overlay.connect('key-press-event', (_, ev) => {
         // If it does, bail out cleanly instead of leaving a frozen overlay.
         if (!Main.pushModal(this._overlay)) {
             this._visible = false;
+            this._isModal = false;
             this._overlay.hide();
             return;
         }
+        this._isModal = true;
 
         easeActor(this._overlay, { opacity: 255, duration: 150, mode: Clutter.AnimationMode.EASE_OUT_QUAD });
         easeActor(this._dialog, { opacity: 255, translation_y: 0, duration: 200, mode: Clutter.AnimationMode.EASE_OUT_EXPO });
@@ -1904,10 +1907,13 @@ this._overlay.connect('key-press-event', (_, ev) => {
         if (!this._visible) return;
         if (!this._dialog || !this._overlay) return;
         this._visible = false;
-        try {
-            Main.popModal(this._overlay);
-        } catch (e: any) {
-            dbg('Launcher', `popModal failed: ${e.message}`);
+        if (this._isModal) {
+            this._isModal = false;
+            try {
+                Main.popModal(this._overlay);
+            } catch (e: any) {
+                dbg('Launcher', `popModal failed: ${e.message}`);
+            }
         }
         const ov = this._overlay, dl = this._dialog;
         easeActor(dl, {
