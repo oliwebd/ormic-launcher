@@ -1933,7 +1933,9 @@ this._overlay.connect('key-press-event', (_, ev) => {
 
         // GNOME 50 Wayland: pushModal can fail (e.g. another modal is active).
         // If it does, bail out cleanly instead of leaving a frozen overlay.
-        if (!Main.pushModal(this._overlay)) {
+        if (!Main.pushModal(this._overlay, {
+            actionMode: Shell.ActionMode.NORMAL | Shell.ActionMode.OVERVIEW | Shell.ActionMode.POPUP,
+        })) {
             this._visible = false;
             this._isModal = false;
             this._overlay.hide();
