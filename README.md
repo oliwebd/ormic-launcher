@@ -1,7 +1,6 @@
 # Ormic Launcher — GNOME Shell Extension [BETA]
 
-A modular, floating application launcher for GNOME Shell **45 – 50**, inspired by
-the [pop-os/launcher](https://github.com/pop-os/launcher) project architecture. Re-engineered in pure TypeScript and standard GJS, it matches the premium glassmorphic dark theme and features of the Pop!_OS Launcher window.
+A modular, floating application launcher for GNOME Shell **45 – 50**, inspired by the [pop-os/launcher](https://github.com/pop-os/launcher) project architecture. Re-engineered in pure TypeScript and standard GJS, it matches the premium glassmorphic dark theme and features of the Pop!_OS Launcher window.
 
 ## Supported GNOME Versions
 
@@ -19,24 +18,28 @@ the [pop-os/launcher](https://github.com/pop-os/launcher) project architecture. 
 | Feature | Description | Example |
 |---|---|---|
 | **Apps (GMenu)** | Standard GUI apps loaded recursively from `GMenu.Tree` | `firefox`, `gimp` |
+| **Library Grid View** | Switch between the search list and a full application library grid view categorized by tabs | Library Home, Office, System, etc. |
+| **Custom App Groups** | Create, rename, edit, and delete custom application groups using a built-in checklist editor | Click the "+" tab or edit icon |
+| **Window Switcher** | Find and focus currently open windows using title or WM class, or trigger explicitly with `win ` | `win firefox`, `terminal` |
 | **Favorites First** | Empty search shows your **Favorite Apps** prioritized at the top | Direct launch |
 | **Calculator** | Evaluates math expressions securely with fallback | `2 + 2`, `sqrt(144)`, `sin(90) * pi` |
-| **Web Search** | Launches default engine or specific engines with `g `, `d `, `y `, `gh `, `w ` | `g gnome extensions` |
 | **Recent Files** | Search files you have recently opened (≥2 chars) | `report`, `screenshot` |
 | **Shell Command** | Run shell commands directly with `> ` trigger | `> systemctl restart bluetooth` |
 
-*Each search result highlights its source on the right side of the list (e.g. `Internet`, `Office`, `Calc`, `Web`) matching the premium look of the Pop!_OS Launcher.*
+*Each search result highlights its source on the right side of the list (e.g. `Window`, `Office`, `Calc`, `Command`, `Recent`) matching the premium look of the Pop!_OS Launcher.*
 
 ## Keyboard Shortcuts
 
-| Key | Action |
-|---|---|
-| `Super+Space` | Toggle launcher |
-| `↑` / `↓` | Navigate results |
-| `Enter` | Activate selected result |
-| `Tab` | Auto-complete selected name |
-| `Ctrl + 1..9` | Quick-select and launch search results instantly |
-| `Esc` | Close launcher |
+| Key | Action | Mode |
+|---|---|---|
+| `Super+Space` | Toggle launcher | System-wide |
+| `↑` / `↓` | Navigate search results or move up/down in the library grid | Search / Grid |
+| `←` / `→` | Navigate left/right in the library grid | Grid |
+| `Enter` | Activate selected result / Accept modal actions | All |
+| `Tab` | Auto-complete selected name | Search |
+| `Ctrl + 1..9` | Quick-select and launch search results instantly | Search |
+| `Esc` | Close launcher / Cancel modal editing | All |
+| *Any character* | Typing automatically focuses and routes input to the search bar | Grid |
 
 ## Installation
 
@@ -67,6 +70,14 @@ gnome-extensions enable ormic-launcher@github.com
 3. Open **Extension Manager**, click "Install from file" and select the `.zip` archive.
 4. Toggle the extension on.
 
+### Development & Live Debugging
+
+For active development, you can use:
+```bash
+# Installs, enables the extension, and tails logs matching 'Ormic'
+make dev-install
+```
+
 ## Preferences
 
 Open the Libadwaita-based settings UI with:
@@ -82,13 +93,15 @@ Or via GNOME Extensions / Extension Manager → ⚙ gear icon.
 extension.ts          ← Main TypeScript entry point (compiles to dist/extension.js)
   ├── AppProvider     ← Caches and indexes GUI apps recursively via GMenu.Tree
   ├── CalcProvider    ← Evaluates math expressions
-  ├── WebProvider     ← Opens browser with search query
   ├── RecentProvider  ← Reads ~/.local/share/recently-used.xbel
-  └── CommandProvider ← Runs shell commands via GLib.spawn
+  ├── CommandProvider ← Runs shell commands via GLib.spawn
+  └── WindowProvider  ← Searches open windows via Meta.Display
 
 LauncherDialog        ← St.BoxLayout floating dialog (Pop!_OS glassmorphic aesthetic)
   ├── St.Entry        ← Search input with debounced handler
   ├── St.ScrollView   ← Results list with keyboard navigation
+  ├── Library Grid    ← Grid view of applications categorized by tabs
+  ├── Group Editor    ← Checklist UI to create, rename, edit, and delete custom groups
   └── Tips bar        ← Keyboard shortcut hints
 
 prefs.ts              ← Adw-based preferences window (Libadwaita UI)
@@ -168,4 +181,3 @@ this.providers = [
 GPL-2.0-or-later — GNOME Shell extensions are inherently derived works of GNOME Shell, which is licensed GPL-2.0-or-later.
 
 Inspired by the modular architecture and pluggable providers concept of the [pop-os/launcher](https://github.com/pop-os/launcher) project (MPL-2.0), but completely and independently reimplemented in original TypeScript & GJS code with no borrowed source code.
-
