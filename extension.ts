@@ -1481,7 +1481,20 @@ const LauncherDialog = GObject.registerClass(
                 this._headerBox.show();
                 this._gridScroll.show();
                 this._setTabsVisible(true);
-                this._renderGridAndTabs();
+                // Return to grid view: just swap the cached grid box, don't rebuild
+                this._headerTitleLabel.text = this._activeCategory;
+                const gridBox = this._gridBox;
+                this._gridScroll.set_child(gridBox);
+                if (gridBox.get_n_children() === 0) {
+                    this._renderGridOnly();
+                } else {
+                    this._gridSelIdx = -1;
+                    timeoutOnce(10, () => {
+                        if (this._gridSelIdx === -1 && this._gridScroll.visible) {
+                            this._selectGridIdx(0);
+                        }
+                    });
+                }
                 return;
             }
 
@@ -1606,6 +1619,7 @@ const LauncherDialog = GObject.registerClass(
 
         private _selectCategory(categoryName: string) {
             if (this._activeCategory === categoryName) return;
+            const t0 = GLib.get_monotonic_time();
             this._activeCategory = categoryName;
 
             // 1. Update tabs selected state without rebuilding them
@@ -1635,8 +1649,11 @@ const LauncherDialog = GObject.registerClass(
 
             // 4. Render only if not already cached/rendered
             if (!hasCachedGrid) {
+                dbg('Performance', `selectCategory('${categoryName}') — CACHE MISS, rendering grid`);
                 this._renderGridOnly();
             } else {
+                const elapsed = (GLib.get_monotonic_time() - t0) / 1000;
+                dbg('Performance', `selectCategory('${categoryName}') — CACHE HIT, took ${elapsed.toFixed(1)}ms`);
                 this._gridSelIdx = -1;
                 timeoutOnce(10, () => {
                     if (this._gridSelIdx === -1 && this._gridScroll.visible) {
@@ -1647,6 +1664,7 @@ const LauncherDialog = GObject.registerClass(
         }
 
         private _renderGridOnly() {
+            const t0 = GLib.get_monotonic_time();
             this._ensureAllAppsCache();
 
             // Filter apps based on active category
@@ -1726,6 +1744,9 @@ const LauncherDialog = GObject.registerClass(
                 currentRow.add_child(item);
             });
 
+            const elapsed = (GLib.get_monotonic_time() - t0) / 1000;
+            dbg('Performance', `renderGridOnly('${this._activeCategory}') — ${filteredApps.length} items, took ${elapsed.toFixed(1)}ms`);
+
             timeoutOnce(50, () => {
                 if (this._gridSelIdx === -1 && this._gridScroll.visible) {
                     this._selectGridIdx(0);
@@ -1733,17 +1754,8 @@ const LauncherDialog = GObject.registerClass(
             });
         }
 
-        private _renderGridAndTabs() {
-            dbg('Grid', `renderGridAndTabs category=${this._activeCategory}`);
-
-            // Clear category grid boxes cache on categories/tabs structure changes
-            if (this._categoryGridBoxes) {
-                this._categoryGridBoxes.forEach(box => box.destroy());
-                this._categoryGridBoxes.clear();
-            }
-            if (this._gridItemsCache) {
-                this._gridItemsCache.clear();
-            }
+        private _renderTabsOnly() {
+            dbg('Grid', `renderTabsOnly category=${this._activeCategory}`);
 
             // Render Bottom Category Tabs
             this._tabsBox.destroy_all_children();
@@ -1805,26 +1817,35 @@ const LauncherDialog = GObject.registerClass(
                 this._editBtn.hide();
                 this._deleteBtn.hide();
             }
+        }
 
-            // Set grid child from cache or render
+        /**
+         * Rebuild tabs + grid for the active category.
+         * Only invalidates the CURRENT category's cached grid box.
+         * Grid items (icon textures) are preserved in _gridItemsCache.
+         */
+        private _renderGridAndTabs() {
+            dbg('Performance', `renderGridAndTabs — rebuilding tabs, invalidating grid for: ${this._activeCategory}`);
+
+            // Only invalidate the active category's grid box (not ALL of them)
+            const oldBox = this._categoryGridBoxes.get(this._activeCategory);
+            if (oldBox) {
+                // Detach cached grid items from rows before destroying the box
+                oldBox.get_children().forEach((row: any) => {
+                    if (row.get_children) {
+                        row.get_children().forEach((child: any) => row.remove_child(child));
+                    }
+                });
+                oldBox.destroy();
+                this._categoryGridBoxes.delete(this._activeCategory);
+            }
+
+            this._renderTabsOnly();
+
+            // Swap in grid and render
             const gridBox = this._gridBox;
             this._gridScroll.set_child(gridBox);
-
-            if (this._categoryGridBoxes.size <= 1) {
-                // If it's a fresh/dirty load, defer rendering slightly to allow opening animations to run buttery smooth
-                timeoutOnce(20, () => {
-                    if (this._activeCategory === 'Library Home') {
-                        this._renderGridOnly();
-                    }
-                });
-            } else {
-                this._gridSelIdx = -1;
-                timeoutOnce(10, () => {
-                    if (this._gridSelIdx === -1 && this._gridScroll.visible) {
-                        this._selectGridIdx(0);
-                    }
-                });
-            }
+            this._renderGridOnly();
         }
 
         private _selectGridIdx(i: number) {
@@ -2037,21 +2058,6 @@ const LauncherDialog = GObject.registerClass(
                 }
             }
 
-            // Invalidate caches if the apps changed or maps are empty
-            if (isAppsDirty || this._allAppsCacheDirty || this._categoryGridBoxes.size === 0) {
-                dbg('Performance', `Invalidating caches. Reason: isAppsDirty=${isAppsDirty}, allAppsCacheDirty=${this._allAppsCacheDirty}, categoryGridBoxesSize=${this._categoryGridBoxes.size}`);
-                this._allAppsCacheDirty = true;
-                if (this._gridItemsCache) {
-                    this._gridItemsCache.clear();
-                }
-                if (this._categoryGridBoxes) {
-                    this._categoryGridBoxes.forEach(box => box.destroy());
-                    this._categoryGridBoxes.clear();
-                }
-            } else {
-                dbg('Performance', 'Reusing cached category grid boxes (0ms layout change)');
-            }
-
             this._clear();
             this._entry.text = '';
             this._activeCategory = 'Library Home';
@@ -2067,7 +2073,59 @@ const LauncherDialog = GObject.registerClass(
             this._gridScroll.show();
             this._setTabsVisible(true);
 
-            this._renderGridAndTabs();
+            // Decide: fast path (reuse caches) or slow path (rebuild everything)
+            const needsRebuild = isAppsDirty || this._allAppsCacheDirty || this._categoryGridBoxes.size === 0;
+
+            if (needsRebuild) {
+                dbg('Performance', `SLOW PATH: cache rebuild needed. isAppsDirty=${isAppsDirty}, allAppsCacheDirty=${this._allAppsCacheDirty}, gridBoxes=${this._categoryGridBoxes.size}`);
+                this._allAppsCacheDirty = true;
+                if (this._gridItemsCache) this._gridItemsCache.clear();
+                if (this._categoryGridBoxes) {
+                    this._categoryGridBoxes.forEach(box => box.destroy());
+                    this._categoryGridBoxes.clear();
+                }
+
+                // Rebuild tabs
+                this._renderTabsOnly();
+
+                // Swap in grid box (will be a new empty one since cache was cleared)
+                const gridBox = this._gridBox;
+                this._gridScroll.set_child(gridBox);
+
+                // Defer grid rendering to allow opening animation to play smoothly
+                timeoutOnce(20, () => {
+                    this._renderGridOnly();
+                });
+            } else {
+                dbg('Performance', `FAST PATH: reusing ${this._categoryGridBoxes.size} cached grid boxes, ${this._gridItemsCache.size} cached items`);
+
+                // Reuse existing tabs — just update selection state (no destroy/create)
+                const tabs = this._tabsBox.get_children() as CategoryTab[];
+                if (tabs.length === 0) {
+                    // Tabs were never built
+                    this._renderTabsOnly();
+                } else {
+                    tabs.forEach(tab => {
+                        if (typeof tab.setSelected === 'function') {
+                            tab.setSelected(tab.categoryName === this._activeCategory);
+                        }
+                    });
+                    this._headerTitleLabel.text = this._activeCategory;
+                    this._editBtn.hide();
+                    this._deleteBtn.hide();
+                }
+
+                // Swap in the cached Library Home grid box — instant, 0ms
+                const gridBox = this._gridBox;
+                this._gridScroll.set_child(gridBox);
+
+                this._gridSelIdx = -1;
+                timeoutOnce(10, () => {
+                    if (this._gridSelIdx === -1 && this._gridScroll.visible) {
+                        this._selectGridIdx(0);
+                    }
+                });
+            }
         }
     },
 );
