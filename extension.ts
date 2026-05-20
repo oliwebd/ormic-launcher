@@ -1250,6 +1250,7 @@ const LauncherDialog = GObject.registerClass(
                 x_expand: true, y_expand: true,
                 x_align: Clutter.ActorAlign.CENTER,
                 y_align: Clutter.ActorAlign.CENTER,
+                reactive: true,
             });
             this._promptOverlay.hide();
 
@@ -1257,7 +1258,32 @@ const LauncherDialog = GObject.registerClass(
                 style_class: 'ormic-prompt-card',
                 vertical: true,
                 x_expand: true,
+                reactive: true,
             });
+            try {
+                const blur = new Shell.BlurEffect({
+                    brightness: 0.90,
+                    mode: Shell.BlurMode.BACKGROUND,
+                });
+                // @ts-ignore
+                blur.sigma = 40;
+                promptCard.add_effect_with_name('blur', blur);
+            } catch (e: any) {
+                log(`Ormic Launcher: prompt card blur error: ${e.message}`);
+            }
+
+            // Click outside the card (but on the overlay) to cancel
+            this._promptOverlay.connect('button-press-event', (_, ev) => {
+                const [x, y] = ev.get_coords();
+                const [success, lx, ly] = promptCard.transform_stage_point(x, y);
+                const insideCard = success && lx >= 0 && lx <= promptCard.width && ly >= 0 && ly <= promptCard.height;
+                if (!insideCard) {
+                    this._hidePromptOverlay(false);
+                    return Clutter.EVENT_STOP;
+                }
+                return Clutter.EVENT_PROPAGATE;
+            });
+
             promptCard.add_child(new St.Label({
                 text: _('Create New Group'),
                 style_class: 'ormic-prompt-title',
