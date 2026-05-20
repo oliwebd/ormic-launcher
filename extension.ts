@@ -516,13 +516,9 @@ const GridItem = GObject.registerClass({
 
         this.set_child(this._box);
 
-        this.connect('button-release-event', (actor, ev) => {
-            if (ev.get_button() === 1) {
-                dbg('GridItem', `clicked on ${result.name}`);
-                this.emit('item-activated');
-                return Clutter.EVENT_STOP;
-            }
-            return Clutter.EVENT_PROPAGATE;
+        this.connect('clicked', () => {
+            dbg('GridItem', `clicked on ${result.name}`);
+            this.emit('item-activated');
         });
 
         this.connect('notify::hover', () => {
@@ -584,13 +580,9 @@ const CategoryTab = GObject.registerClass({
 
         this.set_child(box);
 
-        this.connect('button-release-event', (actor, ev) => {
-            if (ev.get_button() === 1) {
-                dbg('CategoryTab', `clicked on ${categoryName}`);
-                this.emit('tab-selected');
-                return Clutter.EVENT_STOP;
-            }
-            return Clutter.EVENT_PROPAGATE;
+        this.connect('clicked', () => {
+            dbg('CategoryTab', `clicked on ${categoryName}`);
+            this.emit('tab-selected');
         });
     }
 
@@ -666,14 +658,10 @@ const EditAppRow = GObject.registerClass({
 
         if (this._selected) this.add_style_class_name('selected');
 
-        this.connect('button-release-event', (actor, ev) => {
-            if (ev.get_button() === 1) {
-                dbg('EditAppRow', `clicked on ${result.name}`);
-                this.toggle();
-                this.emit('toggle');
-                return Clutter.EVENT_STOP;
-            }
-            return Clutter.EVENT_PROPAGATE;
+        this.connect('clicked', () => {
+            dbg('EditAppRow', `clicked on ${result.name}`);
+            this.toggle();
+            this.emit('toggle');
         });
     }
 
@@ -816,13 +804,9 @@ const ResultRow = GObject.registerClass({
 
         this.set_child(mainBox);
 
-        this.connect('button-release-event', (actor, ev) => {
-            if (ev.get_button() === 1) {
-                dbg('ResultRow', `clicked on ${result.name}`);
-                this.emit('item-activated');
-                return Clutter.EVENT_STOP;
-            }
-            return Clutter.EVENT_PROPAGATE;
+        this.connect('clicked', () => {
+            dbg('ResultRow', `clicked on ${result.name}`);
+            this.emit('item-activated');
         });
 
         this.connect('notify::hover', () => {
@@ -1770,6 +1754,15 @@ export default class OrmicLauncherExtension extends Extension {
             x: 0, y: 0, opacity: 0,
         });
 
+        // Set click guard on capturing event phase for all button presses
+        this._overlay.connect('captured-event', (_, ev: any) => {
+            const t = typeof ev.type === 'function' ? ev.type() : ev.type;
+            if (t === Clutter.EventType.BUTTON_PRESS) {
+                this._setClickGuard();
+            }
+            return Clutter.EVENT_PROPAGATE;
+        });
+
         // FIX: Click-outside-to-close lives here on the overlay, not on the
         // dialog. The overlay covers the full monitor. We check whether the
         // press landed inside the dialog's bounding box using d.contains(source)
@@ -1785,7 +1778,10 @@ export default class OrmicLauncherExtension extends Extension {
             const [success, lx, ly] = d.transform_stage_point(x, y);
             const insideDialog = success && lx >= 0 && lx <= d.width && ly >= 0 && ly <= d.height;
 
+            dbg('OverlayPress', `stage_click=(${x}, ${y}) local_click=(${lx}, ${ly}) dialog_size=(${d.width}, ${d.height}) inside=${insideDialog}`);
+
             if (!insideDialog) {
+                dbg('OverlayPress', 'Click outside dialog, hiding launcher');
                 this.hide();
             } else {
                 // Set click guard: suppress the focus-watcher while
