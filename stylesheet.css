@@ -128,9 +128,9 @@
 
 /* ── Icon bins ───────────────────────────────────────────────────────────── */
 .ormic-icon-bin {
-  width: 52px;
-  height: 52px;
-  border-radius: 11px;
+  width: 42px;
+  height: 42px;
+  border-radius: 9px;
   background-color: rgba(255, 255, 255, 0.04);
   margin: 4px 14px 4px 10px;
   padding: 2px;
@@ -138,18 +138,18 @@
 
 .ormic-icon-sym {
   color: rgba(255, 255, 255, 0.70);
-  icon-size: 48px;
+  icon-size: 38px;
 }
 
 /* ── Text column ─────────────────────────────────────────────────────────── */
 .ormic-text-col {
-  spacing: 3px;
+  spacing: 2px;
   padding: 0;
 }
 
 .ormic-name {
   color: rgba(255, 255, 255, 0.92);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
 }
 
@@ -159,7 +159,7 @@
 
 .ormic-desc {
   color: rgba(255, 255, 255, 0.36);
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 400;
 }
 
@@ -304,12 +304,12 @@
 
 /* ── Grid Card Item ──────────────────────────────────────────────────────── */
 .ormic-grid-item {
-  padding: 10px;
-  border-radius: 14px;
+  padding: 8px;
+  border-radius: 12px;
   background-color: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(255, 255, 255, 0.04);
-  min-width: 98px;
-  min-height: 112px;
+  min-width: 82px;
+  min-height: 96px;
   transition-duration: 80ms;
 }
 
@@ -329,23 +329,23 @@
 }
 
 .ormic-grid-icon-bin {
-  width: 58px;
-  height: 58px;
-  border-radius: 12px;
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.02) 100%);
-  padding: 6px;
-  margin: 0 auto 6px auto;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  padding: 4px;
+  margin: 0 auto 4px auto;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
 }
 
 .ormic-grid-icon-sym {
   color: rgba(255, 255, 255, 0.65);
-  icon-size: 56px;
+  icon-size: 46px;
 }
 
 .ormic-grid-label {
   color: rgba(255, 255, 255, 0.82);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 500;
   text-align: center;
 }
@@ -354,21 +354,22 @@
   color: #FAB84B;
 }
 
-/* ── Footer Category Tabs ────────────────────────────────────────────────── */
+/* ── Left Sidebar Category Tabs ──────────────────────────────────────────── */
 .ormic-tabs-box {
-  padding: 12px 20px;
-  spacing: 8px;
+  padding: 16px 10px;
+  spacing: 6px;
   background-color: rgba(0, 0, 0, 0.16);
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  width: 170px;
+  min-width: 170px;
 }
 
 .ormic-category-tab {
-  padding: 6px 14px;
-  border-radius: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
   background-color: transparent;
   border: 1px solid transparent;
   transition-duration: 80ms;
-  min-width: 90px;
+  x-align: start;
 }
 
 .ormic-category-tab:hover {
@@ -382,12 +383,12 @@
 }
 
 .ormic-category-tab-box {
-  spacing: 3px;
+  spacing: 10px;
 }
 
 .ormic-category-tab-icon {
   color: rgba(255, 255, 255, 0.52);
-  icon-size: 20px;
+  icon-size: 16px;
 }
 
 .ormic-category-tab.active .ormic-category-tab-icon {
@@ -395,14 +396,19 @@
 }
 
 .ormic-category-tab-label {
-  font-size: 10px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.45);
-  margin-top: 2px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.65);
 }
 
 .ormic-category-tab.active .ormic-category-tab-label {
   color: #FAB84B;
+  font-weight: 600;
+}
+
+.ormic-vsep {
+  width: 1px;
+  background-color: rgba(255, 255, 255, 0.065);
 }
 
 /* ── Group Editor Screen ─────────────────────────────────────────────────── */
@@ -510,7 +516,7 @@
 }
 
 .ormic-edit-name {
-  font-size: 13.5px;
+  font-size: 12.5px;
   color: rgba(255, 255, 255, 0.88);
 }
 

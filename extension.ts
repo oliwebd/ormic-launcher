@@ -488,18 +488,18 @@ const GridItem = GObject.registerClass({
 
         const iconBin = new St.Bin({ style_class: 'ormic-grid-icon-bin' });
         if (result.createIcon) {
-            const texture = result.createIcon(56);
+            const texture = result.createIcon(44);
             if (texture) {
-                texture.set_size(56, 56);
+                texture.set_size(44, 44);
                 iconBin.set_child(texture);
             }
         } else if (result.icon) {
-            result.icon.set_size(56, 56);
+            result.icon.set_size(44, 44);
             iconBin.set_child(result.icon);
         } else {
             iconBin.set_child(new St.Icon({
                 icon_name: result.iconName ?? 'application-x-executable-symbolic',
-                icon_size: 56,
+                icon_size: 44,
                 style_class: 'ormic-grid-icon-sym',
             }));
         }
@@ -558,15 +558,15 @@ const CategoryTab = GObject.registerClass({
         this._iconName = iconName;
 
         const box = new St.BoxLayout({
-            vertical: true,
+            vertical: false,
             style_class: 'ormic-category-tab-box',
-            x_align: Clutter.ActorAlign.CENTER,
+            x_expand: true,
             y_align: Clutter.ActorAlign.CENTER,
         });
 
         const icon = new St.Icon({
             icon_name: iconName,
-            icon_size: 20,
+            icon_size: 16,
             style_class: 'ormic-category-tab-icon',
         });
         box.add_child(icon);
@@ -574,7 +574,7 @@ const CategoryTab = GObject.registerClass({
         const label = new St.Label({
             text: categoryName,
             style_class: 'ormic-category-tab-label',
-            x_align: Clutter.ActorAlign.CENTER,
+            y_align: Clutter.ActorAlign.CENTER,
         });
         box.add_child(label);
 
@@ -861,6 +861,7 @@ const LauncherDialog = GObject.registerClass(
         _gridScroll!: St.ScrollView;
         _gridBox!: St.BoxLayout;
         _tabsBox!: St.BoxLayout;
+        _vsep!: St.Widget;
 
         // Group Editor checklist view
         _editorBox!: St.BoxLayout;
@@ -1054,12 +1055,14 @@ const LauncherDialog = GObject.registerClass(
             });
             this._gridScroll.set_child(this._gridBox);
 
-            // ── Bottom Tabs Container ─────────────────────────────────────
+            // ── Left Sidebar Tabs Container ───────────────────────────────
             this._tabsBox = new St.BoxLayout({
                 style_class: 'ormic-tabs-box',
-                x_expand: true,
-                x_align: Clutter.ActorAlign.CENTER,
+                vertical: true,
+                y_expand: true,
+                y_align: Clutter.ActorAlign.FILL,
             });
+            this._vsep = new St.Widget({ style_class: 'ormic-vsep', y_expand: true });
 
             // ── Group Editor Screen ───────────────────────────────────────
             this._editorBox = new St.BoxLayout({
@@ -1161,14 +1164,35 @@ const LauncherDialog = GObject.registerClass(
             this.add_child(this._entryBox);
             this.add_child(new St.Widget({ style_class: 'ormic-sep', x_expand: true }));
 
-            this.add_child(this._scroll);
-            this.add_child(this._headerBox);
-            this.add_child(this._gridScroll);
-            this.add_child(this._editorBox);
-            this.add_child(this._promptOverlay);
+            const contentContainer = new St.BoxLayout({
+                style_class: 'ormic-content-container',
+                x_expand: true, y_expand: true,
+            });
+
+            this._tabsBox.vertical = true;
+            this._tabsBox.x_expand = false;
+            this._tabsBox.y_expand = true;
+            this._tabsBox.x_align = Clutter.ActorAlign.START;
+            this._tabsBox.y_align = Clutter.ActorAlign.FILL;
+            contentContainer.add_child(this._tabsBox);
+
+            contentContainer.add_child(this._vsep);
+
+            const rightPanel = new St.BoxLayout({
+                style_class: 'ormic-right-panel',
+                vertical: true,
+                x_expand: true, y_expand: true,
+            });
+            rightPanel.add_child(this._scroll);
+            rightPanel.add_child(this._headerBox);
+            rightPanel.add_child(this._gridScroll);
+            rightPanel.add_child(this._editorBox);
+            rightPanel.add_child(this._promptOverlay);
+
+            contentContainer.add_child(rightPanel);
+            this.add_child(contentContainer);
 
             this.add_child(new St.Widget({ style_class: 'ormic-sep', x_expand: true }));
-            this.add_child(this._tabsBox);
             this.add_child(this._tips);
         }
 
@@ -1211,8 +1235,8 @@ const LauncherDialog = GObject.registerClass(
             } else {
                 // Library grid view key handlers
                 if (sym === Clutter.KEY_Return || sym === Clutter.KEY_KP_Enter) { this._activateGridSel(); return true; }
-                if (sym === Clutter.KEY_Up) { this._moveGridSel(-6); return true; }
-                if (sym === Clutter.KEY_Down) { this._moveGridSel(6); return true; }
+                if (sym === Clutter.KEY_Up) { this._moveGridSel(-7); return true; }
+                if (sym === Clutter.KEY_Down) { this._moveGridSel(7); return true; }
                 if (sym === Clutter.KEY_Left) { this._moveGridSel(-1); return true; }
                 if (sym === Clutter.KEY_Right) { this._moveGridSel(1); return true; }
 
@@ -1227,6 +1251,16 @@ const LauncherDialog = GObject.registerClass(
                 }
             }
             return false;
+        }
+
+        private _setTabsVisible(visible: boolean) {
+            if (visible) {
+                this._tabsBox.show();
+                this._vsep.show();
+            } else {
+                this._tabsBox.hide();
+                this._vsep.hide();
+            }
         }
 
         private _onText() {
@@ -1249,7 +1283,7 @@ const LauncherDialog = GObject.registerClass(
                 this._scroll.hide();
                 this._headerBox.show();
                 this._gridScroll.show();
-                this._tabsBox.show();
+                this._setTabsVisible(true);
                 this._renderGridAndTabs();
                 return;
             }
@@ -1257,7 +1291,7 @@ const LauncherDialog = GObject.registerClass(
             // Search Results Mode
             this._headerBox.hide();
             this._gridScroll.hide();
-            this._tabsBox.hide();
+            this._setTabsVisible(false);
             this._scroll.show();
 
             this._rbox.destroy_all_children();
@@ -1460,7 +1494,7 @@ const LauncherDialog = GObject.registerClass(
                 return;
             }
 
-            const columns = 6;
+            const columns = 7;
             let currentRow = new St.BoxLayout({ style_class: 'ormic-grid-row', x_expand: true });
             this._gridBox.add_child(currentRow);
 
@@ -1531,7 +1565,7 @@ const LauncherDialog = GObject.registerClass(
             this._isEditing = true;
             this._headerBox.hide();
             this._gridScroll.hide();
-            this._tabsBox.hide();
+            this._setTabsVisible(false);
 
             this._editorNameEntry.text = this._activeCategory;
             this._editorAppsContainer.destroy_all_children();
@@ -1575,7 +1609,7 @@ const LauncherDialog = GObject.registerClass(
             this._editorBox.hide();
             this._headerBox.show();
             this._gridScroll.show();
-            this._tabsBox.show();
+            this._setTabsVisible(true);
 
             if (save) {
                 const newName = this._editorNameEntry.text.trim();
@@ -1694,7 +1728,7 @@ const LauncherDialog = GObject.registerClass(
             this._scroll.hide();
             this._headerBox.show();
             this._gridScroll.show();
-            this._tabsBox.show();
+            this._setTabsVisible(true);
 
             this._renderGridAndTabs();
         }
@@ -1873,7 +1907,7 @@ this._overlay.connect('key-press-event', (_, ev) => {
     _pos() {
         if (!this._overlay || !this._dialog) return;
         const mon = Main.layoutManager.primaryMonitor; if (!mon) return;
-        const dw = Math.min(860, mon.width * 0.55);
+        const dw = Math.min(1020, mon.width * 0.65);
         const dx = mon.x + Math.floor((mon.width - dw) / 2);
         const dy = mon.y + Math.floor(mon.height * 0.14);
         this._overlay.set_position(mon.x, mon.y);
