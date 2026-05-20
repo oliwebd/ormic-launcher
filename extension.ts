@@ -182,6 +182,11 @@ class AppProvider {
     private _treeChangedId = 0;
     private _installedChangedId = 0;
     private _dirty = true;
+
+    get dirty(): boolean {
+        return this._dirty;
+    }
+
     _appsCache: Map<string, {
         app: any; category: string;
         name: string; desc: string; exec: string; kw: string;
@@ -903,11 +908,25 @@ const LauncherDialog = GObject.registerClass(
         private _gen!: number;
         _shellSettings!: Gio.Settings;
         private _gridItemsCache!: Map<string, GridItem>;
+        private _categoryGridBoxes!: Map<string, St.BoxLayout>;
+        private _allAppsCache!: SearchResult[];
+        private _allAppsCacheDirty!: boolean;
 
         // Dynamic multi-view state
         private _activeCategory = 'Library Home';
         private _isEditing = false;
         private _gridSelIdx = -1;
+
+        get _gridBox(): St.BoxLayout {
+            let box = this._categoryGridBoxes.get(this._activeCategory);
+            if (!box) {
+                box = new St.BoxLayout({
+                    style_class: 'ormic-grid-box', vertical: true, x_expand: true,
+                });
+                this._categoryGridBoxes.set(this._activeCategory, box);
+            }
+            return box;
+        }
 
         // UI Container Boxes
         _entryBox!: St.BoxLayout;
@@ -925,7 +944,6 @@ const LauncherDialog = GObject.registerClass(
         _deleteBtn!: St.Button;
 
         _gridScroll!: St.ScrollView;
-        _gridBox!: St.BoxLayout;
         _tabsBox!: St.BoxLayout;
         _vsep!: St.Widget;
 
@@ -963,6 +981,9 @@ const LauncherDialog = GObject.registerClass(
             this._gen = 0;
             this._shellSettings = new Gio.Settings({ schema_id: 'org.gnome.shell' });
             this._gridItemsCache = new Map();
+            this._categoryGridBoxes = new Map();
+            this._allAppsCache = [];
+            this._allAppsCacheDirty = true;
 
             // ── Search row ────────────────────────────────────────────────
             this._entryBox = new St.BoxLayout({ style_class: 'ormic-search-row', x_expand: true });
@@ -1142,10 +1163,7 @@ const LauncherDialog = GObject.registerClass(
                 vscrollbar_policy: St.PolicyType.AUTOMATIC,
                 overlay_scrollbars: true, x_expand: true, y_expand: true,
             });
-            this._gridBox = new St.BoxLayout({
-                style_class: 'ormic-grid-box', vertical: true, x_expand: true,
-            });
-            this._gridScroll.set_child(this._gridBox);
+            // gridBox will be added to gridScroll dynamically in _selectCategory/_renderGridAndTabs
 
             // ── Left Sidebar Tabs Container ───────────────────────────────
             this._tabsBox = new St.BoxLayout({
@@ -1547,10 +1565,43 @@ const LauncherDialog = GObject.registerClass(
 
         private _collectGridItems(): GridItem[] {
             const items: GridItem[] = [];
-            this._gridBox.get_children().forEach((row: any) => {
-                row.get_children().forEach((item: GridItem) => items.push(item));
+            const gridBox = this._gridBox;
+            gridBox.get_children().forEach((row: any) => {
+                if (row.get_children) {
+                    row.get_children().forEach((item: GridItem) => items.push(item));
+                }
             });
             return items;
+        }
+
+        private _ensureAllAppsCache() {
+            if (!this._allAppsCacheDirty && this._allAppsCache.length > 0) return;
+            this._allAppsCacheDirty = false;
+
+            const apps: SearchResult[] = [];
+            const appProv = this._providers.find(p => p.id === 'apps') as AppProvider | undefined;
+            if (appProv) {
+                for (const [id, cached] of appProv._appsCache.entries()) {
+                    const { app, category } = cached;
+                    const info = app.get_app_info();
+                    if (!info) continue;
+                    apps.push({
+                        id: `app:${id}`, desktopId: id,
+                        name: cached.displayName ?? info.get_name() ?? id,
+                        description: cached.displayDesc ?? info.get_description() ?? '',
+                        score: 0, providerPriority: 10,
+                        createIcon: (s: number) => app.create_icon_texture(s),
+                        categoryIcon: 'application-x-executable-symbolic',
+                        category: category,
+                        activate: () => {
+                            dbg('LibraryGrid', `activate: ${id}`);
+                            app.activate();
+                        },
+                    });
+                }
+            }
+            apps.sort((a, b) => a.name.localeCompare(b.name));
+            this._allAppsCache = apps;
         }
 
         private _selectCategory(categoryName: string) {
@@ -1577,51 +1628,42 @@ const LauncherDialog = GObject.registerClass(
                 this._deleteBtn.hide();
             }
 
-            // 3. Render grid only
-            this._renderGridOnly();
+            // 3. Swap the grid box in ScrollView
+            const hasCachedGrid = this._categoryGridBoxes.has(categoryName);
+            const gridBox = this._gridBox;
+            this._gridScroll.set_child(gridBox);
+
+            // 4. Render only if not already cached/rendered
+            if (!hasCachedGrid) {
+                this._renderGridOnly();
+            } else {
+                this._gridSelIdx = -1;
+                timeoutOnce(10, () => {
+                    if (this._gridSelIdx === -1 && this._gridScroll.visible) {
+                        this._selectGridIdx(0);
+                    }
+                });
+            }
         }
 
         private _renderGridOnly() {
-            // Fetch applications cache
-            const apps: SearchResult[] = [];
-            const appProv = this._providers.find(p => p.id === 'apps') as AppProvider | undefined;
-            if (appProv) {
-                for (const [id, cached] of appProv._appsCache.entries()) {
-                    const { app, category } = cached;
-                    const info = app.get_app_info();
-                    if (!info) continue;
-                    apps.push({
-                        id: `app:${id}`, desktopId: id,
-                        name: cached.displayName ?? info.get_name() ?? id,
-                        description: cached.displayDesc ?? info.get_description() ?? '',
-                        score: 0, providerPriority: 10,
-                        createIcon: (s: number) => app.create_icon_texture(s),
-                        categoryIcon: 'application-x-executable-symbolic',
-                        category: category,
-                        activate: () => {
-                            dbg('LibraryGrid', `activate: ${id}`);
-                            app.activate();
-                        },
-                    });
-                }
-            }
-            apps.sort((a, b) => a.name.localeCompare(b.name));
+            this._ensureAllAppsCache();
 
             // Filter apps based on active category
             let filteredApps: SearchResult[] = [];
             if (this._activeCategory === 'Library Home') {
-                filteredApps = apps;
+                filteredApps = this._allAppsCache;
             } else if (this._activeCategory === 'Office') {
-                filteredApps = apps.filter(a => a.category.toLowerCase().includes('office'));
+                filteredApps = this._allAppsCache.filter(a => a.category.toLowerCase().includes('office'));
             } else if (this._activeCategory === 'System') {
-                filteredApps = apps.filter(a =>
+                filteredApps = this._allAppsCache.filter(a =>
                     a.category.toLowerCase().includes('system') ||
                     a.category.toLowerCase().includes('setting') ||
                     a.category.toLowerCase().includes('administration') ||
                     a.category.toLowerCase().includes('preferences')
                 );
             } else if (this._activeCategory === 'Utilities') {
-                filteredApps = apps.filter(a =>
+                filteredApps = this._allAppsCache.filter(a =>
                     a.category.toLowerCase().includes('utility') ||
                     a.category.toLowerCase().includes('utilities') ||
                     a.category.toLowerCase().includes('accessories')
@@ -1629,19 +1671,19 @@ const LauncherDialog = GObject.registerClass(
             } else {
                 const customGroups = this._getCustomGroups();
                 const customAppIds = customGroups[this._activeCategory] || [];
-                filteredApps = apps.filter(a => customAppIds.includes(a.desktopId ?? ''));
+                filteredApps = this._allAppsCache.filter(a => customAppIds.includes(a.desktopId ?? ''));
             }
 
             // Render Grid Box
-            // Detach cached items from rows before destroying rows to avoid destroying cached items
-            this._gridBox.get_children().forEach((row: any) => {
+            const gridBox = this._gridBox;
+            gridBox.get_children().forEach((row: any) => {
                 if (row.get_children) {
                     row.get_children().forEach((child: any) => {
                         row.remove_child(child);
                     });
                 }
             });
-            this._gridBox.destroy_all_children();
+            gridBox.destroy_all_children();
             this._gridSelIdx = -1;
 
             if (!filteredApps.length) {
@@ -1651,18 +1693,18 @@ const LauncherDialog = GObject.registerClass(
                     x_align: Clutter.ActorAlign.CENTER,
                     y_align: Clutter.ActorAlign.CENTER,
                 });
-                this._gridBox.add_child(emptyLabel);
+                gridBox.add_child(emptyLabel);
                 return;
             }
 
             const columns = 7;
             let currentRow = new St.BoxLayout({ style_class: 'ormic-grid-row', x_expand: true });
-            this._gridBox.add_child(currentRow);
+            gridBox.add_child(currentRow);
 
             filteredApps.forEach((app, i) => {
                 if (i > 0 && i % columns === 0) {
                     currentRow = new St.BoxLayout({ style_class: 'ormic-grid-row', x_expand: true });
-                    this._gridBox.add_child(currentRow);
+                    gridBox.add_child(currentRow);
                 }
 
                 let item = this._gridItemsCache.get(app.id);
@@ -1684,10 +1726,6 @@ const LauncherDialog = GObject.registerClass(
                 currentRow.add_child(item);
             });
 
-            // FIX: Defer initial grid selection until after the scene graph has
-            // laid out the items. Selecting at index 0 immediately means all
-            // items have height=0, so ensure_actor_visible does nothing useful.
-            // A short idle gives Clutter one frame to measure everything.
             timeoutOnce(50, () => {
                 if (this._gridSelIdx === -1 && this._gridScroll.visible) {
                     this._selectGridIdx(0);
@@ -1697,6 +1735,12 @@ const LauncherDialog = GObject.registerClass(
 
         private _renderGridAndTabs() {
             dbg('Grid', `renderGridAndTabs category=${this._activeCategory}`);
+
+            // Clear category grid boxes cache on categories/tabs structure changes
+            if (this._categoryGridBoxes) {
+                this._categoryGridBoxes.forEach(box => box.destroy());
+                this._categoryGridBoxes.clear();
+            }
 
             // Render Bottom Category Tabs
             this._tabsBox.destroy_all_children();
@@ -1759,8 +1803,25 @@ const LauncherDialog = GObject.registerClass(
                 this._deleteBtn.hide();
             }
 
-            // Render Grid Box
-            this._renderGridOnly();
+            // Set grid child from cache or render
+            const gridBox = this._gridBox;
+            this._gridScroll.set_child(gridBox);
+
+            if (this._categoryGridBoxes.size <= 1) {
+                // If it's a fresh/dirty load, defer rendering slightly to allow opening animations to run buttery smooth
+                timeoutOnce(20, () => {
+                    if (this._activeCategory === 'Library Home') {
+                        this._renderGridOnly();
+                    }
+                });
+            } else {
+                this._gridSelIdx = -1;
+                timeoutOnce(10, () => {
+                    if (this._gridSelIdx === -1 && this._gridScroll.visible) {
+                        this._selectGridIdx(0);
+                    }
+                });
+            }
         }
 
         private _selectGridIdx(i: number) {
@@ -1957,9 +2018,10 @@ const LauncherDialog = GObject.registerClass(
         }
 
         reset() {
-            if (this._gridItemsCache) {
-                this._gridItemsCache.clear();
-            }
+            // Check if application list is dirty on app provider BEFORE calling onOpen() (which resets it)
+            const appProv = this._providers?.find(p => p.id === 'apps') as AppProvider | undefined;
+            const isAppsDirty = appProv ? appProv.dirty : false;
+
             if (this._providers) {
                 for (const p of this._providers) {
                     try {
@@ -1971,6 +2033,22 @@ const LauncherDialog = GObject.registerClass(
                     }
                 }
             }
+
+            // Invalidate caches if the apps changed or maps are empty
+            if (isAppsDirty || this._allAppsCacheDirty || this._categoryGridBoxes.size === 0) {
+                dbg('Performance', `Invalidating caches. Reason: isAppsDirty=${isAppsDirty}, allAppsCacheDirty=${this._allAppsCacheDirty}, categoryGridBoxesSize=${this._categoryGridBoxes.size}`);
+                this._allAppsCacheDirty = true;
+                if (this._gridItemsCache) {
+                    this._gridItemsCache.clear();
+                }
+                if (this._categoryGridBoxes) {
+                    this._categoryGridBoxes.forEach(box => box.destroy());
+                    this._categoryGridBoxes.clear();
+                }
+            } else {
+                dbg('Performance', 'Reusing cached category grid boxes (0ms layout change)');
+            }
+
             this._clear();
             this._entry.text = '';
             this._activeCategory = 'Library Home';
