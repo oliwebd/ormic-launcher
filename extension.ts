@@ -928,9 +928,16 @@ const LauncherDialog = GObject.registerClass(
                 let actor: any = ev.get_source();
                 let isInteractive = false;
                 while (actor && actor !== (this as any)) {
+                    const cName = actor.constructor?.name || '';
                     if (actor instanceof St.Entry ||
                         actor instanceof St.ScrollBar ||
-                        actor instanceof St.Button) {
+                        actor instanceof St.Button ||
+                        cName.includes('Button') ||
+                        cName.includes('Entry') ||
+                        cName.includes('ScrollBar') ||
+                        cName.includes('Tab') ||
+                        cName.includes('Row') ||
+                        cName.includes('Item')) {
                         isInteractive = true;
                         break;
                     }
