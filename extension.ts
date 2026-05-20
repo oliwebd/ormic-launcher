@@ -1747,6 +1747,7 @@ export default class OrmicLauncherExtension extends Extension {
     _monId!: number | null;
     _keyId!: number | null;
     _cfgId!: number | null;
+    _focusId!: number | null;
 
     enable() {
         dbg('Extension', 'enable() called');
@@ -1756,7 +1757,7 @@ export default class OrmicLauncherExtension extends Extension {
             new RecentProvider(this._settings), new CommandProvider(),
             new WindowProvider(this._settings),
         ];
-        this._visible = false; this._indicator = null; this._cfgId = null;
+        this._visible = false; this._indicator = null; this._cfgId = null; this._focusId = null;
 
         this._overlay = new St.Widget({
             style_class: 'ormic-overlay', reactive: true, visible: false,
@@ -1765,25 +1766,17 @@ export default class OrmicLauncherExtension extends Extension {
 
         // FIX: Click-outside-to-close lives here on the overlay, not on the
         // dialog. The overlay covers the full monitor. We check whether the
-        // press landed inside the dialog's bounding box using absolute screen
-        // coordinates from get_transformed_position() + width/height — this is
-        // reliable because the overlay's own transform is identity (no scale,
-        // no rotation). We must also stop the event here so it doesn't reach
-        // the shell behind the launcher (which could accidentally activate
-        // panel items or trigger other actions).
+        // press landed inside the dialog's bounding box using d.contains(source)
+        // — this is extremely reliable and immune to coordinate transform/scaling
+        // issues. We must also stop the event here so it doesn't reach the shell
+        // behind the launcher (which could accidentally activate panel items or
+        // trigger other actions).
         this._overlay.connect('button-press-event', (_, ev) => {
-            const [cx, cy] = ev.get_coords();
             const d = this._dialog;
             if (!d) { this.hide(); return Clutter.EVENT_STOP; }
 
-            // get_transformed_position returns absolute screen coords [x, y]
-            const [dx, dy] = d.get_transformed_position();
-            const dw = d.width;
-            const dh = d.height;
-
-            const insideDialog =
-                cx >= dx && cx <= dx + dw &&
-                cy >= dy && cy <= dy + dh;
+            const source = ev.get_source();
+            const insideDialog = source && (d === source || d.contains(source));
 
             if (!insideDialog) {
                 this.hide();
@@ -1823,12 +1816,22 @@ this._overlay.connect('key-press-event', (_, ev) => {
             return Clutter.EVENT_PROPAGATE;
         });
 
+        this._focusId = global.stage.connect('notify::key-focus', () => {
+            if (!this._visible || !this._overlay) return;
+            const focus = global.stage.key_focus;
+            if (focus && focus !== this._overlay && !this._overlay.contains(focus)) {
+                dbg('Extension', 'Focus moved outside launcher overlay, hiding');
+                this.hide();
+            }
+        });
+
         this._cfgId = this._settings.connect('changed::show-indicator', () => this._syncInd());
         this._syncInd();
     }
 
     disable() {
         dbg('Extension', 'disable() called');
+        if (this._focusId) { global.stage.disconnect(this._focusId); this._focusId = null; }
         if (this._cfgId) { this._settings.disconnect(this._cfgId); this._cfgId = null; }
         if (this._keyId) { global.stage.disconnect(this._keyId); this._keyId = null; }
         if (this._monId) { Main.layoutManager.disconnect(this._monId); this._monId = null; }
@@ -1866,6 +1869,9 @@ this._overlay.connect('key-press-event', (_, ev) => {
         this._overlay.set_size(mon.width, mon.height);
         this._dialog.set_position(dx - mon.x, dy - mon.y);
         this._dialog.set_width(dw);
+        this._dialog.min_width = dw;
+        // @ts-ignore – max_width exists on Clutter.Actor at runtime
+        this._dialog.max_width = dw;
     }
 
     toggle() { this._visible ? this.hide() : this.show(); }
@@ -1898,7 +1904,11 @@ this._overlay.connect('key-press-event', (_, ev) => {
         if (!this._visible) return;
         if (!this._dialog || !this._overlay) return;
         this._visible = false;
-        Main.popModal(this._overlay);
+        try {
+            Main.popModal(this._overlay);
+        } catch (e: any) {
+            dbg('Launcher', `popModal failed: ${e.message}`);
+        }
         const ov = this._overlay, dl = this._dialog;
         easeActor(dl, {
             opacity: 0, translation_y: -14, duration: 120, mode: Clutter.AnimationMode.EASE_IN_QUAD,
