@@ -550,6 +550,7 @@ const CategoryTab = GObject.registerClass({
         super._init({
             style_class: 'ormic-category-tab',
             reactive: true, track_hover: true, can_focus: false,
+            x_expand: true, x_align: Clutter.ActorAlign.FILL,
         });
     }
 
@@ -1068,6 +1069,33 @@ const LauncherDialog = GObject.registerClass(
                 vertical: true,
                 y_expand: true,
                 y_align: Clutter.ActorAlign.FILL,
+                reactive: true,
+            });
+            this._tabsBox.connect('scroll-event', (_, ev) => {
+                const dir = ev.get_scroll_direction();
+                let delta = 0;
+                if (dir === Clutter.ScrollDirection.UP) {
+                    delta = -1;
+                } else if (dir === Clutter.ScrollDirection.DOWN) {
+                    delta = 1;
+                } else if (dir === Clutter.ScrollDirection.SMOOTH) {
+                    const [dx, dy] = ev.get_scroll_delta();
+                    if (dy < 0) delta = -1;
+                    else if (dy > 0) delta = 1;
+                }
+
+                if (delta !== 0) {
+                    const cats = this._getCategoriesList();
+                    const idx = cats.indexOf(this._activeCategory);
+                    if (idx > -1) {
+                        const n = cats.length;
+                        this._activeCategory = cats[(idx + delta + n) % n];
+                        this._renderGridAndTabs();
+                        this.focus();
+                        return Clutter.EVENT_STOP;
+                    }
+                }
+                return Clutter.EVENT_PROPAGATE;
             });
             this._vsep = new St.Widget({ style_class: 'ormic-vsep', y_expand: true });
 
@@ -1228,6 +1256,18 @@ const LauncherDialog = GObject.registerClass(
             if (this._scroll.visible && ctrl && this._ext._settings.get_boolean('enable-quick-select')
                 && sym >= Clutter.KEY_1 && sym <= Clutter.KEY_9) {
                 this._activateIdx(sym - Clutter.KEY_1); return true;
+            }
+
+            // Shift key category change
+            if (!this._scroll.visible && this._entry.text === '' && (sym === Clutter.KEY_Shift_L || sym === Clutter.KEY_Shift_R)) {
+                const cats = this._getCategoriesList();
+                const idx = cats.indexOf(this._activeCategory);
+                if (idx > -1) {
+                    this._activeCategory = cats[(idx + 1) % cats.length];
+                    this._renderGridAndTabs();
+                    this.focus();
+                    return true;
+                }
             }
 
             // 4. Navigation & Escape
@@ -1401,6 +1441,7 @@ const LauncherDialog = GObject.registerClass(
                 tab.connect('tab-selected', () => {
                     this._activeCategory = t.name;
                     this._renderGridAndTabs();
+                    this.focus();
                 });
                 this._tabsBox.add_child(tab);
             });
@@ -1414,6 +1455,7 @@ const LauncherDialog = GObject.registerClass(
                 tab.connect('tab-selected', () => {
                     this._activeCategory = gName;
                     this._renderGridAndTabs();
+                    this.focus();
                 });
                 this._tabsBox.add_child(tab);
             }
@@ -1685,6 +1727,15 @@ const LauncherDialog = GObject.registerClass(
         }
 
         // ─── Settings Helper Methods ──────────────────────────────────────────
+
+        private _getCategoriesList(): string[] {
+            const list = ['Library Home', 'Office', 'System', 'Utilities'];
+            const customGroups = this._getCustomGroups();
+            for (const gName of Object.keys(customGroups)) {
+                list.push(gName);
+            }
+            return list;
+        }
 
         private _getCustomGroups(): Record<string, string[]> {
             dbg('Groups', 'getCustomGroups()');
