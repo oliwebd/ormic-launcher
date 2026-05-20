@@ -516,9 +516,13 @@ const GridItem = GObject.registerClass({
 
         this.set_child(this._box);
 
-        this.connect('clicked', () => {
-            dbg('GridItem', `clicked on ${result.name}`);
-            this.emit('item-activated');
+        this.connect('button-release-event', (actor, ev) => {
+            if (ev.get_button() === 1) {
+                dbg('GridItem', `clicked on ${result.name}`);
+                this.emit('item-activated');
+                return Clutter.EVENT_STOP;
+            }
+            return Clutter.EVENT_PROPAGATE;
         });
 
         this.connect('notify::hover', () => {
@@ -585,9 +589,13 @@ const CategoryTab = GObject.registerClass({
 
         this.set_child(box);
 
-        this.connect('clicked', () => {
-            dbg('CategoryTab', `clicked on ${categoryName}`);
-            this.emit('tab-selected');
+        this.connect('button-release-event', (actor, ev) => {
+            if (ev.get_button() === 1) {
+                dbg('CategoryTab', `clicked on ${categoryName}`);
+                this.emit('tab-selected');
+                return Clutter.EVENT_STOP;
+            }
+            return Clutter.EVENT_PROPAGATE;
         });
     }
 
@@ -663,10 +671,14 @@ const EditAppRow = GObject.registerClass({
 
         if (this._selected) this.add_style_class_name('selected');
 
-        this.connect('clicked', () => {
-            dbg('EditAppRow', `clicked on ${result.name}`);
-            this.toggle();
-            this.emit('toggle');
+        this.connect('button-release-event', (actor, ev) => {
+            if (ev.get_button() === 1) {
+                dbg('EditAppRow', `clicked on ${result.name}`);
+                this.toggle();
+                this.emit('toggle');
+                return Clutter.EVENT_STOP;
+            }
+            return Clutter.EVENT_PROPAGATE;
         });
     }
 
@@ -769,19 +781,23 @@ const ResultRow = GObject.registerClass({
             });
             this._favButton = favBtn;
             if (isFav()) favBtn.add_style_class_name('is-fav');
-            favBtn.connect('clicked', () => {
-                const favs = shellSettings.get_strv('favorite-apps') as string[];
-                const idx = favs.indexOf(id);
-                if (idx > -1) {
-                    favs.splice(idx, 1);
-                    favIco.icon_name = 'bookmark-new-symbolic';
-                    favBtn.remove_style_class_name('is-fav');
-                } else {
-                    favs.push(id);
-                    favIco.icon_name = 'emblem-favorite-symbolic';
-                    favBtn.add_style_class_name('is-fav');
+            favBtn.connect('button-release-event', (actor, ev) => {
+                if (ev.get_button() === 1) {
+                    const favs = shellSettings.get_strv('favorite-apps') as string[];
+                    const idx = favs.indexOf(id);
+                    if (idx > -1) {
+                        favs.splice(idx, 1);
+                        favIco.icon_name = 'bookmark-new-symbolic';
+                        favBtn.remove_style_class_name('is-fav');
+                    } else {
+                        favs.push(id);
+                        favIco.icon_name = 'emblem-favorite-symbolic';
+                        favBtn.add_style_class_name('is-fav');
+                    }
+                    shellSettings.set_strv('favorite-apps', favs);
+                    return Clutter.EVENT_STOP;
                 }
-                shellSettings.set_strv('favorite-apps', favs);
+                return Clutter.EVENT_PROPAGATE;
             });
             mainBox.add_child(favBtn);
         }
@@ -809,9 +825,13 @@ const ResultRow = GObject.registerClass({
 
         this.set_child(mainBox);
 
-        this.connect('clicked', () => {
-            dbg('ResultRow', `clicked on ${result.name}`);
-            this.emit('item-activated');
+        this.connect('button-release-event', (actor, ev) => {
+            if (ev.get_button() === 1) {
+                dbg('ResultRow', `clicked on ${result.name}`);
+                this.emit('item-activated');
+                return Clutter.EVENT_STOP;
+            }
+            return Clutter.EVENT_PROPAGATE;
         });
 
         this.connect('notify::hover', () => {
@@ -988,7 +1008,13 @@ const LauncherDialog = GObject.registerClass(
                 reactive: true, track_hover: true, can_focus: false,
                 y_align: Clutter.ActorAlign.CENTER,
             });
-            closeBtn.connect('clicked', () => this._ext.hide());
+            closeBtn.connect('button-release-event', (actor, ev) => {
+                if (ev.get_button() === 1) {
+                    this._ext.hide();
+                    return Clutter.EVENT_STOP;
+                }
+                return Clutter.EVENT_PROPAGATE;
+            });
             this._entryBox.add_child(closeBtn);
 
             // ── Search Results ────────────────────────────────────────────
@@ -1042,7 +1068,13 @@ const LauncherDialog = GObject.registerClass(
                 style_class: 'ormic-header-btn edit-btn',
                 reactive: true, track_hover: true,
             });
-            this._editBtn.connect('clicked', () => this._startEditing());
+            this._editBtn.connect('button-release-event', (actor, ev) => {
+                if (ev.get_button() === 1) {
+                    this._startEditing();
+                    return Clutter.EVENT_STOP;
+                }
+                return Clutter.EVENT_PROPAGATE;
+            });
             controlBox.add_child(this._editBtn);
 
             this._deleteBtn = new St.Button({
@@ -1050,7 +1082,13 @@ const LauncherDialog = GObject.registerClass(
                 style_class: 'ormic-header-btn delete-btn',
                 reactive: true, track_hover: true,
             });
-            this._deleteBtn.connect('clicked', () => this._deleteActiveCategory());
+            this._deleteBtn.connect('button-release-event', (actor, ev) => {
+                if (ev.get_button() === 1) {
+                    this._deleteActiveCategory();
+                    return Clutter.EVENT_STOP;
+                }
+                return Clutter.EVENT_PROPAGATE;
+            });
             controlBox.add_child(this._deleteBtn);
 
             this._headerBox.add_child(controlBox);
@@ -1127,14 +1165,26 @@ const LauncherDialog = GObject.registerClass(
                 label: _('Cancel'), style_class: 'ormic-editor-btn cancel-btn',
                 reactive: true, track_hover: true,
             });
-            cancelEdBtn.connect('clicked', () => this._stopEditing(false));
+            cancelEdBtn.connect('button-release-event', (actor, ev) => {
+                if (ev.get_button() === 1) {
+                    this._stopEditing(false);
+                    return Clutter.EVENT_STOP;
+                }
+                return Clutter.EVENT_PROPAGATE;
+            });
             edBtnBox.add_child(cancelEdBtn);
 
             const saveEdBtn = new St.Button({
                 label: _('Done'), style_class: 'ormic-editor-btn save-btn',
                 reactive: true, track_hover: true,
             });
-            saveEdBtn.connect('clicked', () => this._stopEditing(true));
+            saveEdBtn.connect('button-release-event', (actor, ev) => {
+                if (ev.get_button() === 1) {
+                    this._stopEditing(true);
+                    return Clutter.EVENT_STOP;
+                }
+                return Clutter.EVENT_PROPAGATE;
+            });
             edBtnBox.add_child(saveEdBtn);
 
             edHeader.add_child(edBtnBox);
@@ -1186,14 +1236,26 @@ const LauncherDialog = GObject.registerClass(
                 label: _('Cancel'), style_class: 'ormic-prompt-btn cancel-btn',
                 reactive: true, track_hover: true,
             });
-            pCancel.connect('clicked', () => this._hidePromptOverlay(false));
+            pCancel.connect('button-release-event', (actor, ev) => {
+                if (ev.get_button() === 1) {
+                    this._hidePromptOverlay(false);
+                    return Clutter.EVENT_STOP;
+                }
+                return Clutter.EVENT_PROPAGATE;
+            });
             promptBtns.add_child(pCancel);
 
             const pCreate = new St.Button({
                 label: _('Create'), style_class: 'ormic-prompt-btn create-btn',
                 reactive: true, track_hover: true,
             });
-            pCreate.connect('clicked', () => this._hidePromptOverlay(true));
+            pCreate.connect('button-release-event', (actor, ev) => {
+                if (ev.get_button() === 1) {
+                    this._hidePromptOverlay(true);
+                    return Clutter.EVENT_STOP;
+                }
+                return Clutter.EVENT_PROPAGATE;
+            });
             promptBtns.add_child(pCreate);
 
             promptCard.add_child(promptBtns);
