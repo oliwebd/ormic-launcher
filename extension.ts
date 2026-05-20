@@ -104,9 +104,8 @@ function scrollToActor(scrollView: St.ScrollView, actor: Clutter.Actor) {
         if (!adj) return;
 
         // Transform actor position into the scroll content's coordinate space
-        const [ok, ax, ay] = actor.get_transformed_position() as unknown as [boolean, number, number];
-        if (!ok) return;
-        const [, , svy] = scrollView.get_transformed_position() as unknown as [boolean, number, number];
+        const [ax, ay] = actor.get_transformed_position();
+        const [, svy] = scrollView.get_transformed_position();
 
         const relY = ay - svy + adj.value;
         const viewHeight = scrollView.height;
@@ -1777,9 +1776,8 @@ export default class OrmicLauncherExtension extends Extension {
             const d = this._dialog;
             if (!d) { this.hide(); return Clutter.EVENT_STOP; }
 
-            // get_transformed_position returns absolute screen coords
-            const [ok, dx, dy] = d.get_transformed_position() as unknown as [boolean, number, number];
-            if (!ok) { this.hide(); return Clutter.EVENT_STOP; }
+            // get_transformed_position returns absolute screen coords [x, y]
+            const [dx, dy] = d.get_transformed_position();
             const dw = d.width;
             const dh = d.height;
 
@@ -1873,29 +1871,31 @@ this._overlay.connect('key-press-event', (_, ev) => {
     toggle() { this._visible ? this.hide() : this.show(); }
 
     show() {
-    dbg('Launcher', 'show()');
-    if (!this._dialog || !this._overlay) return;
-    this._visible = true;
-    this._dialog.reset();
-    this._overlay.show();
-    this._dialog.opacity = 0;
-    this._dialog.translation_y = -20;
+        dbg('Launcher', 'show()');
+        if (this._visible) return;
+        if (!this._dialog || !this._overlay) return;
+        this._visible = true;
+        this._dialog.reset();
+        this._overlay.show();
+        this._dialog.opacity = 0;
+        this._dialog.translation_y = -20;
 
-    // GNOME 50 Wayland: pushModal can fail (e.g. another modal is active).
-    // If it does, bail out cleanly instead of leaving a frozen overlay.
-    if (!Main.pushModal(this._overlay)) {
-        this._visible = false;
-        this._overlay.hide();
-        return;
+        // GNOME 50 Wayland: pushModal can fail (e.g. another modal is active).
+        // If it does, bail out cleanly instead of leaving a frozen overlay.
+        if (!Main.pushModal(this._overlay)) {
+            this._visible = false;
+            this._overlay.hide();
+            return;
+        }
+
+        easeActor(this._overlay, { opacity: 255, duration: 150, mode: Clutter.AnimationMode.EASE_OUT_QUAD });
+        easeActor(this._dialog, { opacity: 255, translation_y: 0, duration: 200, mode: Clutter.AnimationMode.EASE_OUT_EXPO });
+        timeoutOnce(10, () => this._dialog?.focus());
     }
-
-    easeActor(this._overlay, { opacity: 255, duration: 150, mode: Clutter.AnimationMode.EASE_OUT_QUAD });
-    easeActor(this._dialog, { opacity: 255, translation_y: 0, duration: 200, mode: Clutter.AnimationMode.EASE_OUT_EXPO });
-    timeoutOnce(10, () => this._dialog?.focus());
-}
 
     hide() {
         dbg('Launcher', 'hide()');
+        if (!this._visible) return;
         if (!this._dialog || !this._overlay) return;
         this._visible = false;
         Main.popModal(this._overlay);
