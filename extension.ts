@@ -2156,7 +2156,7 @@ type OrmicIndicator = InstanceType<typeof OrmicIndicator>;
 export default class OrmicLauncherExtension extends Extension {
     providers!: any[];
     _visible!: boolean;
-    _isModal = false;
+    _grab: any = null;
     _clickGuard = false;
     _clickGuardTimer: number | null | undefined = null;
     _settings!: Gio.Settings;
@@ -2326,17 +2326,18 @@ this._overlay.connect('key-press-event', (_, ev) => {
         this._dialog.opacity = 0;
         this._dialog.translation_y = -20;
 
-        // GNOME 50 Wayland: pushModal can fail (e.g. another modal is active).
-        // If it does, bail out cleanly instead of leaving a frozen overlay.
-        if (!Main.pushModal(this._overlay, {
+        // GNOME 45+: pushModal returns a grab object (not a boolean).
+        // A falsy return means another modal is active — bail out cleanly.
+        const grab = Main.pushModal(this._overlay, {
             actionMode: Shell.ActionMode.NORMAL | Shell.ActionMode.OVERVIEW | Shell.ActionMode.POPUP,
-        })) {
+        });
+        if (!grab) {
             this._visible = false;
-            this._isModal = false;
+            this._grab = null;
             this._overlay.hide();
             return;
         }
-        this._isModal = true;
+        this._grab = grab;
 
         easeActor(this._overlay, { opacity: 255, duration: 150, mode: Clutter.AnimationMode.EASE_OUT_QUAD });
         easeActor(this._dialog, { opacity: 255, translation_y: 0, duration: 200, mode: Clutter.AnimationMode.EASE_OUT_EXPO });
@@ -2353,13 +2354,13 @@ this._overlay.connect('key-press-event', (_, ev) => {
             GLib.source_remove(this._clickGuardTimer as number);
             this._clickGuardTimer = null;
         }
-        if (this._isModal) {
-            this._isModal = false;
+        if (this._grab) {
             try {
-                Main.popModal(this._overlay);
+                this._grab.ungrab();
             } catch (e: any) {
-                dbg('Launcher', `popModal failed: ${e.message}`);
+                dbg('Launcher', `ungrab failed: ${e.message}`);
             }
+            this._grab = null;
         }
         const ov = this._overlay, dl = this._dialog;
         easeActor(dl, {
