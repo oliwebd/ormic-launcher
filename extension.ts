@@ -907,7 +907,7 @@ const LauncherDialog = GObject.registerClass(
         private _tid!: number | null | undefined;
         private _gen!: number;
         _shellSettings!: Gio.Settings;
-        private _gridItemsCache!: Map<string, GridItem>;
+        
         private _categoryGridBoxes!: Map<string, St.BoxLayout>;
         private _allAppsCache!: SearchResult[];
         private _allAppsCacheDirty!: boolean;
@@ -980,7 +980,7 @@ const LauncherDialog = GObject.registerClass(
             this._tid = null;
             this._gen = 0;
             this._shellSettings = new Gio.Settings({ schema_id: 'org.gnome.shell' });
-            this._gridItemsCache = new Map();
+            
             this._categoryGridBoxes = new Map();
             this._allAppsCache = [];
             this._allAppsCacheDirty = true;
@@ -1725,23 +1725,18 @@ const LauncherDialog = GObject.registerClass(
                     gridBox.add_child(currentRow);
                 }
 
-                let item = this._gridItemsCache.get(app.id);
-                if (!item) {
-                    const newItem = new (GridItem as any)() as GridItem;
-                    newItem.setup(app);
-                    newItem.connect('item-activated', () => {
-                        this._ext.hide();
-                        app.activate();
-                    });
-                    newItem.connect('item-hovered', () => {
-                        const allItems = this._collectGridItems();
-                        const idx = allItems.indexOf(newItem);
-                        if (idx >= 0) this._selectGridIdx(idx);
-                    });
-                    this._gridItemsCache.set(app.id, newItem);
-                    item = newItem;
-                }
-                currentRow.add_child(item);
+                const item = new (GridItem as any)() as GridItem;
+item.setup(app);
+item.connect('item-activated', () => {
+    this._ext.hide();
+    app.activate();
+});
+item.connect('item-hovered', () => {
+    const allItems = this._collectGridItems();
+    const idx = allItems.indexOf(item);
+    if (idx >= 0) this._selectGridIdx(idx);
+});
+currentRow.add_child(item);
             });
 
             const elapsed = (GLib.get_monotonic_time() - t0) / 1000;
@@ -1829,16 +1824,10 @@ const LauncherDialog = GObject.registerClass(
 
             // Only invalidate the active category's grid box (not ALL of them)
             const oldBox = this._categoryGridBoxes.get(this._activeCategory);
-            if (oldBox) {
-                // Detach cached grid items from rows before destroying the box
-                oldBox.get_children().forEach((row: any) => {
-                    if (row.get_children) {
-                        row.get_children().forEach((child: any) => row.remove_child(child));
-                    }
-                });
-                oldBox.destroy();
-                this._categoryGridBoxes.delete(this._activeCategory);
-            }
+if (oldBox) {
+    oldBox.destroy();   // GridItems are owned by this box; destroy cleans up fine
+    this._categoryGridBoxes.delete(this._activeCategory);
+}
 
             this._renderTabsOnly();
 
@@ -2079,7 +2068,7 @@ const LauncherDialog = GObject.registerClass(
             if (needsRebuild) {
                 dbg('Performance', `SLOW PATH: cache rebuild needed. isAppsDirty=${isAppsDirty}, allAppsCacheDirty=${this._allAppsCacheDirty}, gridBoxes=${this._categoryGridBoxes.size}`);
                 this._allAppsCacheDirty = true;
-                if (this._gridItemsCache) this._gridItemsCache.clear();
+                
                 if (this._categoryGridBoxes) {
                     this._categoryGridBoxes.forEach(box => box.destroy());
                     this._categoryGridBoxes.clear();
