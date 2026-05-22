@@ -62,7 +62,7 @@ export const ResultRow = GObject.registerClass({
 
         const textCol = new St.BoxLayout({
             style_class: 'ormic-text-col',
-            vertical: true, x_expand: true,
+            orientation: Clutter.Orientation.VERTICAL, x_expand: true,
             y_align: Clutter.ActorAlign.CENTER,
         });
         const nameLabel = new St.Label({

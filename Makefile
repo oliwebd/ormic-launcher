@@ -1,7 +1,7 @@
 UUID = ormic-launcher@github.com
 DEST = $(HOME)/.local/share/gnome-shell/extensions/$(UUID)
 
-.PHONY: all build clean install uninstall dev-install lint lint-fix pack
+.PHONY: all build clean install uninstall dev-install lint lint-fix pack shexli
 
 all: build
 
@@ -40,8 +40,14 @@ lint-fix: node_modules
 
 pack: build
 	@echo "Packaging extension..."
+	rm -f dist/schemas/gschemas.compiled dist/patch.js dist/types.js dist/launcher/LauncherState.js
+	rm -f $(UUID).zip
 	cd dist && zip -qr ../$(UUID).zip *
 	@echo "Package created: $(UUID).zip"
+
+shexli: pack
+	@echo "Running shexli on zip..."
+	venv/bin/shexli $$(pwd)/$(UUID).zip
 
 clean:
 	rm -rf dist node_modules $(UUID).zip

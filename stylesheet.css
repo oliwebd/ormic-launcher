@@ -310,6 +310,7 @@
   border: 1px solid transparent;
   border-bottom: 4px solid transparent;
   min-width: 82px;
+  max-width: 86px;
   min-height: 96px;
   transition-duration: 80ms;
 }
@@ -356,13 +357,12 @@
   color: #FAB84B;
 }
 
-/* ── Left Sidebar Category Tabs ──────────────────────────────────────────── */
+/* ── Top Header Category Tabs ──────────────────────────────────────────── */
 .ormic-tabs-box {
-  padding: 16px 10px;
-  spacing: 6px;
+  padding: 10px 16px;
+  spacing: 8px;
   background-color: rgba(0, 0, 0, 0.16);
-  width: 170px;
-  min-width: 170px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.065);
 }
 
 .ormic-category-tab {

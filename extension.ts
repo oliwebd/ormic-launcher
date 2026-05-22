@@ -77,7 +77,7 @@ const LauncherDialog = GObject.registerClass(
             let box = this._categoryGridBoxes.get(categoryName);
             if (!box) {
                 box = new St.BoxLayout({
-                    style_class: 'ormic-grid-box', vertical: true, x_expand: true,
+                    style_class: 'ormic-grid-box', orientation: Clutter.Orientation.VERTICAL, x_expand: true,
                 });
                 this._categoryGridBoxes.set(categoryName, box);
             }
@@ -114,7 +114,7 @@ const LauncherDialog = GObject.registerClass(
         _promptEntry!: St.Entry;
 
         _init() {
-            super._init({ style_class: 'ormic-dialog', vertical: true, reactive: true });
+            super._init({ style_class: 'ormic-dialog', orientation: Clutter.Orientation.VERTICAL, reactive: true });
             try {
                 const blur = new Shell.BlurEffect({
                     brightness: 0.95,
@@ -232,7 +232,7 @@ const LauncherDialog = GObject.registerClass(
                 overlay_scrollbars: true, x_expand: true,
             });
             this._rbox = new St.BoxLayout({
-                style_class: 'ormic-rbox', vertical: true, x_expand: true,
+                style_class: 'ormic-rbox', orientation: Clutter.Orientation.VERTICAL, x_expand: true,
             });
             this._scroll.set_child(this._rbox);
             this._scroll.hide();
@@ -308,12 +308,12 @@ const LauncherDialog = GObject.registerClass(
                 overlay_scrollbars: true, x_expand: true, y_expand: true,
             });
 
-            // ── Left Sidebar Tabs Container ───────────────────────────────
+            // ── Top Header Tabs Container ─────────────────────────────────
             this._tabsBox = new St.BoxLayout({
                 style_class: 'ormic-tabs-box',
-                vertical: true,
-                y_expand: true,
-                y_align: Clutter.ActorAlign.FILL,
+                orientation: Clutter.Orientation.HORIZONTAL,
+                x_expand: true,
+                x_align: Clutter.ActorAlign.FILL,
                 reactive: true,
             });
             this._tabsBox.connect('scroll-event', (_, ev) => {
@@ -342,10 +342,11 @@ const LauncherDialog = GObject.registerClass(
                 return Clutter.EVENT_PROPAGATE;
             });
             this._vsep = new St.Widget({ style_class: 'ormic-vsep', y_expand: true });
+            this._vsep.hide();
 
             // ── Group Editor Screen ───────────────────────────────────────
             this._editorBox = new St.BoxLayout({
-                style_class: 'ormic-editor-box', vertical: true, x_expand: true, y_expand: true,
+                style_class: 'ormic-editor-box', orientation: Clutter.Orientation.VERTICAL, x_expand: true, y_expand: true,
             });
             this._editorBox.hide();
 
@@ -399,7 +400,7 @@ const LauncherDialog = GObject.registerClass(
                 overlay_scrollbars: true, x_expand: true, y_expand: true,
             });
             this._editorAppsContainer = new St.BoxLayout({
-                style_class: 'ormic-editor-apps', vertical: true, x_expand: true,
+                style_class: 'ormic-editor-apps', orientation: Clutter.Orientation.VERTICAL, x_expand: true,
             });
             this._editorScroll.set_child(this._editorAppsContainer);
             this._editorBox.add_child(this._editorScroll);
@@ -407,7 +408,7 @@ const LauncherDialog = GObject.registerClass(
             // ── Prompt Modal Overlay ──────────────────────────────────────
             this._promptOverlay = new St.BoxLayout({
                 style_class: 'ormic-prompt-overlay',
-                vertical: true,
+                orientation: Clutter.Orientation.VERTICAL,
                 x_expand: true, y_expand: true,
                 x_align: Clutter.ActorAlign.CENTER,
                 y_align: Clutter.ActorAlign.CENTER,
@@ -417,7 +418,7 @@ const LauncherDialog = GObject.registerClass(
 
             const promptCard = new St.BoxLayout({
                 style_class: 'ormic-prompt-card',
-                vertical: true,
+                orientation: Clutter.Orientation.VERTICAL,
                 x_expand: true,
                 reactive: true,
             });
@@ -491,23 +492,30 @@ const LauncherDialog = GObject.registerClass(
             this.add_child(this._entryBox);
             this.add_child(new St.Widget({ style_class: 'ormic-sep', x_expand: true }));
 
+            this._tabsBox.orientation = Clutter.Orientation.HORIZONTAL;
+            this._tabsBox.x_expand = true;
+            this._tabsBox.y_expand = false;
+            this._tabsBox.x_align = Clutter.ActorAlign.FILL;
+            this._tabsBox.y_align = Clutter.ActorAlign.START;
+            
+            const tabsScroll = new St.ScrollView({
+                style_class: 'ormic-tabs-scroll',
+                hscrollbar_policy: St.PolicyType.AUTOMATIC,
+                vscrollbar_policy: St.PolicyType.NEVER,
+                overlay_scrollbars: true,
+                x_expand: true,
+            });
+            tabsScroll.set_child(this._tabsBox);
+            this.add_child(tabsScroll);
+
             const contentContainer = new St.BoxLayout({
                 style_class: 'ormic-content-container',
                 x_expand: true, y_expand: true,
             });
 
-            this._tabsBox.vertical = true;
-            this._tabsBox.x_expand = false;
-            this._tabsBox.y_expand = true;
-            this._tabsBox.x_align = Clutter.ActorAlign.START;
-            this._tabsBox.y_align = Clutter.ActorAlign.FILL;
-            contentContainer.add_child(this._tabsBox);
-
-            contentContainer.add_child(this._vsep);
-
             const rightPanel = new St.BoxLayout({
                 style_class: 'ormic-right-panel',
-                vertical: true,
+                orientation: Clutter.Orientation.VERTICAL,
                 x_expand: true, y_expand: true,
             });
             rightPanel.add_child(this._scroll);
@@ -613,11 +621,11 @@ const LauncherDialog = GObject.registerClass(
         private _setTabsVisible(visible: boolean) {
             const shouldShowGroups = this._ext._settings.get_boolean('show-groups-sidebar');
             if (visible && shouldShowGroups) {
+                this._tabsBox.get_parent()?.show();
                 this._tabsBox.show();
-                this._vsep.show();
             } else {
+                this._tabsBox.get_parent()?.hide();
                 this._tabsBox.hide();
-                this._vsep.hide();
             }
         }
 
@@ -1070,6 +1078,9 @@ export default class OrmicLauncherExtension extends Extension {
     _keyId!: number | null;
     _cfgId!: number | null;
     _focusId!: number | null;
+    _overlayCapturedId!: number | null;
+    _overlayPressId!: number | null;
+    _overlayKeyId!: number | null;
 
     enable() {
         dbg('Extension', 'enable() called');
@@ -1086,7 +1097,7 @@ export default class OrmicLauncherExtension extends Extension {
             x: 0, y: 0, opacity: 0,
         });
 
-        this._overlay.connect('captured-event', (_, ev: any) => {
+        this._overlayCapturedId = this._overlay.connect('captured-event', (_, ev: any) => {
             const t = typeof ev.type === 'function' ? ev.type() : ev.type;
             if (t === Clutter.EventType.BUTTON_PRESS) {
                 this._setClickGuard();
@@ -1094,7 +1105,7 @@ export default class OrmicLauncherExtension extends Extension {
             return Clutter.EVENT_PROPAGATE;
         });
 
-        this._overlay.connect('button-press-event', (_, ev) => {
+        this._overlayPressId = this._overlay.connect('button-press-event', (_, ev) => {
             const d = this._dialog;
             if (!d) { this.hide(); return Clutter.EVENT_STOP; }
 
@@ -1113,7 +1124,7 @@ export default class OrmicLauncherExtension extends Extension {
             return Clutter.EVENT_STOP;
         });
 
-        this._overlay.connect('key-press-event', (_, ev) => {
+        this._overlayKeyId = this._overlay.connect('key-press-event', (_, ev) => {
             if (ev.get_key_symbol() === Clutter.KEY_Escape) {
                 this.hide();
                 return Clutter.EVENT_STOP;
@@ -1168,7 +1179,11 @@ export default class OrmicLauncherExtension extends Extension {
         
         // Stop any running animations and clean up idle rendering tasks
         if (this._overlay) {
+            if (this._overlayCapturedId) this._overlay.disconnect(this._overlayCapturedId);
+            if (this._overlayPressId) this._overlay.disconnect(this._overlayPressId);
+            if (this._overlayKeyId) this._overlay.disconnect(this._overlayKeyId);
             this._overlay.remove_all_transitions();
+            this._overlay.destroy();
         }
         if (this._dialog) {
             this._dialog.remove_all_transitions();
@@ -1177,17 +1192,24 @@ export default class OrmicLauncherExtension extends Extension {
             } catch (e: any) {
                 dbg('Extension', `Error running dialog cleanup: ${e.message}`);
             }
+            this._dialog.destroy();
         }
 
-        this._overlay?.destroy();
         this._overlay = null;
         this._dialog = null;
+        
+        if (this._clickGuardTimer != null) {
+            GLib.source_remove(this._clickGuardTimer);
+            this._clickGuardTimer = null;
+        }
+        
         for (const p of this.providers) {
             if (typeof p.destroy === 'function') {
                 try { p.destroy(); } catch (_) { }
             }
         }
         this.providers = [];
+        this._settings = null as any;
         this._visible = false;
     }
 

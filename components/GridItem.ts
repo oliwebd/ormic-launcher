@@ -26,7 +26,7 @@ export const GridItem = GObject.registerClass({
         this._result = result;
 
         this._box = new St.BoxLayout({
-            vertical: true,
+            orientation: Clutter.Orientation.VERTICAL,
             style_class: 'ormic-grid-item-box',
             x_expand: true, y_expand: true,
         });
@@ -56,7 +56,7 @@ export const GridItem = GObject.registerClass({
             x_align: Clutter.ActorAlign.CENTER,
         });
         nameLabel.clutter_text.ellipsize = Pango.EllipsizeMode.END;
-        nameLabel.clutter_text.line_wrap = true;
+        nameLabel.clutter_text.line_wrap = false;
         this._box.add_child(nameLabel);
 
         this.set_child(this._box);
