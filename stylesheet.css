@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════════════════════════
    Ormic Launcher — Stylesheet
-   Design: Premium dark glassmorphism layout with 6-column Grid & Bottom Tabs
+   Design: Premium dark glassmorphism layout with 7-column Grid & Top Tabs
    Accent: #FAB84B  (Pop!_OS orange)
    ═══════════════════════════════════════════════════════════════════════════ */
 
@@ -84,9 +84,28 @@
   background-color: rgba(255, 255, 255, 0.065);
 }
 
+/* ── Layout containers ───────────────────────────────────────────────────── */
+.ormic-content-container {
+  /* flex row: sidebar (if any) + right panel */
+}
+
+.ormic-right-panel {
+  /* vertical stack: scroll / header / grid / editor / prompt */
+}
+
 /* ── Search Results List View ────────────────────────────────────────────── */
 .ormic-scroll {
   max-height: 400px;
+}
+
+/* Hide search result scrollbar until hover */
+.ormic-scroll StScrollBar {
+  opacity: 0;
+  transition-duration: 200ms;
+}
+
+.ormic-scroll:hover StScrollBar {
+  opacity: 1;
 }
 
 .ormic-rbox {
@@ -94,9 +113,9 @@
   spacing: 0;
 }
 
+/* Result row outer button */
 .ormic-result {
   padding: 0;
-  spacing: 0;
   border-radius: 0;
   background-color: transparent;
   transition-duration: 60ms;
@@ -110,6 +129,12 @@
 
 .ormic-result.selected {
   background-color: rgba(250, 184, 75, 0.09);
+}
+
+/* Result row inner box — must expand to fill width */
+.ormic-result-box {
+  x-expand: true;
+  spacing: 0;
 }
 
 /* ── Left accent bar (list view selection) ───────────────────────────────── */
@@ -238,32 +263,30 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   NEW: Premium Grid & Library Layout Styles
+   Grid & Library Layout Styles
    ═══════════════════════════════════════════════════════════════════════════ */
 
 /* ── Category Header ─────────────────────────────────────────────────────── */
+/* Compact action-only header — active category shown in the tab bar */
 .ormic-header {
-  padding: 16px 24px 8px 24px;
+  padding: 6px 12px 6px 12px;
 }
 
 .ormic-header-title {
-  color: rgba(255, 255, 255, 0.95);
-  font-size: 20px;
-  font-weight: 600;
-  letter-spacing: 0.25px;
-  text-align: center;
+  /* Hidden; tab bar communicates the active category */
+  visible: false;
 }
 
 .ormic-header-control {
-  spacing: 8px;
+  spacing: 6px;
 }
 
 .ormic-header-btn {
-  padding: 7px;
+  padding: 6px;
   border-radius: 8px;
   background-color: rgba(255, 255, 255, 0.035);
   border: 1px solid rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(255, 255, 255, 0.55);
   transition-duration: 80ms;
 }
 
@@ -281,21 +304,33 @@
 
 /* ── Grid Container ──────────────────────────────────────────────────────── */
 .ormic-grid-scroll {
-  max-height: 440px;
+  max-height: 500px;
+}
+
+/* Hide grid scrollbar until hover — thin overlay track appears on scroll */
+.ormic-grid-scroll StScrollBar {
+  opacity: 0;
+  transition-duration: 200ms;
+}
+
+.ormic-grid-scroll:hover StScrollBar {
+  opacity: 1;
 }
 
 .ormic-grid-box {
-  padding: 16px 20px;
-  spacing: 12px;
+  padding: 14px 18px 18px 18px;
+  spacing: 14px;
 }
 
+/* Rows align to START so incomplete last row doesn't leave empty right gap */
 .ormic-grid-row {
-  spacing: 12px;
+  spacing: 10px;
+  x-align: start;
 }
 
 .ormic-grid-empty {
   color: rgba(255, 255, 255, 0.4);
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 300;
   text-align: center;
   padding: 60px 0;
@@ -304,93 +339,115 @@
 
 /* ── Grid Card Item ──────────────────────────────────────────────────────── */
 .ormic-grid-item {
-  padding: 8px;
-  border-radius: 0px;
+  padding: 10px 6px 8px 6px;
+  border-radius: 12px;
   background-color: transparent;
   border: 1px solid transparent;
-  border-bottom: 4px solid transparent;
-  min-width: 82px;
-  max-width: 86px;
-  min-height: 96px;
-  transition-duration: 80ms;
+  min-width: 84px;
+  max-width: 90px;
+  min-height: 100px;
+  transition-duration: 100ms;
 }
 
 .ormic-grid-item:hover {
-  background-color: rgba(255, 255, 255, 0.04);
+  background-color: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
 }
 
 .ormic-grid-item.selected {
-  background-color: rgba(250, 184, 75, 0.09);
-  border: 1px solid transparent;
-  border-bottom: 4px solid #FAB84B;
-  border-radius: 0px;
+  background-color: rgba(250, 184, 75, 0.11);
+  border-color: rgba(250, 184, 75, 0.32);
+  border-radius: 12px;
+  box-shadow: 0 0 0 1px rgba(250, 184, 75, 0.18), 0 3px 10px rgba(250, 184, 75, 0.12);
 }
 
 .ormic-grid-item-box {
-  spacing: 4px;
+  spacing: 6px;
 }
 
 .ormic-grid-icon-bin {
-  width: 48px;
-  height: 48px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.02) 100%);
+  width: 54px;
+  height: 54px;
+  border-radius: 12px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.09) 0%, rgba(255, 255, 255, 0.025) 100%);
   padding: 4px;
-  margin-top: 0px;
-  margin-bottom: 4px;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+  margin-bottom: 2px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .ormic-grid-icon-sym {
-  color: rgba(255, 255, 255, 0.65);
-  icon-size: 46px;
+  color: rgba(255, 255, 255, 0.70);
+  icon-size: 48px;
 }
 
 .ormic-grid-label {
-  color: rgba(255, 255, 255, 0.82);
-  font-size: 10px;
+  color: rgba(255, 255, 255, 0.84);
+  font-size: 10.5px;
   font-weight: 500;
   text-align: center;
+  letter-spacing: 0.1px;
 }
 
 .ormic-grid-item.selected .ormic-grid-label {
   color: #FAB84B;
+  font-weight: 600;
 }
 
-/* ── Top Header Category Tabs ──────────────────────────────────────────── */
-.ormic-tabs-box {
-  padding: 10px 16px;
-  spacing: 8px;
-  background-color: rgba(0, 0, 0, 0.16);
+/* ── Top Header Category Tabs scroll ────────────────────────────────────── */
+.ormic-tabs-scroll {
+  background-color: rgba(0, 0, 0, 0.18);
   border-bottom: 1px solid rgba(255, 255, 255, 0.065);
 }
 
+/* Hide scrollbar on tabs scroll — scrollbar is never needed (overlay only) */
+.ormic-tabs-scroll StScrollBar {
+  opacity: 0;
+  width: 0;
+}
+
+/* ── Category Tabs container ─────────────────────────────────────────────── */
+.ormic-tabs-box {
+  padding: 6px 12px;
+  spacing: 4px;
+}
+
 .ormic-category-tab {
-  padding: 8px 12px;
+  padding: 7px 13px;
   border-radius: 8px;
   background-color: transparent;
   border: 1px solid transparent;
-  transition-duration: 80ms;
+  border-bottom-width: 2px;
+  transition-duration: 100ms;
   x-align: start;
+  /* Each tab only as wide as its content — prevents empty right side */
+  x-expand: false;
 }
 
 .ormic-category-tab:hover {
-  background-color: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.06);
+  background-color: rgba(255, 255, 255, 0.075);
+  border-color: rgba(255, 255, 255, 0.10);
+  border-bottom-color: rgba(255, 255, 255, 0.10);
 }
 
 .ormic-category-tab.active {
-  background-color: rgba(250, 184, 75, 0.12);
-  border-color: rgba(250, 184, 75, 0.32);
+  background-color: rgba(250, 184, 75, 0.10);
+  border-color: rgba(250, 184, 75, 0.20);
+  border-bottom-color: #FAB84B;
+  box-shadow: 0 1px 0 0 #FAB84B;
 }
 
 .ormic-category-tab-box {
-  spacing: 10px;
+  spacing: 8px;
 }
 
 .ormic-category-tab-icon {
-  color: rgba(255, 255, 255, 0.52);
-  icon-size: 16px;
+  color: rgba(255, 255, 255, 0.45);
+  icon-size: 15px;
+}
+
+.ormic-category-tab:hover .ormic-category-tab-icon {
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .ormic-category-tab.active .ormic-category-tab-icon {
@@ -398,9 +455,16 @@
 }
 
 .ormic-category-tab-label {
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.65);
+  color: rgba(255, 255, 255, 0.60);
+  letter-spacing: 0.1px;
+}
+
+/* HOVER: make label text clearly visible */
+.ormic-category-tab:hover .ormic-category-tab-label {
+  color: rgba(255, 255, 255, 0.95);
+  font-weight: 600;
 }
 
 .ormic-category-tab.active .ormic-category-tab-label {
@@ -658,12 +722,13 @@
 .ormic-grid-scroll StScrollBar,
 .ormic-editor-scroll StScrollBar {
   padding: 0 2px;
+  width: 8px;
 }
 
 .ormic-scroll StScrollBar StBin#trough,
 .ormic-grid-scroll StScrollBar StBin#trough,
 .ormic-editor-scroll StScrollBar StBin#trough {
-  background-color: transparent;
+  background-color: rgba(255, 255, 255, 0.04);
   width: 5px;
   border-radius: 3px;
 }
@@ -671,7 +736,7 @@
 .ormic-scroll StScrollBar StButton#vhandle,
 .ormic-grid-scroll StScrollBar StButton#vhandle,
 .ormic-editor-scroll StScrollBar StButton#vhandle {
-  background-color: rgba(255, 255, 255, 0.16);
+  background-color: rgba(255, 255, 255, 0.22);
   border-radius: 3px;
   border: none;
   min-height: 28px;
@@ -680,5 +745,15 @@
 .ormic-scroll StScrollBar StButton#vhandle:hover,
 .ormic-grid-scroll StScrollBar StButton#vhandle:hover,
 .ormic-editor-scroll StScrollBar StButton#vhandle:hover {
-  background-color: rgba(255, 255, 255, 0.26);
+  background-color: rgba(255, 255, 255, 0.38);
+}
+
+/* Editor scroll — also hide until hover */
+.ormic-editor-scroll StScrollBar {
+  opacity: 0;
+  transition-duration: 200ms;
+}
+
+.ormic-editor-scroll:hover StScrollBar {
+  opacity: 1;
 }

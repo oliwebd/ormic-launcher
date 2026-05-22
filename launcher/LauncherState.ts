@@ -58,6 +58,12 @@ export interface LauncherState {
     readonly promptOverlay: St.BoxLayout;
     readonly promptEntry: St.Entry;
 
+    // ─── Page navigation widgets ─────────────────────────────────────────
+    readonly pageNavBox: St.BoxLayout;
+    readonly pageDotsBox: St.BoxLayout;
+    readonly prevPageBtn: St.Button;
+    readonly nextPageBtn: St.Button;
+
     // ─── Methods the controllers may call back into ──────────────────────
     focus(): void;
     getGridBox(): St.BoxLayout;

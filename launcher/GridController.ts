@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Ormic Launcher — Grid Controller
 //
-// Manages the library grid view: category filtering, chunked rendering,
-// background pre-rendering of off-screen categories, grid selection,
+// Manages the library grid view: category filtering, page-based navigation
+// (GNOME app-grid style dots + left/right arrows), grid selection,
 // and the category tabs sidebar.
 
 import GLib from 'gi://GLib';
@@ -12,7 +12,7 @@ import Clutter from 'gi://Clutter';
 import { gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
 
 import { SearchResult } from '../types.js';
-import { dbg, timeoutOnce, scrollToActor, createAppIcon } from '../utils.js';
+import { dbg, timeoutOnce, createAppIcon } from '../utils.js';
 import { AppProvider } from '../providers/apps.js';
 import { GridItem } from '../components/GridItem.js';
 import { CategoryTab } from '../components/CategoryTab.js';
@@ -27,13 +27,11 @@ const STATIC_TABS = [
 ] as const;
 
 const COLUMNS = 7;
-const CHUNK_SIZE = 8;
+const ROWS_PER_PAGE = 4;
+const ITEMS_PER_PAGE = COLUMNS * ROWS_PER_PAGE; // 28 items per page
 
 /** Debounce interval for tab-hover category switching (ms). */
 const TAB_HOVER_DEBOUNCE_MS = 150;
-
-/** Guard interval after a programmatic scroll to suppress re-entrant hover events (ms). */
-const SCROLL_HOVER_GUARD_MS = 50;
 
 export class GridController {
     private _s: LauncherState;
@@ -41,12 +39,15 @@ export class GridController {
     /** Timer id for debounced tab-hover category switching. */
     private _tabHoverTimerId: number | null = null;
 
-    /**
-     * When true, item-hovered signals are suppressed to prevent the
-     * scroll → hover → scroll feedback loop.
-     */
-    private _scrollHoverGuard = false;
-    private _scrollGuardTimerId: number | null = null;
+    /** Current page index (0-based). */
+    private _currentPage = 0;
+
+    /** Total pages for the active category. */
+    private _totalPages = 1;
+
+    /** Filtered apps for the current category (cached between page changes). */
+    private _filteredApps: SearchResult[] = [];
+    private _filteredCategory = '';
 
     constructor(state: LauncherState) {
         this._s = state;
@@ -74,15 +75,6 @@ export class GridController {
         if (this._tabHoverTimerId != null) {
             GLib.source_remove(this._tabHoverTimerId);
             this._tabHoverTimerId = null;
-        }
-    }
-
-    /** Cancel the scroll-hover guard timer. */
-    private _cancelScrollGuard(): void {
-        this._scrollHoverGuard = false;
-        if (this._scrollGuardTimerId != null) {
-            GLib.source_remove(this._scrollGuardTimerId);
-            this._scrollGuardTimerId = null;
         }
     }
 
@@ -146,6 +138,16 @@ export class GridController {
         return all.filter(a => ids.includes(a.desktopId ?? ''));
     }
 
+    /** Return filtered apps for the current category, using cached result when possible. */
+    private _getFilteredApps(): SearchResult[] {
+        const s = this._s;
+        if (this._filteredCategory !== s.activeCategory) {
+            this._filteredApps = this._filterApps(s.activeCategory);
+            this._filteredCategory = s.activeCategory;
+        }
+        return this._filteredApps;
+    }
+
     // ─── Grid items helpers ──────────────────────────────────────────────
 
     collectGridItems(): GridItem[] {
@@ -159,6 +161,74 @@ export class GridController {
         return items;
     }
 
+    // ─── Page navigation ─────────────────────────────────────────────────
+
+    goToPage(page: number): void {
+        const clampedPage = Math.max(0, Math.min(this._totalPages - 1, page));
+        if (clampedPage === this._currentPage && this._filteredCategory === this._s.activeCategory) {
+            // Already on this page for this category — just update nav
+            this._updatePageNav();
+            return;
+        }
+        this._currentPage = clampedPage;
+        this.renderGridOnly();
+    }
+
+    nextPage(): void {
+        if (this._currentPage < this._totalPages - 1)
+            this.goToPage(this._currentPage + 1);
+    }
+
+    prevPage(): void {
+        if (this._currentPage > 0)
+            this.goToPage(this._currentPage - 1);
+    }
+
+    resetPage(): void {
+        this._currentPage = 0;
+        this._filteredCategory = ''; // force re-filter
+    }
+
+    /** Rebuild page-dot indicators and update arrow button states. */
+    private _updatePageNav(): void {
+        const s = this._s;
+        if (!s.pageDotsBox || !s.prevPageBtn || !s.nextPageBtn) return;
+
+        // Rebuild dots
+        s.pageDotsBox.destroy_all_children();
+        for (let i = 0; i < this._totalPages; i++) {
+            const dot = new St.Widget({
+                style_class: i === this._currentPage
+                    ? 'ormic-page-dot ormic-page-dot-active'
+                    : 'ormic-page-dot',
+                reactive: true,
+                track_hover: true,
+            });
+            const pageIdx = i;
+            dot.connect('button-press-event', () => {
+                this.goToPage(pageIdx);
+                s.focus();
+                return Clutter.EVENT_STOP;
+            });
+            s.pageDotsBox.add_child(dot);
+        }
+
+        // Arrow states
+        const atFirst = this._currentPage === 0;
+        const atLast = this._currentPage >= this._totalPages - 1;
+        s.prevPageBtn.reactive = !atFirst;
+        s.prevPageBtn.opacity = atFirst ? 60 : 255;
+        s.nextPageBtn.reactive = !atLast;
+        s.nextPageBtn.opacity = atLast ? 60 : 255;
+
+        // Show nav bar only when more than one page exists
+        if (this._totalPages > 1) {
+            s.pageNavBox.show();
+        } else {
+            s.pageNavBox.hide();
+        }
+    }
+
     // ─── Select category ─────────────────────────────────────────────────
 
     selectCategory(categoryName: string): void {
@@ -166,6 +236,10 @@ export class GridController {
         if (s.activeCategory === categoryName) return;
         const t0 = GLib.get_monotonic_time();
         s.activeCategory = categoryName;
+
+        // Reset pagination for the new category
+        this._currentPage = 0;
+        this._filteredCategory = ''; // force re-filter
 
         this.cancelRenderJob();
         this.cancelBgRenderJob();
@@ -183,39 +257,36 @@ export class GridController {
         if (isCustom) { s.editBtn.show(); s.deleteBtn.show(); }
         else { s.editBtn.hide(); s.deleteBtn.hide(); }
 
-        const hasCachedGrid = s.categoryGridBoxes.has(categoryName);
         const gridBox = s.getGridBox();
         s.gridScroll.set_child(gridBox);
 
-        if (!hasCachedGrid) {
-            dbg('Performance', `selectCategory('${categoryName}') — CACHE MISS, rendering grid`);
-            this.renderGridOnly();
-        } else {
-            const elapsed = (GLib.get_monotonic_time() - t0) / 1000;
-            dbg('Performance', `selectCategory('${categoryName}') — CACHE HIT, took ${elapsed.toFixed(1)}ms`);
-            s.gridSelIdx = -1;
-            timeoutOnce(10, () => {
-                if (s.gridSelIdx === -1 && s.gridScroll.visible) {
-                    this.selectGridIdx(0);
-                }
-            });
-            this.startBackgroundPreRender();
-        }
+        const elapsed = (GLib.get_monotonic_time() - t0) / 1000;
+        dbg('Performance', `selectCategory('${categoryName}') — ${elapsed.toFixed(1)}ms`);
+
+        this.renderGridOnly();
     }
 
-    // ─── Render active category grid ─────────────────────────────────────
+    // ─── Render active category grid (current page only) ─────────────────
 
     renderGridOnly(): void {
         const s = this._s;
         const t0 = GLib.get_monotonic_time();
-        const filteredApps = this._filterApps(s.activeCategory);
 
+        const filteredApps = this._getFilteredApps();
+
+        // Calculate pagination
+        this._totalPages = Math.max(1, Math.ceil(filteredApps.length / ITEMS_PER_PAGE));
+        this._currentPage = Math.max(0, Math.min(this._totalPages - 1, this._currentPage));
+
+        const pageStart = this._currentPage * ITEMS_PER_PAGE;
+        const pageEnd = Math.min(pageStart + ITEMS_PER_PAGE, filteredApps.length);
+        const pageApps = filteredApps.slice(pageStart, pageEnd);
+
+        // Clear current grid
         const gridBox = s.getGridBox();
         gridBox.get_children().forEach((row: any) => {
             if (row.get_children) {
-                row.get_children().forEach((child: any) => {
-                    row.remove_child(child);
-                });
+                row.get_children().forEach((child: any) => row.remove_child(child));
             }
         });
         gridBox.destroy_all_children();
@@ -229,157 +300,65 @@ export class GridController {
                 y_align: Clutter.ActorAlign.CENTER,
             });
             gridBox.add_child(emptyLabel);
+            this._updatePageNav();
             return;
         }
 
-        let currentRow = new St.BoxLayout({ style_class: 'ormic-grid-row', x_expand: true });
-        gridBox.add_child(currentRow);
-
-        let index = 0;
-
-        const renderChunk = () => {
-            if (s.isDestroyed()) return;
-            const end = Math.min(index + CHUNK_SIZE, filteredApps.length);
-            for (; index < end; index++) {
-                const app = filteredApps[index];
-                if (index > 0 && index % COLUMNS === 0) {
-                    currentRow = new St.BoxLayout({ style_class: 'ormic-grid-row', x_expand: true });
-                    gridBox.add_child(currentRow);
-                }
-
-                const item = new (GridItem as any)() as GridItem;
-                item.setup(app);
-                item.connect('item-activated', () => {
-                    s.ext.hide();
-                    app.activate();
-                });
-                item.connect('item-hovered', () => {
-                    if (this._scrollHoverGuard) return;
-                    const allItems = this.collectGridItems();
-                    const idx = allItems.indexOf(item);
-                    if (idx >= 0) this.selectGridIdx(idx);
-                });
-                currentRow.add_child(item);
-            }
-
-            if (index < filteredApps.length) {
-                s.renderIdleId = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
-                    renderChunk();
-                    return GLib.SOURCE_REMOVE;
-                });
-            } else {
-                s.renderIdleId = 0;
-                const elapsed = (GLib.get_monotonic_time() - t0) / 1000;
-                dbg('Performance', `renderGridOnly('${s.activeCategory}') — ${filteredApps.length} items, took ${elapsed.toFixed(1)}ms`);
-
-                if (s.gridSelIdx === -1 && s.gridScroll.visible) {
-                    this.selectGridIdx(0);
-                }
-                this.startBackgroundPreRender();
-            }
-        };
-
-        renderChunk();
-    }
-
-    // ─── Background pre-render off-screen categories ─────────────────────
-
-    private _renderCategoryGridBackground(categoryName: string, onComplete: () => void): void {
-        const s = this._s;
-        const filteredApps = this._filterApps(categoryName);
-
-        const gridBox = s.getCategoryGridBox(categoryName);
-        gridBox.get_children().forEach((row: any) => {
-            if (row.get_children) {
-                row.get_children().forEach((child: any) => {
-                    row.remove_child(child);
-                });
-            }
+        // Render page items synchronously (≤28 items — always fast)
+        let currentRow = new St.BoxLayout({
+            style_class: 'ormic-grid-row',
+            x_expand: false,
+            x_align: Clutter.ActorAlign.START,
         });
-        gridBox.destroy_all_children();
-
-        if (!filteredApps.length) {
-            const emptyLabel = new St.Label({
-                text: _('No applications in this group.\nClick the pencil icon to add apps!'),
-                style_class: 'ormic-grid-empty',
-                x_align: Clutter.ActorAlign.CENTER,
-                y_align: Clutter.ActorAlign.CENTER,
-            });
-            gridBox.add_child(emptyLabel);
-            onComplete();
-            return;
-        }
-
-        let currentRow = new St.BoxLayout({ style_class: 'ormic-grid-row', x_expand: true });
         gridBox.add_child(currentRow);
 
-        let index = 0;
+        pageApps.forEach((app, localIdx) => {
+            if (localIdx > 0 && localIdx % COLUMNS === 0) {
+                currentRow = new St.BoxLayout({
+                    style_class: 'ormic-grid-row',
+                    x_expand: false,
+                    x_align: Clutter.ActorAlign.START,
+                });
+                gridBox.add_child(currentRow);
+            }
 
-        const renderChunk = () => {
-            if (s.isDestroyed()) return;
-            const end = Math.min(index + CHUNK_SIZE, filteredApps.length);
-            for (; index < end; index++) {
-                const app = filteredApps[index];
-                if (index > 0 && index % COLUMNS === 0) {
-                    currentRow = new St.BoxLayout({ style_class: 'ormic-grid-row', x_expand: true });
-                    gridBox.add_child(currentRow);
+            const item = new (GridItem as any)() as GridItem;
+            item.setup(app);
+            item.connect('item-activated', () => {
+                s.ext.hide();
+                app.activate();
+            });
+            item.connect('item-hovered', () => {
+                const globalIdx = pageStart + localIdx;
+                if (s.gridSelIdx !== globalIdx) {
+                    s.gridSelIdx = globalIdx;
+                    const allItems = this.collectGridItems();
+                    allItems.forEach((it, idx) => it.setSelected(idx === localIdx));
                 }
+            });
+            currentRow.add_child(item);
+        });
 
-                const item = new (GridItem as any)() as GridItem;
-                item.setup(app);
-                item.connect('item-activated', () => {
-                    s.ext.hide();
-                    app.activate();
-                });
-                item.connect('item-hovered', () => {
-                    if (this._scrollHoverGuard) return;
-                    if (s.activeCategory === categoryName) {
-                        const allItems = this.collectGridItems();
-                        const idx = allItems.indexOf(item);
-                        if (idx >= 0) this.selectGridIdx(idx);
-                    }
-                });
-                currentRow.add_child(item);
-            }
+        s.renderIdleId = 0;
 
-            if (index < filteredApps.length) {
-                s.bgRenderIdleId = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
-                    renderChunk();
-                    return GLib.SOURCE_REMOVE;
-                });
-            } else {
-                s.bgRenderIdleId = 0;
-                dbg('Performance', `Background pre-render for '${categoryName}' completed.`);
-                onComplete();
-            }
-        };
+        // Auto-select first item
+        if (s.gridSelIdx === -1 && s.gridScroll.visible) {
+            s.gridSelIdx = pageStart;
+            timeoutOnce(10, () => {
+                if (s.gridScroll.visible) this.selectGridIdx(s.gridSelIdx);
+            });
+        }
 
-        renderChunk();
+        this._updatePageNav();
+
+        const elapsed = (GLib.get_monotonic_time() - t0) / 1000;
+        dbg('Performance', `renderGridOnly('${s.activeCategory}') page ${this._currentPage}/${this._totalPages - 1} — ${pageApps.length} items, ${elapsed.toFixed(1)}ms`);
     }
+
+    // ─── Background pre-render (no-op with pagination) ───────────────────
 
     startBackgroundPreRender(): void {
-        this.cancelBgRenderJob();
-
-        const allCats = this.getCategoriesList();
-        this._s.bgRenderQueue = allCats.filter(
-            cat => cat !== this._s.activeCategory && !this._s.categoryGridBoxes.has(cat),
-        );
-
-        dbg('Performance', `Starting background pre-render. Queue: ${JSON.stringify(this._s.bgRenderQueue)}`);
-        this._processNextBackgroundCategory();
-    }
-
-    private _processNextBackgroundCategory(): void {
-        if (this._s.bgRenderQueue.length === 0) {
-            dbg('Performance', 'Background pre-rendering complete.');
-            return;
-        }
-
-        const nextCat = this._s.bgRenderQueue.shift()!;
-        dbg('Performance', `Background pre-rendering category: ${nextCat}`);
-        this._renderCategoryGridBackground(nextCat, () => {
-            this._processNextBackgroundCategory();
-        });
+        // No-op: page-based rendering is fast enough on demand.
     }
 
     // ─── Tabs rendering ──────────────────────────────────────────────────
@@ -440,7 +419,6 @@ export class GridController {
         const addTab = new (CategoryTab as any)() as CategoryTab;
         addTab.setup(_('Add group'), 'list-add-symbolic');
         addTab.connect('tab-selected', () => {
-            // GroupEditorController handles this — emit on state
             s.promptEntry.text = '';
             s.promptOverlay.show();
             s.promptEntry.grab_key_focus();
@@ -455,16 +433,20 @@ export class GridController {
 
     renderGridAndTabs(): void {
         const s = this._s;
-        dbg('Performance', `renderGridAndTabs — rebuilding tabs, invalidating grid for: ${s.activeCategory}`);
+        dbg('Performance', `renderGridAndTabs — rebuilding tabs, resetting page for: ${s.activeCategory}`);
 
         this.cancelRenderJob();
         this.cancelBgRenderJob();
 
+        // Invalidate cache for active category so it re-renders
         const oldBox = s.categoryGridBoxes.get(s.activeCategory);
         if (oldBox) {
             oldBox.destroy();
             s.categoryGridBoxes.delete(s.activeCategory);
         }
+
+        this._currentPage = 0;
+        this._filteredCategory = '';
 
         this.renderTabsOnly();
 
@@ -475,41 +457,56 @@ export class GridController {
 
     // ─── Grid selection ──────────────────────────────────────────────────
 
-    selectGridIdx(i: number): void {
+    selectGridIdx(globalIdx: number): void {
+        const filteredApps = this._getFilteredApps();
+        if (!filteredApps.length) return;
+
+        const total = filteredApps.length;
+        globalIdx = Math.max(0, Math.min(total - 1, globalIdx));
+
+        const targetPage = Math.floor(globalIdx / ITEMS_PER_PAGE);
+
+        // Switch page if needed (triggers re-render, which will select item 0)
+        if (targetPage !== this._currentPage) {
+            this._currentPage = targetPage;
+            this._s.gridSelIdx = globalIdx;
+            this.renderGridOnly();
+            // After render, select the local item
+            const localIdx = globalIdx - targetPage * ITEMS_PER_PAGE;
+            timeoutOnce(20, () => {
+                const items = this.collectGridItems();
+                items.forEach((item, idx) => item.setSelected(idx === localIdx));
+            });
+            return;
+        }
+
+        const localIdx = globalIdx - this._currentPage * ITEMS_PER_PAGE;
         const items = this.collectGridItems();
         if (!items.length) return;
-        i = Math.max(0, Math.min(items.length - 1, i));
-        items.forEach((item, idx) => item.setSelected(idx === i));
-        this._s.gridSelIdx = i;
 
-        // Activate scroll-hover guard BEFORE scrolling to prevent the
-        // scroll → hover → scroll feedback loop.
-        this._cancelScrollGuard();
-        this._scrollHoverGuard = true;
-        scrollToActor(this._s.gridScroll, items[i]);
-        this._scrollGuardTimerId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, SCROLL_HOVER_GUARD_MS, () => {
-            this._scrollHoverGuard = false;
-            this._scrollGuardTimerId = null;
-            return GLib.SOURCE_REMOVE;
-        });
+        items.forEach((item, idx) => item.setSelected(idx === localIdx));
+        this._s.gridSelIdx = globalIdx;
     }
 
     moveGridSel(d: number): void {
-        const items = this.collectGridItems();
-        const n = items.length;
-        if (n) {
-            this.selectGridIdx((this._s.gridSelIdx + d + n) % n);
-        }
+        const filteredApps = this._getFilteredApps();
+        const total = filteredApps.length;
+        if (!total) return;
+
+        const currentGlobal = this._s.gridSelIdx;
+        const startGlobal = currentGlobal < 0 ? 0 : currentGlobal;
+        const newGlobal = ((startGlobal + d) % total + total) % total;
+        this.selectGridIdx(newGlobal);
     }
 
     activateGridSel(): void {
         const s = this._s;
         dbg('Activate', 'grid sel', s.gridSelIdx);
-        const items = this.collectGridItems();
-        const selected = items[s.gridSelIdx];
+        const filteredApps = this._getFilteredApps();
+        const selected = filteredApps[s.gridSelIdx];
         if (selected) {
             s.ext.hide();
-            selected.result.activate();
+            selected.activate();
         }
     }
 
@@ -549,7 +546,6 @@ export class GridController {
         this.cancelRenderJob();
         this.cancelBgRenderJob();
         this._cancelTabHoverTimer();
-        this._cancelScrollGuard();
         const s = this._s;
         if (s.tid != null) {
             GLib.source_remove(s.tid as number);

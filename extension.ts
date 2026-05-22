@@ -29,7 +29,6 @@ import { RecentProvider } from './providers/recent.js';
 import { CommandProvider } from './providers/command.js';
 import { WindowProvider } from './providers/window.js';
 
-import { GridItem } from './components/GridItem.js';
 import { CategoryTab } from './components/CategoryTab.js';
 
 import { LauncherState } from './launcher/LauncherState.js';
@@ -55,7 +54,7 @@ const LauncherDialog = GObject.registerClass(
         private _tid!: number | null | undefined;
         private _gen!: number;
         _shellSettings!: Gio.Settings;
-        
+
         private _categoryGridBoxes!: Map<string, St.BoxLayout>;
         private _allAppsCache!: SearchResult[];
         private _allAppsCacheDirty!: boolean;
@@ -103,6 +102,12 @@ const LauncherDialog = GObject.registerClass(
         _tabsBox!: St.BoxLayout;
         _vsep!: St.Widget;
 
+        // Page navigation bar
+        _pageNavBox!: St.BoxLayout;
+        _pageDotsBox!: St.BoxLayout;
+        _prevPageBtn!: St.Button;
+        _nextPageBtn!: St.Button;
+
         // Group Editor checklist view
         _editorBox!: St.BoxLayout;
         _editorNameEntry!: St.Entry;
@@ -135,7 +140,7 @@ const LauncherDialog = GObject.registerClass(
             this._tid = null;
             this._gen = 0;
             this._shellSettings = new Gio.Settings({ schema_id: 'org.gnome.shell' });
-            
+
             this._categoryGridBoxes = new Map();
             this._allAppsCache = [];
             this._allAppsCacheDirty = true;
@@ -183,26 +188,32 @@ const LauncherDialog = GObject.registerClass(
             });
 
             this.connect('scroll-event', (_, ev) => {
+                const dir = ev.get_scroll_direction();
+                let delta = 0;
+                if (dir === Clutter.ScrollDirection.UP) delta = -1;
+                else if (dir === Clutter.ScrollDirection.DOWN) delta = 1;
+                else if (dir === Clutter.ScrollDirection.SMOOTH) {
+                    const [, dy] = ev.get_scroll_delta();
+                    if (dy < 0) delta = -1;
+                    else if (dy > 0) delta = 1;
+                }
+
+                // Grid view: scroll navigates pages
+                if (this._gridScroll.visible && delta !== 0) {
+                    if (delta === -1) this._gridCtrl.prevPage();
+                    else this._gridCtrl.nextPage();
+                    return Clutter.EVENT_STOP;
+                }
+
+                // Search/editor view: scroll the list
                 let sv: St.ScrollView | null = null;
                 if (this._scroll.visible) sv = this._scroll;
-                else if (this._gridScroll.visible) sv = this._gridScroll;
                 else if (this._editorScroll.visible) sv = this._editorScroll;
-
                 if (sv && sv.vscrollbar_visible && sv.vadjustment) {
                     const adj = sv.vadjustment;
-                    const dir = ev.get_scroll_direction();
                     const step = adj.step_increment * 2.5;
-                    if (dir === Clutter.ScrollDirection.UP) {
-                        adj.set_value(adj.value - step);
-                        return Clutter.EVENT_STOP;
-                    } else if (dir === Clutter.ScrollDirection.DOWN) {
-                        adj.set_value(adj.value + step);
-                        return Clutter.EVENT_STOP;
-                    } else if (dir === Clutter.ScrollDirection.SMOOTH) {
-                        const [, dy] = ev.get_scroll_delta();
-                        adj.set_value(adj.value + dy * step);
-                        return Clutter.EVENT_STOP;
-                    }
+                    if (delta === -1) { adj.set_value(adj.value - step); return Clutter.EVENT_STOP; }
+                    if (delta === 1)  { adj.set_value(adj.value + step); return Clutter.EVENT_STOP; }
                 }
                 return Clutter.EVENT_PROPAGATE;
             });
@@ -250,22 +261,25 @@ const LauncherDialog = GObject.registerClass(
                 this._tips.add_child(innerT);
             }
 
-            // ── Library Grid Header ────────────────────────────────────────
-            this._headerBox = new St.BoxLayout({ style_class: 'ormic-header', x_expand: true });
+            // ── Library Grid Header ────────────────────────────────────────────
+            // Compact action-only header — active category shown in the tab bar
+            this._headerBox = new St.BoxLayout({
+                style_class: 'ormic-header',
+                x_expand: true,
+                x_align: Clutter.ActorAlign.END,
+                y_align: Clutter.ActorAlign.CENTER,
+            });
 
-            const leftSpacer = new St.Widget({ x_expand: true });
-            this._headerBox.add_child(leftSpacer);
-
+            // Keep a stub title label (never shown) so state references don’t break
             this._headerTitleLabel = new St.Label({
                 text: this._activeCategory,
                 style_class: 'ormic-header-title',
                 y_align: Clutter.ActorAlign.CENTER,
+                visible: false,
             });
-            this._headerBox.add_child(this._headerTitleLabel);
 
             const controlBox = new St.BoxLayout({
                 style_class: 'ormic-header-control',
-                x_expand: true,
                 x_align: Clutter.ActorAlign.END,
                 y_align: Clutter.ActorAlign.CENTER,
             });
@@ -300,13 +314,59 @@ const LauncherDialog = GObject.registerClass(
 
             this._headerBox.add_child(controlBox);
 
-            // ── Library Grid Scroll Box ──────────────────────────────────
+            // ── Library Grid Scroll Box (no scrolling — pages used instead) ──
             this._gridScroll = new St.ScrollView({
                 style_class: 'ormic-grid-scroll',
                 hscrollbar_policy: St.PolicyType.NEVER,
-                vscrollbar_policy: St.PolicyType.AUTOMATIC,
-                overlay_scrollbars: true, x_expand: true, y_expand: true,
+                vscrollbar_policy: St.PolicyType.NEVER,
+                overlay_scrollbars: false, x_expand: true, y_expand: true,
             });
+
+            // ── Page Navigation Bar (arrows + dots) ──────────────────────
+            this._pageNavBox = new St.BoxLayout({
+                style_class: 'ormic-page-nav',
+                x_expand: true,
+                x_align: Clutter.ActorAlign.CENTER,
+                y_align: Clutter.ActorAlign.CENTER,
+            });
+
+            this._prevPageBtn = new St.Button({
+                style_class: 'ormic-page-btn',
+                child: new St.Icon({ icon_name: 'go-previous-symbolic', icon_size: 14 }),
+                reactive: true, track_hover: true, can_focus: false,
+            });
+            this._prevPageBtn.connect('button-release-event', (actor, ev) => {
+                if (ev.get_button() === 1) {
+                    this._gridCtrl.prevPage();
+                    this.focus();
+                    return Clutter.EVENT_STOP;
+                }
+                return Clutter.EVENT_PROPAGATE;
+            });
+
+            this._pageDotsBox = new St.BoxLayout({
+                style_class: 'ormic-page-dots',
+                x_align: Clutter.ActorAlign.CENTER,
+            });
+
+            this._nextPageBtn = new St.Button({
+                style_class: 'ormic-page-btn',
+                child: new St.Icon({ icon_name: 'go-next-symbolic', icon_size: 14 }),
+                reactive: true, track_hover: true, can_focus: false,
+            });
+            this._nextPageBtn.connect('button-release-event', (actor, ev) => {
+                if (ev.get_button() === 1) {
+                    this._gridCtrl.nextPage();
+                    this.focus();
+                    return Clutter.EVENT_STOP;
+                }
+                return Clutter.EVENT_PROPAGATE;
+            });
+
+            this._pageNavBox.add_child(this._prevPageBtn);
+            this._pageNavBox.add_child(this._pageDotsBox);
+            this._pageNavBox.add_child(this._nextPageBtn);
+            this._pageNavBox.hide(); // hidden until multiple pages exist
 
             // ── Top Header Tabs Container ─────────────────────────────────
             this._tabsBox = new St.BoxLayout({
@@ -497,7 +557,7 @@ const LauncherDialog = GObject.registerClass(
             this._tabsBox.y_expand = false;
             this._tabsBox.x_align = Clutter.ActorAlign.FILL;
             this._tabsBox.y_align = Clutter.ActorAlign.START;
-            
+
             const tabsScroll = new St.ScrollView({
                 style_class: 'ormic-tabs-scroll',
                 hscrollbar_policy: St.PolicyType.AUTOMATIC,
@@ -521,6 +581,7 @@ const LauncherDialog = GObject.registerClass(
             rightPanel.add_child(this._scroll);
             rightPanel.add_child(this._headerBox);
             rightPanel.add_child(this._gridScroll);
+            rightPanel.add_child(this._pageNavBox);
             rightPanel.add_child(this._editorBox);
             rightPanel.add_child(this._promptOverlay);
 
@@ -598,6 +659,10 @@ const LauncherDialog = GObject.registerClass(
                 editorAppsContainer: this._editorAppsContainer,
                 promptOverlay: this._promptOverlay,
                 promptEntry: this._promptEntry,
+                pageNavBox: this._pageNavBox,
+                pageDotsBox: this._pageDotsBox,
+                prevPageBtn: this._prevPageBtn,
+                nextPageBtn: this._nextPageBtn,
 
                 focus: () => this.focus(),
                 getGridBox: () => this._gridBox,
@@ -615,8 +680,8 @@ const LauncherDialog = GObject.registerClass(
         vfunc_key_press_event(ev: Clutter.Event): boolean { return this._onKey(ev); }
 
         private _onKey(ev: any): boolean {
-        return this._kbdHandler.onKey(ev);
-    }
+            return this._kbdHandler.onKey(ev);
+        }
 
         private _setTabsVisible(visible: boolean) {
             const shouldShowGroups = this._ext._settings.get_boolean('show-groups-sidebar');
@@ -630,314 +695,75 @@ const LauncherDialog = GObject.registerClass(
         }
 
         private _onText() {
-        this._searchCtrl.onText();
-    }
+            this._searchCtrl.onText();
+        }
 
-        private _search(query: string) {
-        this._searchCtrl.search(query);
-    }
+        // ─── Search View ─────────────────────────────────────────────────
 
-        private _clear() {
-        this._searchCtrl.clear();
-    }
+        private _selectIdx(i: number) { this._searchCtrl.selectIdx(i); }
+        private _moveSel(d: number) { this._searchCtrl.moveSel(d); }
+        private _activateSel() { this._searchCtrl.activateSel(); }
+        private _activateIdx(i: number) { this._searchCtrl.activateIdx(i); }
+        private _complete() { this._searchCtrl.complete(); }
 
-        // ─── Search View Rendering ───────────────────────────────────────────
+        // ─── Grid View ────────────────────────────────────────────────────
 
-        private _renderSearchResults() {
-        this._searchCtrl.renderSearchResults();
-    }
+        private _ensureAllAppsCache() { this._gridCtrl.ensureAllAppsCache(); }
 
-        private _selectIdx(i: number) {
-        this._searchCtrl.selectIdx(i);
-    }
-
-        private _moveSel(d: number) {
-        this._searchCtrl.moveSel(d);
-    }
-
-        private _activateSel() {
-        this._searchCtrl.activateSel();
-    }
-
-        private _activateIdx(i: number) {
-        this._searchCtrl.activateIdx(i);
-    }
-
-        private _complete() {
-        this._searchCtrl.complete();
-    }
-
-        // ─── Grid View Rendering & Management ────────────────────────────────
-
-        private _collectGridItems(): GridItem[] {
-        return this._gridCtrl.collectGridItems();
-    }
-
-        private _ensureAllAppsCache() {
-        this._gridCtrl.ensureAllAppsCache();
-    }
-
-        private _cancelRenderJob() {
-        this._gridCtrl.cancelRenderJob();
-    }
-
-        private _cancelBgRenderJob() {
-        this._gridCtrl.cancelBgRenderJob();
-    }
+        private _cancelRenderJob() { this._gridCtrl.cancelRenderJob(); }
+        private _cancelBgRenderJob() { this._gridCtrl.cancelBgRenderJob(); }
 
         cleanup() {
-        this._gridCtrl.cleanup();
-        // existing cleanup logic retained for safety
-        this._cancelRenderJob();
-        this._cancelBgRenderJob();
-        if (this._tid != null) {
-            GLib.source_remove(this._tid as number);
-            this._tid = null;
+            this._gridCtrl.cleanup();
+            this._cancelRenderJob();
+            this._cancelBgRenderJob();
+            if (this._tid != null) {
+                GLib.source_remove(this._tid as number);
+                this._tid = null;
+            }
+            if (this._categoryGridBoxes) {
+                this._categoryGridBoxes.forEach(box => {
+                    try { box.destroy(); } catch (_) { }
+                });
+                this._categoryGridBoxes.clear();
+            }
         }
-        if (this._categoryGridBoxes) {
-            this._categoryGridBoxes.forEach(box => {
-                try { box.destroy(); } catch (_) {}
-            });
-            this._categoryGridBoxes.clear();
-        }
-    }
 
         private _selectCategory(categoryName: string) {
-        this._gridCtrl.selectCategory(categoryName);
-    }
-
-        private _renderGridOnly() {
-        this._gridCtrl.renderGridOnly();
-    }
-
-        private _renderCategoryGridBackground(categoryName: string, onComplete: () => void) {
-            this._ensureAllAppsCache();
-
-            let filteredApps: SearchResult[] = [];
-            if (categoryName === 'Library Home') {
-                filteredApps = this._allAppsCache;
-            } else if (categoryName === 'Office') {
-                filteredApps = this._allAppsCache.filter(a => a.category.toLowerCase().includes('office'));
-            } else if (categoryName === 'System') {
-                filteredApps = this._allAppsCache.filter(a =>
-                    a.category.toLowerCase().includes('system') ||
-                    a.category.toLowerCase().includes('setting') ||
-                    a.category.toLowerCase().includes('administration') ||
-                    a.category.toLowerCase().includes('preferences')
-                );
-            } else if (categoryName === 'Utilities') {
-                filteredApps = this._allAppsCache.filter(a =>
-                    a.category.toLowerCase().includes('utility') ||
-                    a.category.toLowerCase().includes('utilities') ||
-                    a.category.toLowerCase().includes('accessories')
-                );
-            } else {
-                const customGroups = this._getCustomGroups();
-                const customAppIds = customGroups[categoryName] || [];
-                filteredApps = this._allAppsCache.filter(a => customAppIds.includes(a.desktopId ?? ''));
-            }
-
-            const gridBox = this._getCategoryGridBox(categoryName);
-            gridBox.get_children().forEach((row: any) => {
-                if (row.get_children) {
-                    row.get_children().forEach((child: any) => {
-                        row.remove_child(child);
-                    });
-                }
-            });
-            gridBox.destroy_all_children();
-
-            if (!filteredApps.length) {
-                const emptyLabel = new St.Label({
-                    text: _('No applications in this group.\nClick the pencil icon to add apps!'),
-                    style_class: 'ormic-grid-empty',
-                    x_align: Clutter.ActorAlign.CENTER,
-                    y_align: Clutter.ActorAlign.CENTER,
-                });
-                gridBox.add_child(emptyLabel);
-                onComplete();
-                return;
-            }
-
-            const columns = 7;
-            let currentRow = new St.BoxLayout({ style_class: 'ormic-grid-row', x_expand: true });
-            gridBox.add_child(currentRow);
-
-            let index = 0;
-            const CHUNK_SIZE = 8;
-
-            const renderChunk = () => {
-                if ((this as any).is_finalized?.() || !this.get_stage?.()) return;
-                const end = Math.min(index + CHUNK_SIZE, filteredApps.length);
-                for (; index < end; index++) {
-                    const app = filteredApps[index];
-                    if (index > 0 && index % columns === 0) {
-                        currentRow = new St.BoxLayout({ style_class: 'ormic-grid-row', x_expand: true });
-                        gridBox.add_child(currentRow);
-                    }
-
-                    const item = new (GridItem as any)() as GridItem;
-                    item.setup(app);
-                    item.connect('item-activated', () => {
-                        this._ext.hide();
-                        app.activate();
-                    });
-                    item.connect('item-hovered', () => {
-                        if (this._activeCategory === categoryName) {
-                            const allItems = this._collectGridItems();
-                            const idx = allItems.indexOf(item);
-                            if (idx >= 0) this._selectGridIdx(idx);
-                        }
-                    });
-                    currentRow.add_child(item);
-                }
-
-                if (index < filteredApps.length) {
-                    this._bgRenderIdleId = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
-                        renderChunk();
-                        return GLib.SOURCE_REMOVE;
-                    });
-                } else {
-                    this._bgRenderIdleId = 0;
-                    dbg('Performance', `Background pre-render for '${categoryName}' completed.`);
-                    onComplete();
-                }
-            };
-
-            renderChunk();
+            this._gridCtrl.selectCategory(categoryName);
         }
 
-        private _startBackgroundPreRender() {
-            this._cancelBgRenderJob();
-
-            const allCats = this._getCategoriesList();
-            this._bgRenderQueue = allCats.filter(cat => cat !== this._activeCategory && !this._categoryGridBoxes.has(cat));
-
-            dbg('Performance', `Starting background pre-render. Queue: ${JSON.stringify(this._bgRenderQueue)}`);
-            this._processNextBackgroundCategory();
-        }
-
-        private _processNextBackgroundCategory() {
-            if (this._bgRenderQueue.length === 0) {
-                dbg('Performance', 'Background pre-rendering complete.');
-                return;
-            }
-
-            const nextCat = this._bgRenderQueue.shift()!;
-            dbg('Performance', `Background pre-rendering category: ${nextCat}`);
-            this._renderCategoryGridBackground(nextCat, () => {
-                this._processNextBackgroundCategory();
-            });
-        }
+        // ─── Tabs & grid rendering — all delegated to GridController ─────
+        // BUG FIX: the old LauncherDialog had its own _renderTabsOnly that
+        // diverged from GridController.renderTabsOnly, causing tab state to be
+        // inconsistent after group create/edit.  Now every render path goes
+        // through a single authoritative implementation in GridController.
 
         private _renderTabsOnly() {
-            dbg('Grid', `renderTabsOnly category=${this._activeCategory}`);
+            this._gridCtrl.renderTabsOnly();
+        }
 
-            this._tabsBox.destroy_all_children();
-
-            const staticTabs = [
-                { name: 'Library Home', icon: 'go-home-symbolic' },
-                { name: 'Office', icon: 'x-office-document-symbolic' },
-                { name: 'System', icon: 'emblem-system-symbolic' },
-                { name: 'Utilities', icon: 'accessories-calculator-symbolic' },
-            ];
-
-            staticTabs.forEach(t => {
-                const tab = new (CategoryTab as any)() as CategoryTab;
-                tab.setup(t.name, t.icon);
-                tab.setSelected(this._activeCategory === t.name);
-                tab.connect('tab-selected', () => {
-                    this._selectCategory(t.name);
-                    this.focus();
-                });
-                tab.connect('tab-hovered', () => {
-                    this._selectCategory(t.name);
-                    this.focus();
-                });
-                this._tabsBox.add_child(tab);
-            });
-
-            const customGroups = this._getCustomGroups();
-            for (const gName of Object.keys(customGroups)) {
-                const tab = new (CategoryTab as any)() as CategoryTab;
-                tab.setup(gName, 'folder-symbolic');
-                tab.setSelected(this._activeCategory === gName);
-                tab.connect('tab-selected', () => {
-                    this._selectCategory(gName);
-                    this.focus();
-                });
-                tab.connect('tab-hovered', () => {
-                    this._selectCategory(gName);
-                    this.focus();
-                });
-                this._tabsBox.add_child(tab);
-            }
-
-            const addTab = new (CategoryTab as any)() as CategoryTab;
-            addTab.setup(_('Add group'), 'list-add-symbolic');
-            addTab.connect('tab-selected', () => {
-                this._showPromptOverlay();
-            });
-            this._tabsBox.add_child(addTab);
-
-            this._headerTitleLabel.text = this._activeCategory;
-            const isCustom = !staticTabs.some(t => t.name === this._activeCategory);
-            if (isCustom) {
-                this._editBtn.show();
-                this._deleteBtn.show();
-            } else {
-                this._editBtn.hide();
-                this._deleteBtn.hide();
-            }
+        private _renderGridOnly() {
+            this._gridCtrl.renderGridOnly();
         }
 
         private _renderGridAndTabs() {
             this._gridCtrl.renderGridAndTabs();
         }
 
-        private _selectGridIdx(i: number) {
-            this._gridCtrl.selectGridIdx(i);
-        }
+        private _selectGridIdx(i: number) { this._gridCtrl.selectGridIdx(i); }
+        private _moveGridSel(d: number) { this._gridCtrl.moveGridSel(d); }
+        private _activateGridSel() { this._gridCtrl.activateGridSel(); }
 
-        private _moveGridSel(d: number) {
-            this._gridCtrl.moveGridSel(d);
-        }
+        private _startEditing() { this._groupCtrl.startEditing(); }
+        private _stopEditing(save: boolean) { this._groupCtrl.stopEditing(save); }
+        private _deleteActiveCategory() { this._groupCtrl.deleteActiveCategory(); }
+        private _showPromptOverlay() { this._groupCtrl.showPromptOverlay(); }
+        private _hidePromptOverlay(create: boolean) { this._groupCtrl.hidePromptOverlay(create); }
 
-        private _activateGridSel() {
-            this._gridCtrl.activateGridSel();
-        }
-
-        private _startEditing() {
-            this._groupCtrl.startEditing();
-        }
-
-        private _stopEditing(save: boolean) {
-            this._groupCtrl.stopEditing(save);
-        }
-
-        private _deleteActiveCategory() {
-            this._groupCtrl.deleteActiveCategory();
-        }
-
-        private _showPromptOverlay() {
-            this._groupCtrl.showPromptOverlay();
-        }
-
-        private _hidePromptOverlay(create: boolean) {
-            this._groupCtrl.hidePromptOverlay(create);
-        }
-
-        private _getCategoriesList(): string[] {
-            return this._gridCtrl.getCategoriesList();
-        }
-
-        private _getCustomGroups(): Record<string, string[]> {
-            return this._gridCtrl.getCustomGroups();
-        }
-
-        private _saveCustomGroups(groups: Record<string, string[]>) {
-            this._gridCtrl.saveCustomGroups(groups);
-        }
+        private _getCategoriesList(): string[] { return this._gridCtrl.getCategoriesList(); }
+        private _getCustomGroups(): Record<string, string[]> { return this._gridCtrl.getCustomGroups(); }
+        private _saveCustomGroups(groups: Record<string, string[]>) { this._gridCtrl.saveCustomGroups(groups); }
 
         // ─── External Controls ────────────────────────────────────────────────
 
@@ -963,9 +789,7 @@ const LauncherDialog = GObject.registerClass(
             if (this._providers) {
                 for (const p of this._providers) {
                     try {
-                        if (typeof p.onOpen === 'function') {
-                            p.onOpen();
-                        }
+                        if (typeof p.onOpen === 'function') p.onOpen();
                     } catch (e: any) {
                         log(`Ormic Launcher: Error calling onOpen on provider: ${e.message}`);
                     }
@@ -975,7 +799,7 @@ const LauncherDialog = GObject.registerClass(
             this._cancelRenderJob();
             this._cancelBgRenderJob();
 
-            this._clear();
+            this._searchCtrl.clear();
             this._entry.text = '';
             this._activeCategory = 'Library Home';
             this._isEditing = false;
@@ -984,34 +808,35 @@ const LauncherDialog = GObject.registerClass(
             this._promptOverlay.hide();
 
             this._entryBox.show();
-
             this._scroll.hide();
             this._headerBox.show();
             this._gridScroll.show();
+            // pageNavBox visibility is managed by GridController._updatePageNav()
             this._setTabsVisible(true);
 
             const needsRebuild = isAppsDirty || this._allAppsCacheDirty || this._categoryGridBoxes.size === 0;
 
             if (needsRebuild) {
-                dbg('Performance', `SLOW PATH: cache rebuild needed. isAppsDirty=${isAppsDirty}, allAppsCacheDirty=${this._allAppsCacheDirty}, gridBoxes=${this._categoryGridBoxes.size}`);
+                dbg('Performance', `SLOW PATH: cache rebuild. isAppsDirty=${isAppsDirty}, allAppsCacheDirty=${this._allAppsCacheDirty}, gridBoxes=${this._categoryGridBoxes.size}`);
                 this._allAppsCacheDirty = true;
-                
+
                 if (this._categoryGridBoxes) {
                     this._categoryGridBoxes.forEach(box => box.destroy());
                     this._categoryGridBoxes.clear();
                 }
 
+                // Single authoritative render — goes through GridController
                 this._renderTabsOnly();
 
                 const gridBox = this._gridBox;
                 this._gridScroll.set_child(gridBox);
 
-                timeoutOnce(20, () => {
-                    this._renderGridOnly();
-                });
+                // Render grid immediately to ensure right side shows content
+                this._renderGridOnly();
             } else {
                 dbg('Performance', `FAST PATH: reusing ${this._categoryGridBoxes.size} cached grid boxes`);
 
+                // Re-sync tab selection without full rebuild
                 const tabs = this._tabsBox.get_children() as CategoryTab[];
                 if (tabs.length === 0) {
                     this._renderTabsOnly();
@@ -1036,7 +861,7 @@ const LauncherDialog = GObject.registerClass(
                     }
                 });
 
-                this._startBackgroundPreRender();
+                this._gridCtrl.startBackgroundPreRender();
             }
         }
     },
@@ -1176,8 +1001,7 @@ export default class OrmicLauncherExtension extends Extension {
         if (this._monId) { Main.layoutManager.disconnect(this._monId); this._monId = null; }
         this._indicator?.destroy(); this._indicator = null;
         Main.wm.removeKeybinding('toggle-ormic-launcher');
-        
-        // Stop any running animations and clean up idle rendering tasks
+
         if (this._overlay) {
             if (this._overlayCapturedId) this._overlay.disconnect(this._overlayCapturedId);
             if (this._overlayPressId) this._overlay.disconnect(this._overlayPressId);
@@ -1197,12 +1021,12 @@ export default class OrmicLauncherExtension extends Extension {
 
         this._overlay = null;
         this._dialog = null;
-        
+
         if (this._clickGuardTimer != null) {
             GLib.source_remove(this._clickGuardTimer);
             this._clickGuardTimer = null;
         }
-        
+
         for (const p of this.providers) {
             if (typeof p.destroy === 'function') {
                 try { p.destroy(); } catch (_) { }
@@ -1226,7 +1050,7 @@ export default class OrmicLauncherExtension extends Extension {
     _pos() {
         if (!this._overlay || !this._dialog) return;
         const mon = Main.layoutManager.primaryMonitor; if (!mon) return;
-        const dw = Math.min(1020, mon.width * 0.65);
+        const dw = Math.min(1060, mon.width * 0.66);
         const dx = mon.x + Math.floor((mon.width - dw) / 2);
         const dy = mon.y + Math.floor(mon.height * 0.14);
         this._overlay.set_position(mon.x, mon.y);
@@ -1238,18 +1062,15 @@ export default class OrmicLauncherExtension extends Extension {
     }
 
     toggle() {
-        if (this._visible) {
-            this.hide();
-        } else {
-            this.show();
-        }
+        if (this._visible) this.hide();
+        else this.show();
     }
 
     show() {
         dbg('Launcher', 'show()');
         if (this._visible) return;
         if (!this._dialog || !this._overlay) return;
-        
+
         this._overlay.remove_all_transitions();
         this._dialog.remove_all_transitions();
 
@@ -1279,7 +1100,7 @@ export default class OrmicLauncherExtension extends Extension {
         dbg('Launcher', 'hide()');
         if (!this._visible) return;
         if (!this._dialog || !this._overlay) return;
-        
+
         this._overlay.remove_all_transitions();
         this._dialog.remove_all_transitions();
 
@@ -1290,11 +1111,8 @@ export default class OrmicLauncherExtension extends Extension {
             this._clickGuardTimer = null;
         }
         if (this._grab) {
-            try {
-                Main.popModal(this._grab);
-            } catch (e: any) {
-                dbg('Launcher', `popModal failed: ${e.message}`);
-            }
+            try { Main.popModal(this._grab); }
+            catch (e: any) { dbg('Launcher', `popModal failed: ${e.message}`); }
             this._grab = null;
         }
         const ov = this._overlay, dl = this._dialog;
@@ -1303,9 +1121,6 @@ export default class OrmicLauncherExtension extends Extension {
             onComplete: () => {
                 if (ov && !(ov as any).is_finalized?.() && dl && !(dl as any).is_finalized?.()) {
                     ov.hide();
-                    // reset() is NOT called here — it runs in show() instead.
-                    // Calling it during hide's fade-out would waste CPU rebuilding
-                    // tabs and scanning providers while the dialog is invisible.
                     dl.opacity = 255;
                     dl.translation_y = 0;
                 }

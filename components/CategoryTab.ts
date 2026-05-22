@@ -17,7 +17,8 @@ export const CategoryTab = GObject.registerClass({
         super._init({
             style_class: 'ormic-category-tab',
             reactive: true, track_hover: true, can_focus: false,
-            x_expand: true, x_align: Clutter.ActorAlign.FILL,
+            x_expand: false,
+            x_align: Clutter.ActorAlign.START,
         });
 
         this.connect('notify::hover', () => {
