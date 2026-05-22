@@ -11,9 +11,9 @@ import { dbg } from '../utils.js';
 export const EditAppRow = GObject.registerClass({
     Signals: { toggle: {} },
 }, class EditAppRow extends St.Button {
-    private _result!: SearchResult;
-    private _selected = false;
-    private _checkIcon!: St.Icon;
+    declare private _result: SearchResult;
+    declare private _selected: boolean;
+    declare private _checkIcon: St.Icon;
 
     _init() {
         super._init({

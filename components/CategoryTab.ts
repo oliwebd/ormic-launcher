@@ -10,8 +10,8 @@ import { dbg } from '../utils.js';
 export const CategoryTab = GObject.registerClass({
     Signals: { 'tab-selected': {}, 'tab-hovered': {} },
 }, class CategoryTab extends St.Button {
-    private _categoryName!: string;
-    private _iconName!: string;
+    declare private _categoryName: string;
+    declare private _iconName: string;
 
     _init() {
         super._init({

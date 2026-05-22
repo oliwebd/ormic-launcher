@@ -14,9 +14,9 @@ import { dbg } from '../utils.js';
 export const ResultRow = GObject.registerClass({
     Signals: { 'item-activated': {}, 'item-hovered': {} },
 }, class ResultRow extends St.Button {
-    private _result!: SearchResult;
-    private _accentBar!: St.Widget;
-    _favButton?: St.Button;
+    declare private _result: SearchResult;
+    declare private _accentBar: St.Widget;
+    declare _favButton?: St.Button;
 
     _init() {
         super._init({

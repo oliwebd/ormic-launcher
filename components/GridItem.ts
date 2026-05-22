@@ -21,11 +21,11 @@ import { dbg } from '../utils.js';
  */
 export const GridItem = GObject.registerClass(
     class GridItem extends St.Button {
-        private _result!: SearchResult;
-        private _iconBin!: St.Bin;
-        private _nameLabel!: St.Label;
-        private _activateCb: (() => void) | null = null;
-        private _hoverCb: (() => void) | null = null;
+        declare private _result: SearchResult;
+        declare private _iconBin: St.Bin;
+        declare private _nameLabel: St.Label;
+        declare private _activateCb: (() => void) | null;
+        declare private _hoverCb: (() => void) | null;
 
         _init() {
             super._init({
