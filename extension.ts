@@ -76,7 +76,10 @@ const LauncherDialog = GObject.registerClass(
             let box = this._categoryGridBoxes.get(categoryName);
             if (!box) {
                 box = new St.BoxLayout({
-                    style_class: 'ormic-grid-box', orientation: Clutter.Orientation.VERTICAL, x_expand: true,
+                    style_class: 'ormic-grid-box',
+                    orientation: Clutter.Orientation.VERTICAL,
+                    x_expand: true,
+                    x_align: Clutter.ActorAlign.CENTER,
                 });
                 this._categoryGridBoxes.set(categoryName, box);
             }
@@ -198,12 +201,6 @@ const LauncherDialog = GObject.registerClass(
                     else if (dy > 0) delta = 1;
                 }
 
-                // Grid view: scroll navigates pages
-                if (this._gridScroll.visible && delta !== 0) {
-                    if (delta === -1) this._gridCtrl.prevPage();
-                    else this._gridCtrl.nextPage();
-                    return Clutter.EVENT_STOP;
-                }
 
                 // Search/editor view: scroll the list
                 let sv: St.ScrollView | null = null;
@@ -318,8 +315,8 @@ const LauncherDialog = GObject.registerClass(
             this._gridScroll = new St.ScrollView({
                 style_class: 'ormic-grid-scroll',
                 hscrollbar_policy: St.PolicyType.NEVER,
-                vscrollbar_policy: St.PolicyType.NEVER,
-                overlay_scrollbars: false, x_expand: true, y_expand: true,
+                vscrollbar_policy: St.PolicyType.AUTOMATIC,
+                overlay_scrollbars: true, x_expand: true, y_expand: true,
             });
 
             // ── Page Navigation Bar (arrows + dots) ──────────────────────
@@ -560,7 +557,7 @@ const LauncherDialog = GObject.registerClass(
 
             const tabsScroll = new St.ScrollView({
                 style_class: 'ormic-tabs-scroll',
-                hscrollbar_policy: St.PolicyType.AUTOMATIC,
+                hscrollbar_policy: St.PolicyType.NEVER,
                 vscrollbar_policy: St.PolicyType.NEVER,
                 overlay_scrollbars: true,
                 x_expand: true,
@@ -783,9 +780,6 @@ const LauncherDialog = GObject.registerClass(
         }
 
         reset() {
-            const appProv = this._providers?.find(p => p.id === 'apps') as AppProvider | undefined;
-            const isAppsDirty = appProv ? appProv.dirty : false;
-
             if (this._providers) {
                 for (const p of this._providers) {
                     try {
@@ -814,10 +808,13 @@ const LauncherDialog = GObject.registerClass(
             // pageNavBox visibility is managed by GridController._updatePageNav()
             this._setTabsVisible(true);
 
-            const needsRebuild = isAppsDirty || this._allAppsCacheDirty || this._categoryGridBoxes.size === 0;
+            // App dirtiness is handled inside GridController.ensureAllAppsCache() now.
+            // Only rebuild the grid widget tree when it has never been built or the
+            // user explicitly cleared it (custom group edit, etc.).
+            const needsRebuild = this._allAppsCacheDirty || this._categoryGridBoxes.size === 0;
 
             if (needsRebuild) {
-                dbg('Performance', `SLOW PATH: cache rebuild. isAppsDirty=${isAppsDirty}, allAppsCacheDirty=${this._allAppsCacheDirty}, gridBoxes=${this._categoryGridBoxes.size}`);
+                dbg('Performance', `SLOW PATH: cache rebuild. allAppsCacheDirty=${this._allAppsCacheDirty}, gridBoxes=${this._categoryGridBoxes.size}`);
                 this._allAppsCacheDirty = true;
 
                 if (this._categoryGridBoxes) {

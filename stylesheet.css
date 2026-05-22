@@ -324,7 +324,7 @@
 
 /* Rows align to START so incomplete last row doesn't leave empty right gap */
 .ormic-grid-row {
-  spacing: 10px;
+  spacing: 6px;
   x-align: start;
 }
 
@@ -339,13 +339,13 @@
 
 /* ── Grid Card Item ──────────────────────────────────────────────────────── */
 .ormic-grid-item {
-  padding: 10px 6px 8px 6px;
+  padding: 8px 4px 6px 4px;
   border-radius: 12px;
   background-color: transparent;
   border: 1px solid transparent;
-  min-width: 84px;
-  max-width: 90px;
-  min-height: 100px;
+  min-width: 72px;
+  max-width: 80px;
+  min-height: 94px;
   transition-duration: 100ms;
 }
 
@@ -367,13 +367,13 @@
 }
 
 .ormic-grid-icon-bin {
-  width: 54px;
-  height: 54px;
-  border-radius: 12px;
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.09) 0%, rgba(255, 255, 255, 0.025) 100%);
-  padding: 4px;
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  background: linear-gradient(145deg, rgba(255,255,255,0.09) 0%, rgba(255,255,255,0.025) 100%);
+  padding: 3px;
   margin-bottom: 2px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.06);
 }
 
 .ormic-grid-icon-sym {
@@ -382,11 +382,11 @@
 }
 
 .ormic-grid-label {
-  color: rgba(255, 255, 255, 0.84);
-  font-size: 10.5px;
+  color: rgba(255,255,255,0.84);
+  font-size: 9.5px;
   font-weight: 500;
   text-align: center;
-  letter-spacing: 0.1px;
+  letter-spacing: 0.05px;
 }
 
 .ormic-grid-item.selected .ormic-grid-label {
@@ -400,10 +400,15 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.065);
 }
 
-/* Hide scrollbar on tabs scroll — scrollbar is never needed (overlay only) */
-.ormic-tabs-scroll StScrollBar {
+.ormic-tabs-scroll StScrollBar,
+.ormic-tabs-scroll StScrollBar StBin#trough,
+.ormic-tabs-scroll StScrollBar StButton#hhandle,
+.ormic-tabs-scroll StScrollBar StButton#vhandle {
   opacity: 0;
   width: 0;
+  height: 0;
+  padding: 0;
+  margin: 0;
 }
 
 /* ── Category Tabs container ─────────────────────────────────────────────── */
@@ -431,10 +436,10 @@
 }
 
 .ormic-category-tab.active {
-  background-color: rgba(250, 184, 75, 0.10);
-  border-color: rgba(250, 184, 75, 0.20);
+  background-color: rgba(255, 255, 255, 0.10);
+  border-color: rgba(255, 255, 255, 0.12);
   border-bottom-color: #FAB84B;
-  box-shadow: 0 1px 0 0 #FAB84B;
+  box-shadow: 0 2px 0 0 #FAB84B;
 }
 
 .ormic-category-tab-box {
@@ -451,7 +456,7 @@
 }
 
 .ormic-category-tab.active .ormic-category-tab-icon {
-  color: #FAB84B;
+  color: rgba(255, 255, 255, 0.95);
 }
 
 .ormic-category-tab-label {
@@ -468,8 +473,8 @@
 }
 
 .ormic-category-tab.active .ormic-category-tab-label {
-  color: #FAB84B;
-  font-weight: 600;
+  color: rgba(255, 255, 255, 0.98);
+  font-weight: 700;
 }
 
 .ormic-vsep {

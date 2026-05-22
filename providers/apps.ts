@@ -15,12 +15,8 @@ export class AppProvider {
     priority = 10;
     private _sys = Shell.AppSystem.get_default();
     private _tree: any = null;
-    private _treeChangedId = 0;
     private _installedChangedId = 0;
     private _dirty = true;
-    private _dirtyDebounceId: number | null = null;
-
-    private static readonly DIRTY_DEBOUNCE_MS = 500;
 
     get dirty(): boolean { return this._dirty; }
 
@@ -42,41 +38,17 @@ export class AppProvider {
         gicon: any | null;  // pre-fetched GIcon
     }> = new Map();
 
-    private _markDirtyDebounced(): void {
-        if (this._dirtyDebounceId != null)
-            GLib.source_remove(this._dirtyDebounceId);
-        this._dirtyDebounceId = GLib.timeout_add(
-            GLib.PRIORITY_DEFAULT, AppProvider.DIRTY_DEBOUNCE_MS, () => {
-                this._dirtyDebounceId = null;
-                dbg('AppProvider', 'debounced dirty — marking cache dirty');
-                this._dirty = true;
-                return GLib.SOURCE_REMOVE;
-            });
-    }
-
     constructor() {
         this._tree = new GMenu.Tree({ menu_basename: 'applications.menu' });
-        this._treeChangedId = this._tree.connect('changed', () => {
-            dbg('AppProvider', 'tree changed signal (debouncing)');
-            this._markDirtyDebounced();
-        });
         this._installedChangedId = this._sys.connect('installed-changed', () => {
-            dbg('AppProvider', 'installed-changed signal (debouncing)');
-            this._markDirtyDebounced();
+            dbg('AppProvider', 'installed-changed signal — marking cache dirty');
+            this._dirty = true;
         });
-        this.reload();
+        this._buildCache();
     }
 
     destroy() {
-        if (this._dirtyDebounceId != null) {
-            GLib.source_remove(this._dirtyDebounceId);
-            this._dirtyDebounceId = null;
-        }
         if (this._tree) {
-            if (this._treeChangedId) {
-                this._tree.disconnect(this._treeChangedId);
-                this._treeChangedId = 0;
-            }
             this._tree = null;
         }
         if (this._installedChangedId) {
@@ -86,12 +58,18 @@ export class AppProvider {
         this._appsCache.clear();
     }
 
-    onOpen() {
-        if (this._dirty) this.reload();
+    onOpen() {}
+
+    ensureCache() {
+        if (this._dirty) this._buildCache();
     }
 
     reload() {
-        dbg('AppProvider', 'reload() — clearing cache');
+        this._buildCache();
+    }
+
+    private _buildCache() {
+        dbg('AppProvider', '_buildCache() — clearing cache');
         this._dirty = false;
         this._appsCache.clear();
         try {
@@ -108,11 +86,11 @@ export class AppProvider {
                         }
                     }
                     this._loadCategory(root, _('App'), false);
-                    dbg('AppProvider', `cache size after reload: ${this._appsCache.size}`);
+                    dbg('AppProvider', `cache size after build: ${this._appsCache.size}`);
                 }
             }
         } catch (e: any) {
-            log(`Ormic Launcher: Error reloading GMenu tree: ${e.message}`);
+            log(`Ormic Launcher: Error rebuilding GMenu tree: ${e.message}`);
         }
     }
 
@@ -160,7 +138,7 @@ export class AppProvider {
     }
 
     search(q: string): SearchResult[] {
-        if (this._dirty) this.reload();
+        this.ensureCache();
         if (!q) return [];
         const lq = q.toLowerCase().trim();
         const out: SearchResult[] = [];

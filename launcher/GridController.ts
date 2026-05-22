@@ -39,28 +39,24 @@ import { CategoryTab } from '../components/CategoryTab.js';
 import type { LauncherState } from './LauncherState.js';
 
 const STATIC_TABS = [
-    { name: 'Favorites',     icon: 'starred-symbolic' },
-    { name: 'Library Home',  icon: 'go-home-symbolic' },
-    { name: 'Office',        icon: 'x-office-document-symbolic' },
-    { name: 'System',        icon: 'emblem-system-symbolic' },
-    { name: 'Utilities',     icon: 'accessories-calculator-symbolic' },
+    { name: 'Favorites', icon: 'starred-symbolic' },
+    { name: 'Library Home', icon: 'go-home-symbolic' },
+    { name: 'Office', icon: 'x-office-document-symbolic' },
+    { name: 'System', icon: 'emblem-system-symbolic' },
+    { name: 'Utilities', icon: 'accessories-calculator-symbolic' },
 ] as const;
 
-const COLUMNS = 7;
+const COLUMNS = 10;
 
 // How many items to render synchronously on the first call (fills the visible
 // viewport). Everything beyond this renders one chunk per idle frame.
-const INITIAL_ITEMS = COLUMNS * 3;  // 3 rows = 21 items
+const INITIAL_ITEMS = COLUMNS * 3;  // 30
 
 // Items rendered per idle tick after the initial batch.
-const CHUNK_ITEMS = COLUMNS * 3;    // 3 rows per idle tick
-
-const TAB_HOVER_DEBOUNCE_MS = 150;
+const CHUNK_ITEMS = COLUMNS * 4;
 
 export class GridController {
     private _s: LauncherState;
-
-    private _tabHoverTimerId: number | null = null;
 
     // ── Render-gen: incremented on every renderGridOnly() call.
     // Idle chunk callbacks compare their captured gen against this; if they
@@ -102,22 +98,25 @@ export class GridController {
         this._s.bgRenderQueue = [];
     }
 
-    private _cancelTabHoverTimer(): void {
-        if (this._tabHoverTimerId != null) {
-            GLib.source_remove(this._tabHoverTimerId);
-            this._tabHoverTimerId = null;
-        }
-    }
-
     // ─── App cache ────────────────────────────────────────────────────────
 
     ensureAllAppsCache(): void {
         const s = this._s;
-        if (!s.allAppsCacheDirty && s.allAppsCache.length > 0) return;
+
+        const appProv = s.providers.find(p => p.id === 'apps') as AppProvider | undefined;
+
+        // Delegate dirty-check and rebuild entirely to AppProvider.
+        // It only rebuilds on real install/uninstall; we never force it.
+        if (appProv) appProv.ensureCache();
+
+        // Rebuild the GridController's SearchResult wrapper array only when
+        // the underlying provider cache actually changed (or first run).
+        const providerDirty = appProv ? appProv.dirty : false;
+        if (!s.allAppsCacheDirty && !providerDirty && s.allAppsCache.length > 0) return;
+
         s.allAppsCacheDirty = false;
 
         const apps: SearchResult[] = [];
-        const appProv = s.providers.find(p => p.id === 'apps') as AppProvider | undefined;
         if (appProv) {
             for (const [id, cached] of appProv._appsCache.entries()) {
                 const { app, category, gicon } = cached;
@@ -128,7 +127,6 @@ export class GridController {
                     name: cached.displayName ?? info.get_name() ?? id,
                     description: cached.displayDesc ?? info.get_description() ?? '',
                     score: 0, providerPriority: 10,
-                    // Fast path: use pre-cached GIcon from AppProvider
                     createIcon: gicon
                         ? (sz: number) => new St.Icon({ gicon, icon_size: sz })
                         : (sz: number) => createAppIcon(app, sz),
@@ -213,8 +211,8 @@ export class GridController {
 
     // ─── No-op stubs (pagination removed) ────────────────────────────────
 
-    nextPage(): void {}
-    prevPage(): void {}
+    nextPage(): void { }
+    prevPage(): void { }
 
     // ─── Header button sync ───────────────────────────────────────────────
 
@@ -223,7 +221,7 @@ export class GridController {
         s.headerTitleLabel.text = s.activeCategory;
         const isCustom = !STATIC_TABS.some(t => t.name === s.activeCategory);
         if (isCustom) { s.editBtn.show(); s.deleteBtn.show(); }
-        else          { s.editBtn.hide(); s.deleteBtn.hide(); }
+        else { s.editBtn.hide(); s.deleteBtn.hide(); }
     }
 
     // ─── Select category ──────────────────────────────────────────────────
@@ -237,7 +235,6 @@ export class GridController {
 
         this.cancelRenderJob();
         this.cancelBgRenderJob();
-        this._cancelTabHoverTimer();
 
         (s.tabsBox.get_children() as CategoryTab[]).forEach(tab => {
             if (typeof tab.setSelected === 'function')
@@ -379,7 +376,7 @@ export class GridController {
 
     // ─── Background pre-render (no-op) ────────────────────────────────────
 
-    startBackgroundPreRender(): void {}
+    startBackgroundPreRender(): void { }
 
     // ─── Tab rendering ────────────────────────────────────────────────────
 
@@ -411,23 +408,16 @@ export class GridController {
                 tab.add_style_class_name('ormic-favorites-tab');
 
             tab.connect('tab-selected', () => {
-                this._cancelTabHoverTimer();
                 if (t.name === 'Favorites') this._filteredCategory = '';
                 this.selectCategory(t.name);
                 s.focus();
             });
             tab.connect('tab-hovered', () => {
-                this._cancelTabHoverTimer();
-                this._tabHoverTimerId = GLib.timeout_add(
-                    GLib.PRIORITY_DEFAULT, TAB_HOVER_DEBOUNCE_MS, () => {
-                        this._tabHoverTimerId = null;
-                        if (!s.isDestroyed()) {
-                            if (t.name === 'Favorites') this._filteredCategory = '';
-                            this.selectCategory(t.name);
-                            s.focus();
-                        }
-                        return GLib.SOURCE_REMOVE;
-                    });
+                if (!s.isDestroyed()) {
+                    if (t.name === 'Favorites') this._filteredCategory = '';
+                    this.selectCategory(t.name);
+                    s.focus();
+                }
             });
             s.tabsBox.add_child(tab);
         });
@@ -437,18 +427,14 @@ export class GridController {
             tab.setup(gName, 'folder-symbolic');
             tab.setSelected(s.activeCategory === gName);
             tab.connect('tab-selected', () => {
-                this._cancelTabHoverTimer();
                 this.selectCategory(gName);
                 s.focus();
             });
             tab.connect('tab-hovered', () => {
-                this._cancelTabHoverTimer();
-                this._tabHoverTimerId = GLib.timeout_add(
-                    GLib.PRIORITY_DEFAULT, TAB_HOVER_DEBOUNCE_MS, () => {
-                        this._tabHoverTimerId = null;
-                        if (!s.isDestroyed()) { this.selectCategory(gName); s.focus(); }
-                        return GLib.SOURCE_REMOVE;
-                    });
+                if (!s.isDestroyed()) {
+                    this.selectCategory(gName);
+                    s.focus();
+                }
             });
             s.tabsBox.add_child(tab);
         }
@@ -538,18 +524,17 @@ export class GridController {
     cleanup(): void {
         this.cancelRenderJob();
         this.cancelBgRenderJob();
-        this._cancelTabHoverTimer();
         // Bump gen so any pending idle chunks abort cleanly
         this._renderGen++;
 
         this._currentItems = [];
-        this._itemPool.forEach(item => { try { item.destroy(); } catch (_) {} });
+        this._itemPool.forEach(item => { try { item.destroy(); } catch (_) { } });
         this._itemPool = [];
 
         const s = this._s;
         if (s.tid != null) { GLib.source_remove(s.tid as number); s.tid = null; }
         if (s.categoryGridBoxes) {
-            s.categoryGridBoxes.forEach(box => { try { box.destroy(); } catch (_) {} });
+            s.categoryGridBoxes.forEach(box => { try { box.destroy(); } catch (_) { } });
             s.categoryGridBoxes.clear();
         }
     }
