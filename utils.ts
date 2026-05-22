@@ -10,11 +10,11 @@ import Clutter from 'gi://Clutter';
 import * as Config from 'resource:///org/gnome/shell/misc/config.js';
 
 // Debug helper — set to true only during active development
-export const DEBUG = false;
+export const DEBUG = true;
 
 export function dbg(scope: string, msg: string, ...args: any[]) {
   if (!DEBUG) return;
-  const extra = args.length ? ' ' + args.map(a => JSON.stringify(a)).join(' '): '';
+  const extra = args.length ? ' ' + args.map(a => JSON.stringify(a)).join(' ') : '';
   log(`[Ormic:${scope}] ${msg}${extra}`);
 }
 
@@ -26,9 +26,7 @@ export function createAppIcon(app: any, size: number): any {
     const info = app.get_app_info();
     if (info && typeof info.get_icon === 'function') {
       const gicon = info.get_icon();
-      if (gicon) return new St.Icon({
-        gicon, icon_size: size
-      });
+      if (gicon) return new St.Icon({ gicon, icon_size: size });
     }
   }
   if (app && typeof app.create_icon_texture === 'function')
@@ -37,20 +35,18 @@ export function createAppIcon(app: any, size: number): any {
 }
 
 /**
-* Create an St.Icon from a pre-fetched GIcon — avoids get_app_info().get_icon()
-* call chain on every render when the GIcon is already cached.
-*/
+ * Create an St.Icon from a pre-fetched GIcon — avoids get_app_info().get_icon()
+ * call chain on every render when the GIcon is already cached.
+ */
 export function iconFromGicon(gicon: any, size: number): St.Icon {
-  return new St.Icon({
-    gicon, icon_size: size
-  });
+  return new St.Icon({ gicon, icon_size: size });
 }
 
 /**
-* One-shot timeout.
-*   GNOME 50+  → GLib.timeout_add_once()  (returns void; not cancellable)
-*   GNOME <50  → GLib.timeout_add()  + SOURCE_REMOVE
-*/
+ * One-shot timeout.
+ *   GNOME 50+  → GLib.timeout_add_once()  (returns void; not cancellable)
+ *   GNOME <50  → GLib.timeout_add()  + SOURCE_REMOVE
+ */
 export function timeoutOnce(ms: number, fn: () => void): number | undefined {
   if (IS_50_PLUS && (GLib as any).timeout_add_once) {
     (GLib as any).timeout_add_once(GLib.PRIORITY_DEFAULT, ms, fn);
@@ -63,12 +59,12 @@ export function timeoutOnce(ms: number, fn: () => void): number | undefined {
 }
 
 /**
-* One-shot idle callback — runs when the main loop is idle.
-*   GNOME 50+  → GLib.idle_add_once()
-*   GNOME <50  → GLib.idle_add() + SOURCE_REMOVE
-*
-* Use this for deferred / chunked work that should not block a frame.
-*/
+ * One-shot idle callback — runs when the main loop is idle.
+ *   GNOME 50+  → GLib.idle_add_once()
+ *   GNOME <50  → GLib.idle_add() + SOURCE_REMOVE
+ *
+ * Use this for deferred / chunked work that should not block a frame.
+ */
 export function idleOnce(fn: () => void): void {
   if (IS_50_PLUS && (GLib as any).idle_add_once) {
     (GLib as any).idle_add_once(GLib.PRIORITY_DEFAULT_IDLE, fn);
@@ -81,47 +77,38 @@ export function idleOnce(fn: () => void): void {
 }
 
 /**
-* Await-able ease animation.
-*   GNOME 50+  → actor.easeAsync()
-*   GNOME <50  → actor.ease() wrapped in a Promise
-*/
-export function easeActor(actor: Clutter.Actor, params: any): Promise < void > {
-  const {
-    onComplete,
-    ...rest
-  } = params;
+ * Await-able ease animation.
+ *   GNOME 50+  → actor.easeAsync()
+ *   GNOME <50  → actor.ease() wrapped in a Promise
+ */
+export function easeActor(actor: Clutter.Actor, params: any): Promise<void> {
+  const { onComplete, ...rest } = params;
   if (IS_50_PLUS && typeof (actor as any).easeAsync === 'function') {
     return (actor as any).easeAsync(rest).then(() => {
       if (onComplete) onComplete();
-    }).catch(() => {});
+    }).catch(() => { });
   }
-  return new Promise < void > (resolve => {
-    actor.ease({
-      ...rest, onComplete: () => {
-        onComplete?.(); resolve();
-      }
-    });
+  return new Promise<void>(resolve => {
+    actor.ease({ ...rest, onComplete: () => { onComplete?.(); resolve(); } });
   });
 }
 
 /**
-* Scroll a St.ScrollView so that `actor` is visible.
-*/
+ * Scroll a St.ScrollView so that `actor` is visible.
+ */
 export function scrollToActor(scrollView: St.ScrollView, actor: Clutter.Actor) {
   try {
     if (typeof (scrollView as any).ensure_actor_visible === 'function') {
       (scrollView as any).ensure_actor_visible(actor);
       return;
     }
-  } catch (_e) {}
+  } catch (_e) { }
 
   try {
     const adj = scrollView.vadjustment;
     if (!adj) return;
-    const [,
-      ay] = actor.get_transformed_position();
-    const [,
-      svy] = scrollView.get_transformed_position();
+    const [, ay] = actor.get_transformed_position();
+    const [, svy] = scrollView.get_transformed_position();
     const relY = ay - svy + adj.value;
     const viewHeight = scrollView.height;
     const actorHeight = actor.height;
@@ -129,36 +116,36 @@ export function scrollToActor(scrollView: St.ScrollView, actor: Clutter.Actor) {
       adj.set_value(relY - 8);
     else if (relY + actorHeight > adj.value + viewHeight)
       adj.set_value(relY + actorHeight - viewHeight + 8);
-  } catch (_e) {}
+  } catch (_e) { }
 }
 
 /**
-* List all normal, visible windows.
-*/
+ * List all normal, visible windows.
+ */
 export function listAllWindows(): any[] {
   try {
     const display = global.display as any;
     if (typeof display.list_all_windows === 'function') {
       return (display.list_all_windows() as any[]).filter(
         (w: any) =>
-        w.get_window_type?.() === Meta.WindowType.NORMAL &&
-        !w.is_skip_taskbar?.(),
+          w.get_window_type?.() === Meta.WindowType.NORMAL &&
+          !w.is_skip_taskbar?.(),
       );
     }
-  } catch (_e) {}
+  } catch (_e) { }
   return (global.get_window_actors() as any[])
-  .map((a: any) => a.meta_window)
-  .filter((w: any) => w && !w.is_skip_taskbar?.());
+    .map((a: any) => a.meta_window)
+    .filter((w: any) => w && !w.is_skip_taskbar?.());
 }
 
 /**
-* Resolve the Shell.App that owns a MetaWindow.
-*/
+ * Resolve the Shell.App that owns a MetaWindow.
+ */
 export function appForWindow(win: any): any {
   try {
     const tracker = Shell.WindowTracker.get_default();
     if (typeof tracker?.get_window_app === 'function')
       return tracker.get_window_app(win);
-  } catch (_e) {}
+  } catch (_e) { }
   return Shell.AppSystem.get_default().lookup_app(win.get_wm_class?.() ?? '');
 }
