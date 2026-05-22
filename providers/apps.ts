@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Ormic Launcher — App Search Provider
 
+import GLib from 'gi://GLib';
 import Shell from 'gi://Shell';
 import GMenu from 'gi://GMenu';
 
@@ -16,6 +17,10 @@ export class AppProvider {
     private _treeChangedId = 0;
     private _installedChangedId = 0;
     private _dirty = true;
+    private _dirtyDebounceId: number | null = null;
+
+    /** Debounce interval for tree/installed-changed signals (ms). */
+    private static readonly DIRTY_DEBOUNCE_MS = 500;
 
     get dirty(): boolean {
         return this._dirty;
@@ -27,20 +32,42 @@ export class AppProvider {
         displayName: string; displayDesc: string;
     }> = new Map();
 
+    /**
+     * Coalesce rapid GMenu signals into a single dirty-mark.
+     * GNOME 50's GMenu fires `changed` much more aggressively
+     * (during shell activities, app launches, etc.), so we debounce
+     * to avoid triggering synchronous reload() on every signal.
+     */
+    private _markDirtyDebounced(): void {
+        if (this._dirtyDebounceId != null) {
+            GLib.source_remove(this._dirtyDebounceId);
+        }
+        this._dirtyDebounceId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, AppProvider.DIRTY_DEBOUNCE_MS, () => {
+            this._dirtyDebounceId = null;
+            dbg('AppProvider', 'debounced dirty — marking cache dirty');
+            this._dirty = true;
+            return GLib.SOURCE_REMOVE;
+        });
+    }
+
     constructor() {
         this._tree = new GMenu.Tree({ menu_basename: 'applications.menu' });
         this._treeChangedId = this._tree.connect('changed', () => {
-            dbg('AppProvider', 'tree changed — marking dirty');
-            this._dirty = true;
+            dbg('AppProvider', 'tree changed signal (debouncing)');
+            this._markDirtyDebounced();
         });
         this._installedChangedId = this._sys.connect('installed-changed', () => {
-            dbg('AppProvider', 'installed-changed — marking dirty');
-            this._dirty = true;
+            dbg('AppProvider', 'installed-changed signal (debouncing)');
+            this._markDirtyDebounced();
         });
         this.reload();
     }
 
     destroy() {
+        if (this._dirtyDebounceId != null) {
+            GLib.source_remove(this._dirtyDebounceId);
+            this._dirtyDebounceId = null;
+        }
         if (this._tree) {
             if (this._treeChangedId) {
                 this._tree.disconnect(this._treeChangedId);

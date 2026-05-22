@@ -29,8 +29,24 @@ const STATIC_TABS = [
 const COLUMNS = 7;
 const CHUNK_SIZE = 8;
 
+/** Debounce interval for tab-hover category switching (ms). */
+const TAB_HOVER_DEBOUNCE_MS = 150;
+
+/** Guard interval after a programmatic scroll to suppress re-entrant hover events (ms). */
+const SCROLL_HOVER_GUARD_MS = 50;
+
 export class GridController {
     private _s: LauncherState;
+
+    /** Timer id for debounced tab-hover category switching. */
+    private _tabHoverTimerId: number | null = null;
+
+    /**
+     * When true, item-hovered signals are suppressed to prevent the
+     * scroll → hover → scroll feedback loop.
+     */
+    private _scrollHoverGuard = false;
+    private _scrollGuardTimerId: number | null = null;
 
     constructor(state: LauncherState) {
         this._s = state;
@@ -51,6 +67,23 @@ export class GridController {
             this._s.bgRenderIdleId = 0;
         }
         this._s.bgRenderQueue = [];
+    }
+
+    /** Cancel any pending tab-hover debounce timer. */
+    private _cancelTabHoverTimer(): void {
+        if (this._tabHoverTimerId != null) {
+            GLib.source_remove(this._tabHoverTimerId);
+            this._tabHoverTimerId = null;
+        }
+    }
+
+    /** Cancel the scroll-hover guard timer. */
+    private _cancelScrollGuard(): void {
+        this._scrollHoverGuard = false;
+        if (this._scrollGuardTimerId != null) {
+            GLib.source_remove(this._scrollGuardTimerId);
+            this._scrollGuardTimerId = null;
+        }
     }
 
     // ─── App cache ───────────────────────────────────────────────────────
@@ -136,6 +169,7 @@ export class GridController {
 
         this.cancelRenderJob();
         this.cancelBgRenderJob();
+        this._cancelTabHoverTimer();
 
         const tabs = s.tabsBox.get_children() as CategoryTab[];
         tabs.forEach(tab => {
@@ -220,6 +254,7 @@ export class GridController {
                     app.activate();
                 });
                 item.connect('item-hovered', () => {
+                    if (this._scrollHoverGuard) return;
                     const allItems = this.collectGridItems();
                     const idx = allItems.indexOf(item);
                     if (idx >= 0) this.selectGridIdx(idx);
@@ -297,6 +332,7 @@ export class GridController {
                     app.activate();
                 });
                 item.connect('item-hovered', () => {
+                    if (this._scrollHoverGuard) return;
                     if (s.activeCategory === categoryName) {
                         const allItems = this.collectGridItems();
                         const idx = allItems.indexOf(item);
@@ -359,12 +395,20 @@ export class GridController {
             tab.setup(t.name, t.icon);
             tab.setSelected(s.activeCategory === t.name);
             tab.connect('tab-selected', () => {
+                this._cancelTabHoverTimer();
                 this.selectCategory(t.name);
                 s.focus();
             });
             tab.connect('tab-hovered', () => {
-                this.selectCategory(t.name);
-                s.focus();
+                this._cancelTabHoverTimer();
+                this._tabHoverTimerId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, TAB_HOVER_DEBOUNCE_MS, () => {
+                    this._tabHoverTimerId = null;
+                    if (!s.isDestroyed()) {
+                        this.selectCategory(t.name);
+                        s.focus();
+                    }
+                    return GLib.SOURCE_REMOVE;
+                });
             });
             s.tabsBox.add_child(tab);
         });
@@ -375,12 +419,20 @@ export class GridController {
             tab.setup(gName, 'folder-symbolic');
             tab.setSelected(s.activeCategory === gName);
             tab.connect('tab-selected', () => {
+                this._cancelTabHoverTimer();
                 this.selectCategory(gName);
                 s.focus();
             });
             tab.connect('tab-hovered', () => {
-                this.selectCategory(gName);
-                s.focus();
+                this._cancelTabHoverTimer();
+                this._tabHoverTimerId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, TAB_HOVER_DEBOUNCE_MS, () => {
+                    this._tabHoverTimerId = null;
+                    if (!s.isDestroyed()) {
+                        this.selectCategory(gName);
+                        s.focus();
+                    }
+                    return GLib.SOURCE_REMOVE;
+                });
             });
             s.tabsBox.add_child(tab);
         }
@@ -430,7 +482,16 @@ export class GridController {
         items.forEach((item, idx) => item.setSelected(idx === i));
         this._s.gridSelIdx = i;
 
+        // Activate scroll-hover guard BEFORE scrolling to prevent the
+        // scroll → hover → scroll feedback loop.
+        this._cancelScrollGuard();
+        this._scrollHoverGuard = true;
         scrollToActor(this._s.gridScroll, items[i]);
+        this._scrollGuardTimerId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, SCROLL_HOVER_GUARD_MS, () => {
+            this._scrollHoverGuard = false;
+            this._scrollGuardTimerId = null;
+            return GLib.SOURCE_REMOVE;
+        });
     }
 
     moveGridSel(d: number): void {
@@ -487,6 +548,8 @@ export class GridController {
     cleanup(): void {
         this.cancelRenderJob();
         this.cancelBgRenderJob();
+        this._cancelTabHoverTimer();
+        this._cancelScrollGuard();
         const s = this._s;
         if (s.tid != null) {
             GLib.source_remove(s.tid as number);

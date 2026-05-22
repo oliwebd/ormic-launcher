@@ -1280,7 +1280,9 @@ export default class OrmicLauncherExtension extends Extension {
             onComplete: () => {
                 if (ov && !(ov as any).is_finalized?.() && dl && !(dl as any).is_finalized?.()) {
                     ov.hide();
-                    dl.reset();
+                    // reset() is NOT called here — it runs in show() instead.
+                    // Calling it during hide's fade-out would waste CPU rebuilding
+                    // tabs and scanning providers while the dialog is invisible.
                     dl.opacity = 255;
                     dl.translation_y = 0;
                 }
