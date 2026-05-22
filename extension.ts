@@ -40,6 +40,25 @@ function dbg(scope: string, msg: string, ...args: any[]) {
     log(`[Ormic:${scope}] ${msg}${extra}`);
 }
 
+function createAppIcon(app: any, size: number): any {
+    if (app && typeof app.get_app_info === 'function') {
+        const info = app.get_app_info();
+        if (info && typeof info.get_icon === 'function') {
+            const gicon = info.get_icon();
+            if (gicon) {
+                return new St.Icon({
+                    gicon: gicon,
+                    icon_size: size,
+                });
+            }
+        }
+    }
+    if (app && typeof app.create_icon_texture === 'function') {
+        return app.create_icon_texture(size);
+    }
+    return null;
+}
+
 import { Extension, gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
 
 // ─── Runtime version gates ────────────────────────────────────────────────────
@@ -324,7 +343,7 @@ class AppProvider {
                 name: displayName,
                 description: displayDesc,
                 score, providerPriority: this.priority,
-                createIcon: (s: number) => app.create_icon_texture(s),
+                createIcon: (s: number) => createAppIcon(app, s),
                 categoryIcon: 'application-x-executable-symbolic',
                 category: category,
                 activate: () => {
@@ -1603,7 +1622,7 @@ const LauncherDialog = GObject.registerClass(
                         name: cached.displayName ?? info.get_name() ?? id,
                         description: cached.displayDesc ?? info.get_description() ?? '',
                         score: 0, providerPriority: 10,
-                        createIcon: (s: number) => app.create_icon_texture(s),
+                        createIcon: (s: number) => createAppIcon(app, s),
                         categoryIcon: 'application-x-executable-symbolic',
                         category: category,
                         activate: () => {
@@ -1888,7 +1907,7 @@ if (oldBox) {
                         name: cached.displayName ?? info.get_name() ?? id,
                         description: cached.displayDesc ?? info.get_description() ?? '',
                         score: 0, providerPriority: 10,
-                        createIcon: (s: number) => app.create_icon_texture(s),
+                        createIcon: (s: number) => createAppIcon(app, s),
                         categoryIcon: 'application-x-executable-symbolic',
                         category: category,
                         activate: () => app.activate(),
@@ -2344,9 +2363,9 @@ this._overlay.connect('key-press-event', (_, ev) => {
         }
         if (this._grab) {
             try {
-                this._grab.ungrab();
+                Main.popModal(this._grab);
             } catch (e: any) {
-                dbg('Launcher', `ungrab failed: ${e.message}`);
+                dbg('Launcher', `popModal failed: ${e.message}`);
             }
             this._grab = null;
         }
