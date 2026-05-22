@@ -21,7 +21,7 @@ import {
     dbg,
     timeoutOnce,
     easeActor,
-    IS_50_PLUS,
+    createBlurEffect,
 } from './utils.js';
 
 import { AppProvider } from './providers/apps.js';
@@ -124,18 +124,8 @@ const LauncherDialog = GObject.registerClass(
 
         _init() {
             super._init({ style_class: 'ormic-dialog', orientation: Clutter.Orientation.VERTICAL, reactive: true });
-            if (!IS_50_PLUS) {
-                try {
-                    const blur = new Shell.BlurEffect({
-                        brightness: 0.95,
-                        mode: Shell.BlurMode.BACKGROUND,
-                    });
-                    (blur as any).sigma = 65;
-                    this.add_effect_with_name('blur', blur);
-                } catch (e: any) {
-                    log(`Ormic Launcher: blur effect error: ${e.message}`);
-                }
-            }
+            // No Shell.BlurEffect here — background blur is handled by the
+            // Clutter.Clone wallpaper actor in OrmicLauncherExtension.enable().
         }
 
         setup(ext: OrmicLauncherExtension) {
@@ -482,17 +472,10 @@ const LauncherDialog = GObject.registerClass(
                 x_expand: true,
                 reactive: true,
             });
-            if (!IS_50_PLUS) {
-                try {
-                    const blur = new Shell.BlurEffect({
-                        brightness: 0.90,
-                        mode: Shell.BlurMode.BACKGROUND,
-                    });
-                    (blur as any).sigma = 40;
-                    promptCard.add_effect_with_name('blur', blur);
-                } catch (e: any) {
-                    log(`Ormic Launcher: prompt card blur error: ${e.message}`);
-                }
+            try {
+                promptCard.add_effect_with_name('blur', createBlurEffect(36, 0.88));
+            } catch (e: any) {
+                log(`Ormic Launcher: prompt card blur error: ${e.message}`);
             }
 
             this._promptOverlay.connect('button-press-event', (_, ev) => {
@@ -907,6 +890,7 @@ export default class OrmicLauncherExtension extends Extension {
     _overlay!: St.Widget | null;
     _dialog!: LauncherDialog | null;
     _indicator!: OrmicIndicator | null;
+    _blurBgClone: any = null;   // Clutter.Clone of wallpaper — GNOME-50-safe blur
     _monId!: number | null;
     _keyId!: number | null;
     _cfgId!: number | null;
@@ -930,16 +914,21 @@ export default class OrmicLauncherExtension extends Extension {
             x: 0, y: 0, opacity: 0,
         });
 
-        if (!IS_50_PLUS) {
-            try {
-                const blur = new Shell.BlurEffect({
-                    mode: Shell.BlurMode.BACKGROUND,
-                });
-                (blur as any).sigma = 40;
-                this._overlay.add_effect(blur);
-            } catch (e) {
-                log('Ormic: Failed to create overlay blur effect: ' + e);
+        // GNOME 50-compatible background blur.
+        // Shell.BlurEffect.BACKGROUND is unreliable for top-chrome actors on GNOME 50
+        // because the render pipeline no longer exposes the desktop framebuffer at that
+        // layer.  Instead: clone the wallpaper background group and apply ACTOR-mode
+        // blur to the clone — this always works because it blurs the clone's own texture.
+        try {
+            const bgGroup = (Main.layoutManager as any)._backgroundGroup;
+            if (bgGroup) {
+                this._blurBgClone = new Clutter.Clone({ source: bgGroup });
+                this._blurBgClone.add_effect(createBlurEffect(32, 0.70, Shell.BlurMode.ACTOR));
+                // Insert as first child so it renders behind the dialog
+                this._overlay.insert_child_at_index(this._blurBgClone, 0);
             }
+        } catch (e: any) {
+            log(`Ormic: bg blur clone failed: ${e.message}`);
         }
 
         this._overlayCapturedId = this._overlay.connect('captured-event', (_, ev: any) => {
@@ -1029,6 +1018,7 @@ export default class OrmicLauncherExtension extends Extension {
             this._overlay.remove_all_transitions();
             this._overlay.destroy();
         }
+        this._blurBgClone = null; // was a child of overlay, destroyed above
         if (this._dialog) {
             this._dialog.remove_all_transitions();
             try {
@@ -1075,6 +1065,10 @@ export default class OrmicLauncherExtension extends Extension {
         const dy = mon.y + Math.floor(mon.height * 0.14);
         this._overlay.set_position(mon.x, mon.y);
         this._overlay.set_size(mon.width, mon.height);
+        // Size the blur clone to fill the monitor (it is at index 0 inside the overlay)
+        if (this._blurBgClone) {
+            this._blurBgClone.set_size(mon.width, mon.height);
+        }
         this._dialog.set_position(dx - mon.x, dy - mon.y);
         this._dialog.set_width(dw);
         this._dialog.min_width = dw;

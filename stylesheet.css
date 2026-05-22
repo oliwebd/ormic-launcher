@@ -4,17 +4,25 @@
    Accent: #FAB84B  (Pop!_OS orange)
    ═══════════════════════════════════════════════════════════════════════════ */
 
-/* ── Overlay ─────────────────────────────────────────────────────────────── */
 .ormic-overlay {
-  background-color: rgba(0, 0, 0, 0.52);
+  /* Dark scrim — fallback when blur clone is unavailable.
+     When the Clutter.Clone blur is active this is mostly hidden behind it,
+     but provides contrast on very bright wallpapers. */
+  background-color: rgba(0, 0, 0, 0.30);
 }
 
 /* ── Dialog card ─────────────────────────────────────────────────────────── */
 .ormic-dialog {
-  background-color: rgba(17, 17, 23, 0.50);
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 16px;
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6);
+  /* Semi-transparent so the blurred wallpaper clone shows through (glassmorphism).
+     Slightly more opaque than before since the dialog no longer self-blurs —
+     the blur effect comes from the Clutter.Clone behind the full overlay. */
+  background-color: rgba(14, 14, 20, 0.48);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 18px;
+  box-shadow:
+    0 2px 0 0 rgba(255, 255, 255, 0.07) inset,
+    0 20px 60px rgba(0, 0, 0, 0.70),
+    0 4px 12px rgba(0, 0, 0, 0.45);
   padding: 0;
   spacing: 0;
 }
@@ -610,13 +618,16 @@
 }
 
 .ormic-prompt-card {
-  background-color: rgba(20, 20, 28, 0.65);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  /* Translucent so the card's own BlurEffect shows the content behind it */
+  background-color: rgba(16, 16, 24, 0.32);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 20px;
   padding: 32px;
   spacing: 24px;
   min-width: 360px;
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.75);
+  box-shadow:
+    0 2px 0 0 rgba(255, 255, 255, 0.08) inset,
+    0 28px 72px rgba(0, 0, 0, 0.80);
 }
 
 .ormic-prompt-title {
