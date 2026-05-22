@@ -46,7 +46,7 @@ const STATIC_TABS = [
     { name: 'Utilities', icon: 'accessories-calculator-symbolic' },
 ] as const;
 
-const COLUMNS = 10;
+const COLUMNS = 9;
 
 // How many items to render synchronously on the first call (fills the visible
 // viewport). Everything beyond this renders one chunk per idle frame.
