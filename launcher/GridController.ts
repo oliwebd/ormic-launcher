@@ -442,6 +442,11 @@ export class GridController {
         const addTab = new (CategoryTab as any)() as CategoryTab;
         addTab.setup(_('Add group'), 'list-add-symbolic');
         addTab.connect('tab-selected', () => {
+            s.headerBox.hide();
+            s.gridScroll.hide();
+            s.pageNavBox.hide();
+            s.setTabsVisible(false);
+            
             s.promptEntry.text = '';
             s.promptOverlay.show();
             s.promptEntry.grab_key_focus();

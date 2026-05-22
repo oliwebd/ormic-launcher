@@ -23,6 +23,7 @@ export class GroupEditorController {
         s.isEditing = true;
         s.headerBox.hide();
         s.gridScroll.hide();
+        s.pageNavBox.hide();
         s.setTabsVisible(false);
 
         s.editorNameEntry.text = s.activeCategory;
@@ -89,6 +90,11 @@ export class GroupEditorController {
 
     showPromptOverlay(): void {
         const s = this._s;
+        s.headerBox.hide();
+        s.gridScroll.hide();
+        s.pageNavBox.hide();
+        s.setTabsVisible(false);
+        
         s.promptEntry.text = '';
         s.promptOverlay.show();
         s.promptEntry.grab_key_focus();
@@ -97,6 +103,11 @@ export class GroupEditorController {
     hidePromptOverlay(create: boolean): void {
         const s = this._s;
         s.promptOverlay.hide();
+        
+        s.headerBox.show();
+        s.gridScroll.show();
+        s.setTabsVisible(true);
+
         const gName = s.promptEntry.text.trim();
 
         if (create && gName) {
