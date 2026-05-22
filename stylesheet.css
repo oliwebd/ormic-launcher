@@ -14,10 +14,7 @@
   background-color: rgba(17, 17, 23, 0.50);
   border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 16px;
-  box-shadow:
-    0 4px 12px rgba(0, 0, 0, 0.4),
-    0 24px 64px rgba(0, 0, 0, 0.7),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6);
   padding: 0;
   spacing: 0;
 }
@@ -358,7 +355,7 @@
   background-color: rgba(250, 184, 75, 0.11);
   border-color: rgba(250, 184, 75, 0.32);
   border-radius: 16px;
-  box-shadow: 0 0 0 1px rgba(250, 184, 75, 0.18), 0 3px 10px rgba(250, 184, 75, 0.12);
+  box-shadow: 0 3px 10px rgba(250, 184, 75, 0.18);
 }
 
 .ormic-grid-item-box {
@@ -372,7 +369,7 @@
   background: linear-gradient(145deg, rgba(255,255,255,0.09) 0%, rgba(255,255,255,0.025) 100%);
   padding: 3px;
   margin-bottom: 2px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.06);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.25);
 }
 
 .ormic-grid-icon-sym {
@@ -619,10 +616,7 @@
   padding: 32px;
   spacing: 24px;
   min-width: 360px;
-  box-shadow:
-    0 16px 40px rgba(0, 0, 0, 0.6),
-    0 32px 100px rgba(0, 0, 0, 0.9),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.75);
 }
 
 .ormic-prompt-title {
@@ -649,7 +643,7 @@
 .ormic-prompt-entry:focus {
   border-color: #FAB84B;
   background-color: rgba(0, 0, 0, 0.4);
-  box-shadow: 0 0 0 2px rgba(250, 184, 75, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 0 2px rgba(250, 184, 75, 0.3);
 }
 
 .ormic-prompt-btns {

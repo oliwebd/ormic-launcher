@@ -105,13 +105,14 @@ export class GridController {
 
         const appProv = s.providers.find(p => p.id === 'apps') as AppProvider | undefined;
 
+        const providerDirty = appProv ? appProv.dirty : false;
+
         // Delegate dirty-check and rebuild entirely to AppProvider.
         // It only rebuilds on real install/uninstall; we never force it.
         if (appProv) appProv.ensureCache();
 
         // Rebuild the GridController's SearchResult wrapper array only when
         // the underlying provider cache actually changed (or first run).
-        const providerDirty = appProv ? appProv.dirty : false;
         if (!s.allAppsCacheDirty && !providerDirty && s.allAppsCache.length > 0) return;
 
         s.allAppsCacheDirty = false;

@@ -925,6 +925,16 @@ export default class OrmicLauncherExtension extends Extension {
             x: 0, y: 0, opacity: 0,
         });
 
+        try {
+            const blur = new Shell.BlurEffect({
+                mode: Shell.BlurMode.BACKGROUND,
+            });
+            (blur as any).sigma = 40;
+            this._overlay.add_effect(blur);
+        } catch (e) {
+            log('Ormic: Failed to create overlay blur effect: ' + e);
+        }
+
         this._overlayCapturedId = this._overlay.connect('captured-event', (_, ev: any) => {
             const t = typeof ev.type === 'function' ? ev.type() : ev.type;
             if (t === Clutter.EventType.BUTTON_PRESS) {

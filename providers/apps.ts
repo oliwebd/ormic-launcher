@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Ormic Launcher — App Search Provider
 
-import GLib from 'gi://GLib';
+
 import St from 'gi://St';
 import Shell from 'gi://Shell';
 import GMenu from 'gi://GMenu';
