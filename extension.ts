@@ -20,7 +20,8 @@ import { SearchResult } from './types.js';
 import {
     dbg,
     timeoutOnce,
-    easeActor
+    easeActor,
+    IS_50_PLUS,
 } from './utils.js';
 
 import { AppProvider } from './providers/apps.js';
@@ -123,15 +124,17 @@ const LauncherDialog = GObject.registerClass(
 
         _init() {
             super._init({ style_class: 'ormic-dialog', orientation: Clutter.Orientation.VERTICAL, reactive: true });
-            try {
-                const blur = new Shell.BlurEffect({
-                    brightness: 0.95,
-                    mode: Shell.BlurMode.BACKGROUND,
-                });
-                (blur as any).sigma = 65;
-                this.add_effect_with_name('blur', blur);
-            } catch (e: any) {
-                log(`Ormic Launcher: blur effect error: ${e.message}`);
+            if (!IS_50_PLUS) {
+                try {
+                    const blur = new Shell.BlurEffect({
+                        brightness: 0.95,
+                        mode: Shell.BlurMode.BACKGROUND,
+                    });
+                    (blur as any).sigma = 65;
+                    this.add_effect_with_name('blur', blur);
+                } catch (e: any) {
+                    log(`Ormic Launcher: blur effect error: ${e.message}`);
+                }
             }
         }
 
@@ -479,15 +482,17 @@ const LauncherDialog = GObject.registerClass(
                 x_expand: true,
                 reactive: true,
             });
-            try {
-                const blur = new Shell.BlurEffect({
-                    brightness: 0.90,
-                    mode: Shell.BlurMode.BACKGROUND,
-                });
-                (blur as any).sigma = 40;
-                promptCard.add_effect_with_name('blur', blur);
-            } catch (e: any) {
-                log(`Ormic Launcher: prompt card blur error: ${e.message}`);
+            if (!IS_50_PLUS) {
+                try {
+                    const blur = new Shell.BlurEffect({
+                        brightness: 0.90,
+                        mode: Shell.BlurMode.BACKGROUND,
+                    });
+                    (blur as any).sigma = 40;
+                    promptCard.add_effect_with_name('blur', blur);
+                } catch (e: any) {
+                    log(`Ormic Launcher: prompt card blur error: ${e.message}`);
+                }
             }
 
             this._promptOverlay.connect('button-press-event', (_, ev) => {
@@ -925,14 +930,16 @@ export default class OrmicLauncherExtension extends Extension {
             x: 0, y: 0, opacity: 0,
         });
 
-        try {
-            const blur = new Shell.BlurEffect({
-                mode: Shell.BlurMode.BACKGROUND,
-            });
-            (blur as any).sigma = 40;
-            this._overlay.add_effect(blur);
-        } catch (e) {
-            log('Ormic: Failed to create overlay blur effect: ' + e);
+        if (!IS_50_PLUS) {
+            try {
+                const blur = new Shell.BlurEffect({
+                    mode: Shell.BlurMode.BACKGROUND,
+                });
+                (blur as any).sigma = 40;
+                this._overlay.add_effect(blur);
+            } catch (e) {
+                log('Ormic: Failed to create overlay blur effect: ' + e);
+            }
         }
 
         this._overlayCapturedId = this._overlay.connect('captured-event', (_, ev: any) => {

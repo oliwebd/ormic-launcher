@@ -43,6 +43,37 @@ export function iconFromGicon(gicon: any, size: number): St.Icon {
 }
 
 /**
+ * Create a Shell.BlurEffect compatible with ALL supported GNOME versions (45–50).
+ *
+ * Root cause of the GNOME 50 blur regression:
+ *   On GNOME 45–49, Shell.BlurEffect.sigma is a writable GObject property that
+ *   can be set after construction.  In GNOME 50 (Shell 18 / Mutter 18) the
+ *   internal Cogl pipeline is compiled at construction time, so `sigma` (and
+ *   `brightness`) must be provided in the constructor params object — setting
+ *   them afterwards is a silent no-op that leaves a zero-sigma (invisible) blur.
+ *
+ * This helper always passes every parameter upfront, which is valid on every
+ * version in the 45–50 matrix, eliminating the need for the `(blur as any).sigma`
+ * workaround entirely.
+ *
+ * @param sigma      Blur radius in pixels (typ. 30–80 for glassmorphic look).
+ * @param brightness Brightness multiplier, 0.0–1.0 (default 1.0 = unchanged).
+ * @param mode       Shell.BlurMode — BACKGROUND (default) blurs what is behind
+ *                   the actor; ACTOR blurs the actor's own content.
+ */
+export function createBlurEffect(
+  sigma: number,
+  brightness = 1.0,
+  mode: Shell.BlurMode = Shell.BlurMode.BACKGROUND,
+): Shell.BlurEffect {
+  // All three properties are passed in the constructor.
+  // The type stubs for older @girs versions may not list `sigma` here, but
+  // the underlying GObject machinery accepts any property by name at init time,
+  // so this is safe on GNOME 45+ even when the TypeScript types lag behind.
+  return new Shell.BlurEffect({ sigma, brightness, mode } as any);
+}
+
+/**
  * One-shot timeout.
  *   GNOME 50+  → GLib.timeout_add_once()  (returns void; not cancellable)
  *   GNOME <50  → GLib.timeout_add()  + SOURCE_REMOVE
