@@ -1,0 +1,72 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+// Ormic Launcher — Category Tab Component
+
+import St from 'gi://St';
+import Clutter from 'gi://Clutter';
+import GObject from 'gi://GObject';
+
+import { dbg } from '../utils.js';
+
+export const CategoryTab = GObject.registerClass({
+    Signals: { 'tab-selected': {}, 'tab-hovered': {} },
+}, class CategoryTab extends St.Button {
+    private _categoryName!: string;
+    private _iconName!: string;
+
+    _init() {
+        super._init({
+            style_class: 'ormic-category-tab',
+            reactive: true, track_hover: true, can_focus: false,
+            x_expand: true, x_align: Clutter.ActorAlign.FILL,
+        });
+
+        this.connect('notify::hover', () => {
+            if (this.hover) this.emit('tab-hovered');
+        });
+    }
+
+    setup(categoryName: string, iconName: string) {
+        this._categoryName = categoryName;
+        this._iconName = iconName;
+
+        const box = new St.BoxLayout({
+            vertical: false,
+            style_class: 'ormic-category-tab-box',
+            x_expand: true,
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+
+        const icon = new St.Icon({
+            icon_name: iconName,
+            icon_size: 16,
+            style_class: 'ormic-category-tab-icon',
+        });
+        box.add_child(icon);
+
+        const label = new St.Label({
+            text: categoryName,
+            style_class: 'ormic-category-tab-label',
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+        box.add_child(label);
+
+        this.set_child(box);
+
+        this.connect('button-release-event', (actor, ev) => {
+            if (ev.get_button() === 1) {
+                dbg('CategoryTab', `clicked on ${categoryName}`);
+                this.emit('tab-selected');
+                return Clutter.EVENT_STOP;
+            }
+            return Clutter.EVENT_PROPAGATE;
+        });
+    }
+
+    get categoryName() { return this._categoryName; }
+
+    setSelected(on: boolean) {
+        if (on) this.add_style_class_name('active');
+        else this.remove_style_class_name('active');
+    }
+});
+export type CategoryTab = InstanceType<typeof CategoryTab>;

@@ -2,10 +2,6 @@
 // Ormic Launcher — GNOME Shell Extension
 // Copyright (C) 2026 oliwebd <oliwebd@gmail.com>
 //
-// Inspired by the pop-os/launcher project (MPL-2.0)
-// by System76 <https://github.com/pop-os/launcher>
-// No source code from that project was used.
-//
 // Compatible with GNOME Shell 45 · 46 · 47 · 48 · 49 · 50
 
 import GLib from 'gi://GLib';
@@ -16,904 +12,30 @@ import St from 'gi://St';
 import Clutter from 'gi://Clutter';
 import GObject from 'gi://GObject';
 import Pango from 'gi://Pango';
-import GMenu from 'gi://GMenu';
-
-// Mtk separated from Meta in GNOME 45; Meta.Rectangle removed in GNOME 49.
-let Mtk: any;
-try {
-    const m = await import('gi://Mtk') as any;
-    Mtk = m.default;
-} catch (_e) { Mtk = null; }
-
-// Config gives us the exact shell version at runtime — no guesswork.
-import * as Config from 'resource:///org/gnome/shell/misc/config.js';
+import PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
-import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
-
-// ─── Debug helpers ────────────────────────────────────────────────────────────
-const DEBUG = true;   // set false to silence all debug output
-
-function dbg(scope: string, msg: string, ...args: any[]) {
-    if (!DEBUG) return;
-    const extra = args.length ? ' ' + args.map(a => JSON.stringify(a)).join(' ') : '';
-    log(`[Ormic:${scope}] ${msg}${extra}`);
-}
-
-function createAppIcon(app: any, size: number): any {
-    if (app && typeof app.get_app_info === 'function') {
-        const info = app.get_app_info();
-        if (info && typeof info.get_icon === 'function') {
-            const gicon = info.get_icon();
-            if (gicon) {
-                return new St.Icon({
-                    gicon: gicon,
-                    icon_size: size,
-                });
-            }
-        }
-    }
-    if (app && typeof app.create_icon_texture === 'function') {
-        return app.create_icon_texture(size);
-    }
-    return null;
-}
-
 import { Extension, gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
 
-// ─── Runtime version gates ────────────────────────────────────────────────────
-
-const SHELL_MAJOR = parseInt((Config as any).PACKAGE_VERSION.split('.')[0], 10);
-const IS_50_PLUS = SHELL_MAJOR >= 50;
-
-// ─── GNOME-version shims ──────────────────────────────────────────────────────
-
-/**
- * One-shot timeout.
- *   GNOME 50+  → GLib.timeout_add_once()  (returns void; not cancellable)
- *   GNOME <50  → GLib.timeout_add()  + SOURCE_REMOVE
- */
-function timeoutOnce(ms: number, fn: () => void): number | undefined {
-    if (IS_50_PLUS && (GLib as any).timeout_add_once) {
-        (GLib as any).timeout_add_once(GLib.PRIORITY_DEFAULT, ms, fn);
-        return undefined;
-    }
-    return GLib.timeout_add(GLib.PRIORITY_DEFAULT, ms, () => {
-        fn();
-        return GLib.SOURCE_REMOVE;
-    });
-}
-
-/**
- * Await-able ease animation.
- *   GNOME 50+  → actor.easeAsync()
- *   GNOME <50  → actor.ease() wrapped in a Promise
- */
-function easeActor(actor: Clutter.Actor, params: any): Promise<void> {
-    const { onComplete, ...rest } = params;
-    if (IS_50_PLUS && typeof (actor as any).easeAsync === 'function') {
-        return (actor as any).easeAsync(rest).then(() => {
-            if (onComplete) onComplete();
-        });
-    }
-    return new Promise<void>(resolve => {
-        actor.ease({ ...rest, onComplete: () => { onComplete?.(); resolve(); } });
-    });
-}
-
-// ─── Scroll helper ────────────────────────────────────────────────────────────
-
-/**
- * Scroll a St.ScrollView so that `actor` is visible.
- * Uses ensure_actor_visible when available (GNOME 40+), otherwise
- * falls back to manual vadjustment arithmetic.
- */
-function scrollToActor(scrollView: St.ScrollView, actor: Clutter.Actor) {
-    try {
-        // Preferred API — available on all supported shells (40+)
-        if (typeof (scrollView as any).ensure_actor_visible === 'function') {
-            (scrollView as any).ensure_actor_visible(actor);
-            return;
-        }
-    } catch (_e) { /* fall through */ }
-
-    // Manual fallback: compute actor's y offset relative to the scroll viewport
-    try {
-        const adj = scrollView.vadjustment;
-        if (!adj) return;
-
-        // Transform actor position into the scroll content's coordinate space
-        const [ax, ay] = actor.get_transformed_position();
-        const [, svy] = scrollView.get_transformed_position();
-
-        const relY = ay - svy + adj.value;
-        const viewHeight = scrollView.height;
-        const actorHeight = actor.height;
-
-        if (relY < adj.value) {
-            adj.set_value(relY - 8);
-        } else if (relY + actorHeight > adj.value + viewHeight) {
-            adj.set_value(relY + actorHeight - viewHeight + 8);
-        }
-    } catch (_e) { /* nothing to do */ }
-}
-
-// ─── Wayland-safe window helpers (X11 removed in GNOME 50) ───────────────────
-
-/**
- * List all normal, visible windows.
- * Tries Meta.Display.list_all_windows() first (canonical Wayland API),
- * falls back to global.get_window_actors() for older shells.
- */
-function listAllWindows(): any[] {
-    try {
-        const display = global.display as any;
-        if (typeof display.list_all_windows === 'function') {
-            return (display.list_all_windows() as any[]).filter(
-                (w: any) =>
-                    w.get_window_type?.() === Meta.WindowType.NORMAL &&
-                    !w.is_skip_taskbar?.(),
-            );
-        }
-    } catch (_e) { }
-    return (global.get_window_actors() as any[])
-        .map((a: any) => a.meta_window)
-        .filter((w: any) => w && !w.is_skip_taskbar?.());
-}
-
-/**
- * Resolve the Shell.App that owns a MetaWindow.
- * Shell.WindowTracker.get_window_app() is the canonical API (Wayland-safe).
- */
-function appForWindow(win: any): any {
-    try {
-        const tracker = Shell.WindowTracker.get_default();
-        if (typeof tracker?.get_window_app === 'function')
-            return tracker.get_window_app(win);
-    } catch (_e) { }
-    return Shell.AppSystem.get_default().lookup_app(win.get_wm_class?.() ?? '');
-}
-
-// ─── Search result contract ───────────────────────────────────────────────────
-
-export interface SearchResult {
-    id: string;
-    desktopId?: string;
-    name: string;
-    description: string;
-    score: number;
-    providerPriority: number;   // secondary sort key
-    icon?: any;      // pre-rendered Clutter texture
-    createIcon?: (size: number) => any; // function to lazily create the icon
-    iconName?: string;   // symbolic fallback
-    categoryIcon: string;
-    category: string;   // right-pill label: "App", "Web", "Window", …
-    activate: () => void;
-}
-
-// ─── Providers ────────────────────────────────────────────────────────────────
-
-class AppProvider {
-    id = 'apps';
-    priority = 10;
-    private _sys = Shell.AppSystem.get_default();
-    private _tree: any = null;
-    private _treeChangedId = 0;
-    private _installedChangedId = 0;
-    private _dirty = true;
-
-    get dirty(): boolean {
-        return this._dirty;
-    }
-
-    _appsCache: Map<string, {
-        app: any; category: string;
-        name: string; desc: string; exec: string; kw: string;
-        displayName: string; displayDesc: string;
-    }> = new Map();
-
-    constructor() {
-        this._tree = new GMenu.Tree({ menu_basename: 'applications.menu' });
-        this._treeChangedId = this._tree.connect('changed', () => {
-            dbg('AppProvider', 'tree changed — marking dirty');
-            this._dirty = true;
-        });
-        this._installedChangedId = this._sys.connect('installed-changed', () => {
-            dbg('AppProvider', 'installed-changed — marking dirty');
-            this._dirty = true;
-        });
-        this.reload();
-    }
-
-    destroy() {
-        if (this._tree) {
-            if (this._treeChangedId) {
-                this._tree.disconnect(this._treeChangedId);
-                this._treeChangedId = 0;
-            }
-            this._tree = null;
-        }
-        if (this._installedChangedId) {
-            this._sys.disconnect(this._installedChangedId);
-            this._installedChangedId = 0;
-        }
-        this._appsCache.clear();
-    }
-
-    onOpen() {
-        if (this._dirty) {
-            this.reload();
-        }
-    }
-
-    reload() {
-        dbg('AppProvider', 'reload() — clearing cache');
-        this._dirty = false;
-        this._appsCache.clear();
-        try {
-            if (this._tree && this._tree.load_sync()) {
-                const root = this._tree.get_root_directory();
-                if (root) {
-                    const iter = root.iter();
-                    let type;
-                    while ((type = iter.next()) !== GMenu.TreeItemType.INVALID) {
-                        if (type === GMenu.TreeItemType.DIRECTORY) {
-                            const dir = iter.get_directory();
-                            if (dir && !dir.get_is_nodisplay()) {
-                                this._loadCategory(dir, dir.get_name(), true);
-                            }
-                        }
-                    }
-                    this._loadCategory(root, _('App'), false);
-                    dbg('AppProvider', `cache size after reload: ${this._appsCache.size}`);
-                }
-            }
-        } catch (e: any) {
-            log(`Ormic Launcher: Error reloading GMenu tree: ${e.message}`);
-        }
-    }
-
-    private _loadCategory(dir: any, categoryName: string, recursive: boolean = true) {
-        const iter = dir.iter();
-        let type;
-        while ((type = iter.next()) !== GMenu.TreeItemType.INVALID) {
-            if (type === GMenu.TreeItemType.ENTRY) {
-                const entry = iter.get_entry();
-                if (!entry) continue;
-                let id;
-                try {
-                    id = entry.get_desktop_file_id();
-                } catch {
-                    continue;
-                }
-                if (!id) continue;
-                if (this._appsCache.has(id)) continue;
-
-                let app = this._sys.lookup_app(id);
-                if (!app) {
-                    try {
-                        app = new Shell.App({ app_info: entry.get_app_info() });
-                    } catch {
-                        continue;
-                    }
-                }
-                if (app && app.get_app_info()?.should_show()) {
-                    const info = app.get_app_info();
-                    this._appsCache.set(id, {
-                        app,
-                        category: categoryName,
-                        name: (info.get_name() ?? '').toLowerCase(),
-                        desc: (info.get_description() ?? '').toLowerCase(),
-                        exec: (info.get_executable() ?? '').toLowerCase(),
-                        kw: (info.get_keywords() ?? []).join(' ').toLowerCase(),
-                        displayName: info.get_name() ?? id,
-                        displayDesc: info.get_description() ?? '',
-                    });
-                }
-            } else if (recursive && type === GMenu.TreeItemType.DIRECTORY) {
-                const subdir = iter.get_directory();
-                if (subdir && !subdir.get_is_nodisplay()) {
-                    this._loadCategory(subdir, categoryName, true);
-                }
-            }
-        }
-    }
-
-    search(q: string): SearchResult[] {
-        if (this._dirty) {
-            this.reload();
-        }
-        if (!q) return [];
-        const lq = q.toLowerCase().trim();
-        const out: SearchResult[] = [];
-        for (const [id, cached] of this._appsCache.entries()) {
-            const { app, category, name, desc, exec, kw, displayName, displayDesc } = cached;
-
-            const score =
-                name === lq ? 100 :
-                    name.startsWith(lq) ? 80 :
-                        name.includes(lq) ? 60 :
-                            exec.includes(lq) ? 40 :
-                                desc.includes(lq) ? 20 :
-                                    kw.includes(lq) ? 10 : 0;
-            if (!score) continue;
-
-            out.push({
-                id: `app:${id}`, desktopId: id,
-                name: displayName,
-                description: displayDesc,
-                score, providerPriority: this.priority,
-                createIcon: (s: number) => createAppIcon(app, s),
-                categoryIcon: 'application-x-executable-symbolic',
-                category: category,
-                activate: () => {
-                    dbg('AppProvider', `activate: ${displayName}`);
-                    app.activate();
-                },
-            });
-        }
-        return out.sort((a, b) => b.score - a.score).slice(0, 8);
-    }
-}
-
-/**
- * CalcProvider – two-stage validation prevents eval on arbitrary strings.
- *   Stage 1: expression must open with a digit, decimal, or paren.
- *   Stage 2: after replacing known function keywords with "0", only
- *            math-safe chars (digits, operators, spaces) may remain.
- */
-class CalcProvider {
-    id = 'calc'; priority = 5;
-    private _start = /^[\d.(]/;
-    private _kw = /\b(sin|cos|tan|sqrt|log|ln|exp|pi)\b/gi;
-    private _safe = /^[0-9\s+\-*/.,%^()e]+$/i;
-
-    private valid(q: string) {
-        return this._start.test(q) && this._safe.test(q.replace(this._kw, '0'));
-    }
-
-    search(q: string): SearchResult[] {
-        q = q.trim();
-        if (!q || !this.valid(q)) return [];
-        try {
-            const s = q
-                .replace(/\^/g, '**').replace(/,/g, '.')
-                .replace(/\bsin\b/g, 'Math.sin').replace(/\bcos\b/g, 'Math.cos')
-                .replace(/\btan\b/g, 'Math.tan').replace(/\bsqrt\b/g, 'Math.sqrt')
-                .replace(/\blog\b/g, 'Math.log10').replace(/\bln\b/g, 'Math.log')
-                .replace(/\bexp\b/g, 'Math.exp').replace(/\bpi\b/gi, 'Math.PI')
-                .replace(/(?<![A-Za-z])e(?![A-Za-z])/g, 'Math.E');
-            // eslint-disable-next-line no-new-func
-            const v = new Function(`"use strict"; return (${s})`)();
-            if (typeof v !== 'number' || !isFinite(v)) return [];
-            const display = Number.isInteger(v) ? String(v) : parseFloat(v.toPrecision(10)).toString();
-            return [{
-                id: 'calc:result', name: display, description: `= ${q}`,
-                score: 95, providerPriority: this.priority,
-                iconName: 'accessories-calculator-symbolic',
-                categoryIcon: 'accessories-calculator-symbolic', category: _('Calc'),
-                activate: () => {
-                    St.Clipboard.get_default().set_text(St.ClipboardType.CLIPBOARD, display);
-                    Main.notify(_('Copied to clipboard'), display);
-                },
-            }];
-        } catch (_e) { return []; }
-    }
-}
-
-
-class RecentProvider {
-    id = 'recent'; priority = 3;
-    private xbel = GLib.build_filenamev([GLib.get_home_dir(), '.local', 'share', 'recently-used.xbel']);
-    private _cachedRecent: { uri: string; name: string; path: string }[] = [];
-
-    constructor(private _s: Gio.Settings) {
-        this.onOpen();
-    }
-
-    onOpen() {
-        if (!this._s.get_boolean('enable-recent-files')) {
-            this._cachedRecent = [];
-            return;
-        }
-        try {
-            const bm = new GLib.BookmarkFile();
-            bm.load_from_file(this.xbel);
-            const items: { uri: string; name: string; path: string }[] = [];
-            for (const uri of bm.get_uris()) {
-                const res = GLib.filename_from_uri(uri);
-                const path = res?.[0];
-                if (!path) continue;
-                const base = GLib.path_get_basename(path);
-                items.push({ uri, name: base, path });
-            }
-            this._cachedRecent = items;
-        } catch (_e) {
-            this._cachedRecent = [];
-        }
-    }
-
-    search(query: string): SearchResult[] {
-        if (!this._s.get_boolean('enable-recent-files')) return [];
-        const q = query.toLowerCase().trim();
-        if (!q || q.length < 2) return [];
-        const out: SearchResult[] = [];
-        for (const item of this._cachedRecent) {
-            const base = item.name.toLowerCase();
-            if (!base.includes(q)) continue;
-            out.push({
-                id: `recent:${item.uri}`,
-                name: item.name,
-                description: item.path,
-                score: base.startsWith(q) ? 35 : 20,
-                providerPriority: this.priority,
-                iconName: 'document-open-recent-symbolic',
-                categoryIcon: 'document-open-recent-symbolic',
-                category: _('Recent'),
-                activate: () => Gio.app_info_launch_default_for_uri(item.uri, null),
-            });
-        }
-        return out.sort((a, b) => b.score - a.score).slice(0, 5);
-    }
-}
-
-class CommandProvider {
-    id = 'command'; priority = 8;
-    search(query: string): SearchResult[] {
-        const q = query.trim();
-        if (!q.startsWith('>')) return [];
-        const cmd = q.slice(1).trim(); if (!cmd) return [];
-        return [{
-            id: 'cmd:run', name: `Run: ${cmd}`, description: _('Execute shell command'),
-            score: 90, providerPriority: this.priority,
-            iconName: 'utilities-terminal-symbolic',
-            categoryIcon: 'utilities-terminal-symbolic', category: _('Command'),
-            activate: () => {
-                dbg('Command', 'spawn:', cmd);
-                try { GLib.spawn_command_line_async(cmd); }
-                catch (e: any) { Main.notifyError(_('Command Error'), e.message); }
-            },
-        }];
-    }
-}
-
-/**
- * WindowProvider
- *   · Shell.WindowTracker.get_window_app() — Wayland-canonical app lookup.
- *   · Meta.Display.list_all_windows()     — Wayland-safe window list.
- *   · Explicit prefix "win " avoids collision with Wikipedia "w ".
- */
-class WindowProvider {
-    id = 'window'; priority = 9;
-    constructor(private _s: Gio.Settings) { }
-
-    search(query: string): SearchResult[] {
-        if (!this._s.get_boolean('enable-window-search')) return [];
-        const q = query.toLowerCase().trim(); if (!q) return [];
-
-        let explicit = false, terms = q;
-        if (q.startsWith('win ')) { explicit = true; terms = q.slice(4).trim(); }
-
-        const out: SearchResult[] = [];
-        try {
-            for (const win of listAllWindows()) {
-                const title = (win.get_title() ?? '').toLowerCase();
-                const wmClass = (win.get_wm_class() ?? '').toLowerCase();
-                let score = 0;
-                if (explicit) {
-                    score = !terms ? 80 : (title.includes(terms) || wmClass.includes(terms)) ? 90 : 0;
-                } else {
-                    score = title === q || wmClass === q ? 85
-                        : title.startsWith(q) || wmClass.startsWith(q) ? 70
-                            : title.includes(q) || wmClass.includes(q) ? 50 : 0;
-                }
-                if (!score) continue;
-                const app = appForWindow(win);
-                const icon = app?.create_icon_texture?.(48) ?? null;
-                out.push({
-                    id: `win:${win.get_id()}`,
-                    name: win.get_title() ?? _('Unknown Window'),
-                    description: win.get_wm_class() ?? '',
-                    score, providerPriority: this.priority,
-                    icon: icon ?? undefined,
-                    iconName: icon ? undefined : 'window-new-symbolic',
-                    categoryIcon: 'window-new-symbolic', category: _('Window'),
-                    activate: () => win.activate(global.get_current_time()),
-                });
-            }
-        } catch (_e) { }
-        return out.sort((a, b) => b.score - a.score).slice(0, 6);
-    }
-}
-
-// ─── Grid Item Component ─────────────────────────────────────────────────────
-
-const GridItem = GObject.registerClass({
-    Signals: { 'item-activated': {}, 'item-hovered': {} },
-}, class GridItem extends St.Button {
-    private _result!: SearchResult;
-    private _box!: St.BoxLayout;
-
-    _init() {
-        super._init({
-            style_class: 'ormic-grid-item',
-            reactive: true, track_hover: true, can_focus: false,
-        });
-    }
-
-    setup(result: SearchResult) {
-        this._result = result;
-
-        this._box = new St.BoxLayout({
-            vertical: true,
-            style_class: 'ormic-grid-item-box',
-            x_expand: true, y_expand: true,
-        });
-
-        const iconBin = new St.Bin({ style_class: 'ormic-grid-icon-bin' });
-        if (result.createIcon) {
-            const texture = result.createIcon(44);
-            if (texture) {
-                texture.set_size(44, 44);
-                iconBin.set_child(texture);
-            }
-        } else if (result.icon) {
-            result.icon.set_size(44, 44);
-            iconBin.set_child(result.icon);
-        } else {
-            iconBin.set_child(new St.Icon({
-                icon_name: result.iconName ?? 'application-x-executable-symbolic',
-                icon_size: 44,
-                style_class: 'ormic-grid-icon-sym',
-            }));
-        }
-        this._box.add_child(iconBin);
-
-        const nameLabel = new St.Label({
-            text: result.name,
-            style_class: 'ormic-grid-label',
-            x_align: Clutter.ActorAlign.CENTER,
-        });
-        nameLabel.clutter_text.ellipsize = Pango.EllipsizeMode.END;
-        nameLabel.clutter_text.line_wrap = true;
-        this._box.add_child(nameLabel);
-
-        this.set_child(this._box);
-
-        this.connect('button-release-event', (actor, ev) => {
-            if (ev.get_button() === 1) {
-                dbg('GridItem', `clicked on ${result.name}`);
-                this.emit('item-activated');
-                return Clutter.EVENT_STOP;
-            }
-            return Clutter.EVENT_PROPAGATE;
-        });
-
-        this.connect('notify::hover', () => {
-            if (this.hover) this.emit('item-hovered');
-        });
-    }
-
-    get result() { return this._result; }
-
-    setSelected(on: boolean) {
-        if (on) {
-            this.add_style_class_name('selected');
-        } else {
-            this.remove_style_class_name('selected');
-        }
-    }
-});
-type GridItem = InstanceType<typeof GridItem>;
-
-// ─── Category Tab Component ──────────────────────────────────────────────────
-
-const CategoryTab = GObject.registerClass({
-    Signals: { 'tab-selected': {}, 'tab-hovered': {} },
-}, class CategoryTab extends St.Button {
-    private _categoryName!: string;
-    private _iconName!: string;
-
-    _init() {
-        super._init({
-            style_class: 'ormic-category-tab',
-            reactive: true, track_hover: true, can_focus: false,
-            x_expand: true, x_align: Clutter.ActorAlign.FILL,
-        });
-
-        this.connect('notify::hover', () => {
-            if (this.hover) this.emit('tab-hovered');
-        });
-    }
-
-    setup(categoryName: string, iconName: string) {
-        this._categoryName = categoryName;
-        this._iconName = iconName;
-
-        const box = new St.BoxLayout({
-            vertical: false,
-            style_class: 'ormic-category-tab-box',
-            x_expand: true,
-            y_align: Clutter.ActorAlign.CENTER,
-        });
-
-        const icon = new St.Icon({
-            icon_name: iconName,
-            icon_size: 16,
-            style_class: 'ormic-category-tab-icon',
-        });
-        box.add_child(icon);
-
-        const label = new St.Label({
-            text: categoryName,
-            style_class: 'ormic-category-tab-label',
-            y_align: Clutter.ActorAlign.CENTER,
-        });
-        box.add_child(label);
-
-        this.set_child(box);
-
-        this.connect('button-release-event', (actor, ev) => {
-            if (ev.get_button() === 1) {
-                dbg('CategoryTab', `clicked on ${categoryName}`);
-                this.emit('tab-selected');
-                return Clutter.EVENT_STOP;
-            }
-            return Clutter.EVENT_PROPAGATE;
-        });
-    }
-
-    get categoryName() { return this._categoryName; }
-
-    setSelected(on: boolean) {
-        if (on) this.add_style_class_name('active');
-        else this.remove_style_class_name('active');
-    }
-});
-type CategoryTab = InstanceType<typeof CategoryTab>;
-
-// ─── Edit App Checklist Row Component ────────────────────────────────────────
-
-const EditAppRow = GObject.registerClass({
-    Signals: { toggle: {} },
-}, class EditAppRow extends St.Button {
-    private _result!: SearchResult;
-    private _selected = false;
-    private _checkIcon!: St.Icon;
-
-    _init() {
-        super._init({
-            style_class: 'ormic-edit-row',
-            reactive: true, track_hover: true, can_focus: false,
-        });
-    }
-
-    setup(result: SearchResult, selected: boolean) {
-        this._result = result;
-        this._selected = selected;
-
-        const box = new St.BoxLayout({
-            style_class: 'ormic-edit-row-box',
-            x_expand: true,
-            y_align: Clutter.ActorAlign.CENTER,
-        });
-
-        const iconBin = new St.Bin({ style_class: 'ormic-edit-icon-bin' });
-        if (result.createIcon) {
-            const texture = result.createIcon(32);
-            if (texture) {
-                texture.set_size(32, 32);
-                iconBin.set_child(texture);
-            }
-        } else if (result.icon) {
-            result.icon.set_size(32, 32);
-            iconBin.set_child(result.icon);
-        } else {
-            iconBin.set_child(new St.Icon({
-                icon_name: result.iconName ?? 'application-x-executable-symbolic',
-                icon_size: 32,
-            }));
-        }
-        box.add_child(iconBin);
-
-        const nameLabel = new St.Label({
-            text: result.name,
-            style_class: 'ormic-edit-name',
-            x_expand: true,
-            y_align: Clutter.ActorAlign.CENTER,
-        });
-        box.add_child(nameLabel);
-
-        this._checkIcon = new St.Icon({
-            icon_name: this._selected ? 'checkbox-checked-symbolic' : 'checkbox-symbolic',
-            icon_size: 16,
-            style_class: 'ormic-edit-checkbox',
-        });
-        box.add_child(this._checkIcon);
-
-        this.set_child(box);
-
-        if (this._selected) this.add_style_class_name('selected');
-
-        this.connect('button-release-event', (actor, ev) => {
-            if (ev.get_button() === 1) {
-                dbg('EditAppRow', `clicked on ${result.name}`);
-                this.toggle();
-                this.emit('toggle');
-                return Clutter.EVENT_STOP;
-            }
-            return Clutter.EVENT_PROPAGATE;
-        });
-    }
-
-    toggle() {
-        this._selected = !this._selected;
-        this._checkIcon.icon_name = this._selected ? 'checkbox-checked-symbolic' : 'checkbox-symbolic';
-        if (this._selected) this.add_style_class_name('selected');
-        else this.remove_style_class_name('selected');
-    }
-
-    get result() { return this._result; }
-    get selected() { return this._selected; }
-});
-type EditAppRow = InstanceType<typeof EditAppRow>;
-
-// ─── Result Row Component (Search list view) ─────────────────────────────────
-
-const ResultRow = GObject.registerClass({
-    Signals: { 'item-activated': {}, 'item-hovered': {} },
-}, class ResultRow extends St.Button {
-    private _result!: SearchResult;
-    private _accentBar!: St.Widget;
-    _favButton?: St.Button;
-
-    _init() {
-        super._init({
-            style_class: 'ormic-result',
-            reactive: true, track_hover: true, can_focus: false,
-        });
-    }
-
-    setup(
-        result: SearchResult,
-        index: number,
-        settings: Gio.Settings,
-        shellSettings: Gio.Settings,
-    ) {
-        this._result = result;
-
-        const mainBox = new St.BoxLayout({
-            style_class: 'ormic-result-box',
-            x_expand: true,
-        });
-
-        this._accentBar = new St.Widget({ style_class: 'ormic-accent-bar' });
-        mainBox.add_child(this._accentBar);
-
-        const iconBin = new St.Bin({ style_class: 'ormic-icon-bin' });
-        if (result.createIcon) {
-            const texture = result.createIcon(48);
-            if (texture) {
-                texture.set_size(48, 48);
-                iconBin.set_child(texture);
-            }
-        } else if (result.icon) {
-            result.icon.set_size(48, 48);
-            iconBin.set_child(result.icon);
-        } else {
-            iconBin.set_child(new St.Icon({
-                icon_name: result.iconName ?? 'application-x-executable-symbolic',
-                icon_size: 48,
-                style_class: 'ormic-icon-sym',
-            }));
-        }
-        mainBox.add_child(iconBin);
-
-        const textCol = new St.BoxLayout({
-            style_class: 'ormic-text-col',
-            vertical: true, x_expand: true,
-            y_align: Clutter.ActorAlign.CENTER,
-        });
-        const nameLabel = new St.Label({
-            text: result.name, style_class: 'ormic-name',
-            x_align: Clutter.ActorAlign.START,
-        });
-        nameLabel.clutter_text.ellipsize = Pango.EllipsizeMode.END;
-        textCol.add_child(nameLabel);
-        if (result.description) {
-            const dl = new St.Label({
-                text: result.description, style_class: 'ormic-desc',
-                x_align: Clutter.ActorAlign.START,
-            });
-            dl.clutter_text.ellipsize = Pango.EllipsizeMode.END;
-            textCol.add_child(dl);
-        }
-        mainBox.add_child(textCol);
-
-        if (result.desktopId) {
-            const id = result.desktopId;
-            const isFav = () =>
-                (shellSettings.get_strv('favorite-apps') as string[]).includes(id);
-            const favIco = new St.Icon({
-                icon_name: isFav() ? 'emblem-favorite-symbolic' : 'bookmark-new-symbolic',
-                icon_size: 14,
-            });
-            const favBtn = new St.Button({
-                child: favIco, style_class: 'ormic-fav-btn',
-                reactive: true, can_focus: false, track_hover: true,
-                y_align: Clutter.ActorAlign.CENTER,
-            });
-            this._favButton = favBtn;
-            if (isFav()) favBtn.add_style_class_name('is-fav');
-            favBtn.connect('button-release-event', (actor, ev) => {
-                if (ev.get_button() === 1) {
-                    const favs = shellSettings.get_strv('favorite-apps') as string[];
-                    const idx = favs.indexOf(id);
-                    if (idx > -1) {
-                        favs.splice(idx, 1);
-                        favIco.icon_name = 'bookmark-new-symbolic';
-                        favBtn.remove_style_class_name('is-fav');
-                    } else {
-                        favs.push(id);
-                        favIco.icon_name = 'emblem-favorite-symbolic';
-                        favBtn.add_style_class_name('is-fav');
-                    }
-                    shellSettings.set_strv('favorite-apps', favs);
-                    return Clutter.EVENT_STOP;
-                }
-                return Clutter.EVENT_PROPAGATE;
-            });
-            mainBox.add_child(favBtn);
-        }
-
-        if (settings.get_boolean('enable-quick-select') && index >= 0 && index < 9) {
-            mainBox.add_child(new St.Label({
-                text: `Ctrl+${index + 1}`, style_class: 'ormic-kbd-badge',
-                y_align: Clutter.ActorAlign.CENTER,
-            }));
-        }
-
-        const pill = new St.BoxLayout({
-            style_class: 'ormic-cat-pill',
-            y_align: Clutter.ActorAlign.CENTER,
-        });
-        pill.add_child(new St.Icon({
-            icon_name: result.categoryIcon, icon_size: 11,
-            style_class: 'ormic-cat-icon',
-        }));
-        pill.add_child(new St.Label({
-            text: result.category, style_class: 'ormic-cat-label',
-            y_align: Clutter.ActorAlign.CENTER,
-        }));
-        mainBox.add_child(pill);
-
-        this.set_child(mainBox);
-
-        this.connect('button-release-event', (actor, ev) => {
-            if (ev.get_button() === 1) {
-                dbg('ResultRow', `clicked on ${result.name}`);
-                this.emit('item-activated');
-                return Clutter.EVENT_STOP;
-            }
-            return Clutter.EVENT_PROPAGATE;
-        });
-
-        this.connect('notify::hover', () => {
-            if (this.hover) this.emit('item-hovered');
-        });
-    }
-
-    get result() { return this._result; }
-
-    setSelected(on: boolean) {
-        if (on) {
-            this.add_style_class_name('selected');
-        } else {
-            this.remove_style_class_name('selected');
-        }
-    }
-});
-type ResultRow = InstanceType<typeof ResultRow>;
+import { SearchResult } from './types.js';
+import {
+    dbg,
+    timeoutOnce,
+    easeActor,
+    scrollToActor,
+    createAppIcon
+} from './utils.js';
+
+import { AppProvider } from './providers/apps.js';
+import { CalcProvider } from './providers/calc.js';
+import { RecentProvider } from './providers/recent.js';
+import { CommandProvider } from './providers/command.js';
+import { WindowProvider } from './providers/window.js';
+
+import { GridItem } from './components/GridItem.js';
+import { CategoryTab } from './components/CategoryTab.js';
+import { EditAppRow } from './components/EditAppRow.js';
+import { ResultRow } from './components/ResultRow.js';
 
 // ─── Launcher Dialog ──────────────────────────────────────────────────────────
 
@@ -931,18 +53,26 @@ const LauncherDialog = GObject.registerClass(
         private _allAppsCache!: SearchResult[];
         private _allAppsCacheDirty!: boolean;
 
+        private _renderIdleId = 0;
+        private _bgRenderIdleId = 0;
+        private _bgRenderQueue: string[] = [];
+
         // Dynamic multi-view state
         private _activeCategory = 'Library Home';
         private _isEditing = false;
         private _gridSelIdx = -1;
 
         get _gridBox(): St.BoxLayout {
-            let box = this._categoryGridBoxes.get(this._activeCategory);
+            return this._getCategoryGridBox(this._activeCategory);
+        }
+
+        private _getCategoryGridBox(categoryName: string): St.BoxLayout {
+            let box = this._categoryGridBoxes.get(categoryName);
             if (!box) {
                 box = new St.BoxLayout({
                     style_class: 'ormic-grid-box', vertical: true, x_expand: true,
                 });
-                this._categoryGridBoxes.set(this._activeCategory, box);
+                this._categoryGridBoxes.set(categoryName, box);
             }
             return box;
         }
@@ -1019,19 +149,9 @@ const LauncherDialog = GObject.registerClass(
             this._entry.clutter_text.connect('key-press-event', (_, ev) => this._onKey(ev));
 
             // ── Click outside dialog to close ─────────────────────────────
-            // FIX: We handle click-to-close in the overlay actor (in OrmicLauncherExtension),
-            // NOT here in the dialog's button-press-event. Handling it here caused issues
-            // because the dialog consumed events before they bubbled up, and coordinate
-            // math relative to the overlay was unreliable.
-            //
-            // Instead, we only handle clicks on non-interactive areas of the DIALOG itself
-            // to restore focus to the entry (e.g. clicking on padding/margins).
             this.connect('button-press-event', (_, ev) => {
-                // Set click guard on the extension to prevent key-focus watcher from closing the dialog
                 this._ext._setClickGuard();
 
-                // Walk up from click source — if it's not an interactive widget,
-                // restore focus to the search entry.
                 let actor: any = ev.get_source();
                 let isInteractive = false;
                 while (actor && actor !== (this as any)) {
@@ -1053,7 +173,6 @@ const LauncherDialog = GObject.registerClass(
                 if (!isInteractive) {
                     timeoutOnce(10, () => this.focus());
                 }
-                // Always PROPAGATE — never stop clicks from reaching the overlay
                 return Clutter.EVENT_PROPAGATE;
             });
 
@@ -1182,7 +301,6 @@ const LauncherDialog = GObject.registerClass(
                 vscrollbar_policy: St.PolicyType.AUTOMATIC,
                 overlay_scrollbars: true, x_expand: true, y_expand: true,
             });
-            // gridBox will be added to gridScroll dynamically in _selectCategory/_renderGridAndTabs
 
             // ── Left Sidebar Tabs Container ───────────────────────────────
             this._tabsBox = new St.BoxLayout({
@@ -1309,7 +427,6 @@ const LauncherDialog = GObject.registerClass(
                 log(`Ormic Launcher: prompt card blur error: ${e.message}`);
             }
 
-            // Click outside the card (but on the overlay) to cancel
             this._promptOverlay.connect('button-press-event', (_, ev) => {
                 const [x, y] = ev.get_coords();
                 const [success, lx, ly] = promptCard.transform_stage_point(x, y);
@@ -1408,27 +525,23 @@ const LauncherDialog = GObject.registerClass(
             dbg('Key', `sym=0x${sym.toString(16)} ctrl=${!!(ev.get_state() & Clutter.ModifierType.CONTROL_MASK)}`);
             const ctrl = !!(ev.get_state() & Clutter.ModifierType.CONTROL_MASK);
 
-            // 1. Check if Prompt Modal is active
             if (this._promptOverlay.visible) {
                 if (sym === Clutter.KEY_Escape) { this._hidePromptOverlay(false); return true; }
                 if (sym === Clutter.KEY_Return || sym === Clutter.KEY_KP_Enter) { this._hidePromptOverlay(true); return true; }
                 return false;
             }
 
-            // 2. Check if Group Editor is active
             if (this._isEditing) {
                 if (sym === Clutter.KEY_Escape) { this._stopEditing(false); return true; }
                 if (sym === Clutter.KEY_Return || sym === Clutter.KEY_KP_Enter) { this._stopEditing(true); return true; }
                 return false;
             }
 
-            // 3. Quick-select badge handler (Search mode only)
             if (this._scroll.visible && ctrl && this._ext._settings.get_boolean('enable-quick-select')
                 && sym >= Clutter.KEY_1 && sym <= Clutter.KEY_9) {
                 this._activateIdx(sym - Clutter.KEY_1); return true;
             }
 
-            // Shift key category change
             if (!this._scroll.visible && this._entry.text === '' && (sym === Clutter.KEY_Shift_L || sym === Clutter.KEY_Shift_R)) {
                 const cats = this._getCategoriesList();
                 const idx = cats.indexOf(this._activeCategory);
@@ -1439,25 +552,20 @@ const LauncherDialog = GObject.registerClass(
                 }
             }
 
-            // 4. Navigation & Escape
             if (sym === Clutter.KEY_Escape) { this._ext.hide(); return true; }
 
             if (this._scroll.visible) {
-                // Search list view key handlers
                 if (sym === Clutter.KEY_Return || sym === Clutter.KEY_KP_Enter) { this._activateSel(); return true; }
                 if (sym === Clutter.KEY_Up) { this._moveSel(-1); return true; }
                 if (sym === Clutter.KEY_Down) { this._moveSel(1); return true; }
                 if (sym === Clutter.KEY_Tab) { this._complete(); return true; }
             } else {
-                // Library grid view key handlers
                 if (sym === Clutter.KEY_Return || sym === Clutter.KEY_KP_Enter) { this._activateGridSel(); return true; }
                 if (sym === Clutter.KEY_Up) { this._moveGridSel(-7); return true; }
                 if (sym === Clutter.KEY_Down) { this._moveGridSel(7); return true; }
                 if (sym === Clutter.KEY_Left) { this._moveGridSel(-1); return true; }
                 if (sym === Clutter.KEY_Right) { this._moveGridSel(1); return true; }
 
-                // When in grid mode and the user types a printable character,
-                // route it directly into the always-visible entry and re-focus it.
                 const char = Clutter.keysym_to_unicode(sym);
                 if (char && char >= 32 && char <= 126 && !ctrl) {
                     this._entry.text = String.fromCharCode(char);
@@ -1500,7 +608,6 @@ const LauncherDialog = GObject.registerClass(
                 this._headerBox.show();
                 this._gridScroll.show();
                 this._setTabsVisible(true);
-                // Return to grid view: just swap the cached grid box, don't rebuild
                 this._headerTitleLabel.text = this._activeCategory;
                 const gridBox = this._gridBox;
                 this._gridScroll.set_child(gridBox);
@@ -1517,7 +624,6 @@ const LauncherDialog = GObject.registerClass(
                 return;
             }
 
-            // Search Results Mode
             this._headerBox.hide();
             this._gridScroll.hide();
             this._setTabsVisible(false);
@@ -1566,9 +672,6 @@ const LauncherDialog = GObject.registerClass(
             rows.forEach((r, j) => r.setSelected(j === i));
             this._selIdx = i;
 
-            // FIX: Use the robust scrollToActor helper instead of manual y math.
-            // The old code used row.y (relative to parent) and scroll height
-            // which gave wrong offsets — items would jump or not scroll at all.
             scrollToActor(this._scroll, rows[i]);
         }
 
@@ -1636,12 +739,29 @@ const LauncherDialog = GObject.registerClass(
             this._allAppsCache = apps;
         }
 
+        private _cancelRenderJob() {
+            if (this._renderIdleId) {
+                GLib.source_remove(this._renderIdleId);
+                this._renderIdleId = 0;
+            }
+        }
+
+        private _cancelBgRenderJob() {
+            if (this._bgRenderIdleId) {
+                GLib.source_remove(this._bgRenderIdleId);
+                this._bgRenderIdleId = 0;
+            }
+            this._bgRenderQueue = [];
+        }
+
         private _selectCategory(categoryName: string) {
             if (this._activeCategory === categoryName) return;
             const t0 = GLib.get_monotonic_time();
             this._activeCategory = categoryName;
 
-            // 1. Update tabs selected state without rebuilding them
+            this._cancelRenderJob();
+            this._cancelBgRenderJob();
+
             const tabs = this._tabsBox.get_children() as CategoryTab[];
             tabs.forEach(tab => {
                 if (typeof tab.setSelected === 'function') {
@@ -1649,7 +769,6 @@ const LauncherDialog = GObject.registerClass(
                 }
             });
 
-            // 2. Update Header Area
             this._headerTitleLabel.text = this._activeCategory;
             const staticTabs = ['Library Home', 'Office', 'System', 'Utilities'];
             const isCustom = !staticTabs.includes(this._activeCategory);
@@ -1661,12 +780,10 @@ const LauncherDialog = GObject.registerClass(
                 this._deleteBtn.hide();
             }
 
-            // 3. Swap the grid box in ScrollView
             const hasCachedGrid = this._categoryGridBoxes.has(categoryName);
             const gridBox = this._gridBox;
             this._gridScroll.set_child(gridBox);
 
-            // 4. Render only if not already cached/rendered
             if (!hasCachedGrid) {
                 dbg('Performance', `selectCategory('${categoryName}') — CACHE MISS, rendering grid`);
                 this._renderGridOnly();
@@ -1679,6 +796,7 @@ const LauncherDialog = GObject.registerClass(
                         this._selectGridIdx(0);
                     }
                 });
+                this._startBackgroundPreRender();
             }
         }
 
@@ -1686,7 +804,6 @@ const LauncherDialog = GObject.registerClass(
             const t0 = GLib.get_monotonic_time();
             this._ensureAllAppsCache();
 
-            // Filter apps based on active category
             let filteredApps: SearchResult[] = [];
             if (this._activeCategory === 'Library Home') {
                 filteredApps = this._allAppsCache;
@@ -1711,7 +828,6 @@ const LauncherDialog = GObject.registerClass(
                 filteredApps = this._allAppsCache.filter(a => customAppIds.includes(a.desktopId ?? ''));
             }
 
-            // Render Grid Box
             const gridBox = this._gridBox;
             gridBox.get_children().forEach((row: any) => {
                 if (row.get_children) {
@@ -1738,40 +854,174 @@ const LauncherDialog = GObject.registerClass(
             let currentRow = new St.BoxLayout({ style_class: 'ormic-grid-row', x_expand: true });
             gridBox.add_child(currentRow);
 
-            filteredApps.forEach((app, i) => {
-                if (i > 0 && i % columns === 0) {
-                    currentRow = new St.BoxLayout({ style_class: 'ormic-grid-row', x_expand: true });
-                    gridBox.add_child(currentRow);
+            let index = 0;
+            const CHUNK_SIZE = 8;
+
+            const renderChunk = () => {
+                const end = Math.min(index + CHUNK_SIZE, filteredApps.length);
+                for (; index < end; index++) {
+                    const app = filteredApps[index];
+                    if (index > 0 && index % columns === 0) {
+                        currentRow = new St.BoxLayout({ style_class: 'ormic-grid-row', x_expand: true });
+                        gridBox.add_child(currentRow);
+                    }
+
+                    const item = new (GridItem as any)() as GridItem;
+                    item.setup(app);
+                    item.connect('item-activated', () => {
+                        this._ext.hide();
+                        app.activate();
+                    });
+                    item.connect('item-hovered', () => {
+                        const allItems = this._collectGridItems();
+                        const idx = allItems.indexOf(item);
+                        if (idx >= 0) this._selectGridIdx(idx);
+                    });
+                    currentRow.add_child(item);
                 }
 
-                const item = new (GridItem as any)() as GridItem;
-item.setup(app);
-item.connect('item-activated', () => {
-    this._ext.hide();
-    app.activate();
-});
-item.connect('item-hovered', () => {
-    const allItems = this._collectGridItems();
-    const idx = allItems.indexOf(item);
-    if (idx >= 0) this._selectGridIdx(idx);
-});
-currentRow.add_child(item);
+                if (index < filteredApps.length) {
+                    this._renderIdleId = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+                        renderChunk();
+                        return GLib.SOURCE_REMOVE;
+                    });
+                } else {
+                    this._renderIdleId = 0;
+                    const elapsed = (GLib.get_monotonic_time() - t0) / 1000;
+                    dbg('Performance', `renderGridOnly('${this._activeCategory}') — ${filteredApps.length} items, took ${elapsed.toFixed(1)}ms`);
+                    
+                    if (this._gridSelIdx === -1 && this._gridScroll.visible) {
+                        this._selectGridIdx(0);
+                    }
+                    this._startBackgroundPreRender();
+                }
+            };
+
+            renderChunk();
+        }
+
+        private _renderCategoryGridBackground(categoryName: string, onComplete: () => void) {
+            this._ensureAllAppsCache();
+
+            let filteredApps: SearchResult[] = [];
+            if (categoryName === 'Library Home') {
+                filteredApps = this._allAppsCache;
+            } else if (categoryName === 'Office') {
+                filteredApps = this._allAppsCache.filter(a => a.category.toLowerCase().includes('office'));
+            } else if (categoryName === 'System') {
+                filteredApps = this._allAppsCache.filter(a =>
+                    a.category.toLowerCase().includes('system') ||
+                    a.category.toLowerCase().includes('setting') ||
+                    a.category.toLowerCase().includes('administration') ||
+                    a.category.toLowerCase().includes('preferences')
+                );
+            } else if (categoryName === 'Utilities') {
+                filteredApps = this._allAppsCache.filter(a =>
+                    a.category.toLowerCase().includes('utility') ||
+                    a.category.toLowerCase().includes('utilities') ||
+                    a.category.toLowerCase().includes('accessories')
+                );
+            } else {
+                const customGroups = this._getCustomGroups();
+                const customAppIds = customGroups[categoryName] || [];
+                filteredApps = this._allAppsCache.filter(a => customAppIds.includes(a.desktopId ?? ''));
+            }
+
+            const gridBox = this._getCategoryGridBox(categoryName);
+            gridBox.get_children().forEach((row: any) => {
+                if (row.get_children) {
+                    row.get_children().forEach((child: any) => {
+                        row.remove_child(child);
+                    });
+                }
             });
+            gridBox.destroy_all_children();
 
-            const elapsed = (GLib.get_monotonic_time() - t0) / 1000;
-            dbg('Performance', `renderGridOnly('${this._activeCategory}') — ${filteredApps.length} items, took ${elapsed.toFixed(1)}ms`);
+            if (!filteredApps.length) {
+                const emptyLabel = new St.Label({
+                    text: _('No applications in this group.\nClick the pencil icon to add apps!'),
+                    style_class: 'ormic-grid-empty',
+                    x_align: Clutter.ActorAlign.CENTER,
+                    y_align: Clutter.ActorAlign.CENTER,
+                });
+                gridBox.add_child(emptyLabel);
+                onComplete();
+                return;
+            }
 
-            timeoutOnce(50, () => {
-                if (this._gridSelIdx === -1 && this._gridScroll.visible) {
-                    this._selectGridIdx(0);
+            const columns = 7;
+            let currentRow = new St.BoxLayout({ style_class: 'ormic-grid-row', x_expand: true });
+            gridBox.add_child(currentRow);
+
+            let index = 0;
+            const CHUNK_SIZE = 8;
+
+            const renderChunk = () => {
+                const end = Math.min(index + CHUNK_SIZE, filteredApps.length);
+                for (; index < end; index++) {
+                    const app = filteredApps[index];
+                    if (index > 0 && index % columns === 0) {
+                        currentRow = new St.BoxLayout({ style_class: 'ormic-grid-row', x_expand: true });
+                        gridBox.add_child(currentRow);
+                    }
+
+                    const item = new (GridItem as any)() as GridItem;
+                    item.setup(app);
+                    item.connect('item-activated', () => {
+                        this._ext.hide();
+                        app.activate();
+                    });
+                    item.connect('item-hovered', () => {
+                        if (this._activeCategory === categoryName) {
+                            const allItems = this._collectGridItems();
+                            const idx = allItems.indexOf(item);
+                            if (idx >= 0) this._selectGridIdx(idx);
+                        }
+                    });
+                    currentRow.add_child(item);
                 }
+
+                if (index < filteredApps.length) {
+                    this._bgRenderIdleId = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+                        renderChunk();
+                        return GLib.SOURCE_REMOVE;
+                    });
+                } else {
+                    this._bgRenderIdleId = 0;
+                    dbg('Performance', `Background pre-render for '${categoryName}' completed.`);
+                    onComplete();
+                }
+            };
+
+            renderChunk();
+        }
+
+        private _startBackgroundPreRender() {
+            this._cancelBgRenderJob();
+
+            const allCats = this._getCategoriesList();
+            this._bgRenderQueue = allCats.filter(cat => cat !== this._activeCategory && !this._categoryGridBoxes.has(cat));
+
+            dbg('Performance', `Starting background pre-render. Queue: ${JSON.stringify(this._bgRenderQueue)}`);
+            this._processNextBackgroundCategory();
+        }
+
+        private _processNextBackgroundCategory() {
+            if (this._bgRenderQueue.length === 0) {
+                dbg('Performance', 'Background pre-rendering complete.');
+                return;
+            }
+
+            const nextCat = this._bgRenderQueue.shift()!;
+            dbg('Performance', `Background pre-rendering category: ${nextCat}`);
+            this._renderCategoryGridBackground(nextCat, () => {
+                this._processNextBackgroundCategory();
             });
         }
 
         private _renderTabsOnly() {
             dbg('Grid', `renderTabsOnly category=${this._activeCategory}`);
 
-            // Render Bottom Category Tabs
             this._tabsBox.destroy_all_children();
 
             const staticTabs = [
@@ -1796,7 +1046,6 @@ currentRow.add_child(item);
                 this._tabsBox.add_child(tab);
             });
 
-            // Render Custom Category Tabs
             const customGroups = this._getCustomGroups();
             for (const gName of Object.keys(customGroups)) {
                 const tab = new (CategoryTab as any)() as CategoryTab;
@@ -1813,7 +1062,6 @@ currentRow.add_child(item);
                 this._tabsBox.add_child(tab);
             }
 
-            // Render "Add group" Tab
             const addTab = new (CategoryTab as any)() as CategoryTab;
             addTab.setup(_('Add group'), 'list-add-symbolic');
             addTab.connect('tab-selected', () => {
@@ -1821,7 +1069,6 @@ currentRow.add_child(item);
             });
             this._tabsBox.add_child(addTab);
 
-            // Update Header Area
             this._headerTitleLabel.text = this._activeCategory;
             const isCustom = !staticTabs.some(t => t.name === this._activeCategory);
             if (isCustom) {
@@ -1833,23 +1080,20 @@ currentRow.add_child(item);
             }
         }
 
-        /**
-         * Rebuild tabs + grid for the active category.
-         * Only invalidates the CURRENT category's cached grid box.
-         */
         private _renderGridAndTabs() {
             dbg('Performance', `renderGridAndTabs — rebuilding tabs, invalidating grid for: ${this._activeCategory}`);
 
-            // Only invalidate the active category's grid box (not ALL of them)
+            this._cancelRenderJob();
+            this._cancelBgRenderJob();
+
             const oldBox = this._categoryGridBoxes.get(this._activeCategory);
-if (oldBox) {
-    oldBox.destroy();   // GridItems are owned by this box; destroy cleans up fine
-    this._categoryGridBoxes.delete(this._activeCategory);
-}
+            if (oldBox) {
+                oldBox.destroy();
+                this._categoryGridBoxes.delete(this._activeCategory);
+            }
 
             this._renderTabsOnly();
 
-            // Swap in grid and render
             const gridBox = this._gridBox;
             this._gridScroll.set_child(gridBox);
             this._renderGridOnly();
@@ -1862,7 +1106,6 @@ if (oldBox) {
             items.forEach((item, idx) => item.setSelected(idx === i));
             this._gridSelIdx = i;
 
-            // FIX: Use the robust scrollToActor helper (same fix as list view).
             scrollToActor(this._gridScroll, items[i]);
         }
 
@@ -2049,7 +1292,6 @@ if (oldBox) {
         }
 
         reset() {
-            // Check if application list is dirty on app provider BEFORE calling onOpen() (which resets it)
             const appProv = this._providers?.find(p => p.id === 'apps') as AppProvider | undefined;
             const isAppsDirty = appProv ? appProv.dirty : false;
 
@@ -2064,6 +1306,9 @@ if (oldBox) {
                     }
                 }
             }
+
+            this._cancelRenderJob();
+            this._cancelBgRenderJob();
 
             this._clear();
             this._entry.text = '';
@@ -2080,7 +1325,6 @@ if (oldBox) {
             this._gridScroll.show();
             this._setTabsVisible(true);
 
-            // Decide: fast path (reuse caches) or slow path (rebuild everything)
             const needsRebuild = isAppsDirty || this._allAppsCacheDirty || this._categoryGridBoxes.size === 0;
 
             if (needsRebuild) {
@@ -2092,24 +1336,19 @@ if (oldBox) {
                     this._categoryGridBoxes.clear();
                 }
 
-                // Rebuild tabs
                 this._renderTabsOnly();
 
-                // Swap in grid box (will be a new empty one since cache was cleared)
                 const gridBox = this._gridBox;
                 this._gridScroll.set_child(gridBox);
 
-                // Defer grid rendering to allow opening animation to play smoothly
                 timeoutOnce(20, () => {
                     this._renderGridOnly();
                 });
             } else {
                 dbg('Performance', `FAST PATH: reusing ${this._categoryGridBoxes.size} cached grid boxes`);
 
-                // Reuse existing tabs — just update selection state (no destroy/create)
                 const tabs = this._tabsBox.get_children() as CategoryTab[];
                 if (tabs.length === 0) {
-                    // Tabs were never built
                     this._renderTabsOnly();
                 } else {
                     tabs.forEach(tab => {
@@ -2122,7 +1361,6 @@ if (oldBox) {
                     this._deleteBtn.hide();
                 }
 
-                // Swap in the cached Library Home grid box — instant, 0ms
                 const gridBox = this._gridBox;
                 this._gridScroll.set_child(gridBox);
 
@@ -2132,12 +1370,13 @@ if (oldBox) {
                         this._selectGridIdx(0);
                     }
                 });
+
+                this._startBackgroundPreRender();
             }
         }
     },
 );
 type LauncherDialog = InstanceType<typeof LauncherDialog>;
-
 
 // ─── Panel indicator ──────────────────────────────────────────────────────────
 
@@ -2190,7 +1429,6 @@ export default class OrmicLauncherExtension extends Extension {
             x: 0, y: 0, opacity: 0,
         });
 
-        // Set click guard on capturing event phase for all button presses
         this._overlay.connect('captured-event', (_, ev: any) => {
             const t = typeof ev.type === 'function' ? ev.type() : ev.type;
             if (t === Clutter.EventType.BUTTON_PRESS) {
@@ -2199,13 +1437,6 @@ export default class OrmicLauncherExtension extends Extension {
             return Clutter.EVENT_PROPAGATE;
         });
 
-        // FIX: Click-outside-to-close lives here on the overlay, not on the
-        // dialog. The overlay covers the full monitor. We check whether the
-        // press landed inside the dialog's bounding box using d.contains(source)
-        // — this is extremely reliable and immune to coordinate transform/scaling
-        // issues. We must also stop the event here so it doesn't reach the shell
-        // behind the launcher (which could accidentally activate panel items or
-        // trigger other actions).
         this._overlay.connect('button-press-event', (_, ev) => {
             const d = this._dialog;
             if (!d) { this.hide(); return Clutter.EVENT_STOP; }
@@ -2220,22 +1451,18 @@ export default class OrmicLauncherExtension extends Extension {
                 dbg('OverlayPress', 'Click outside dialog, hiding launcher');
                 this.hide();
             } else {
-                // Set click guard: suppress the focus-watcher while
-                // Clutter processes this button event chain (press → release).
                 this._setClickGuard();
             }
-            // Always stop so nothing behind the overlay gets the click
             return Clutter.EVENT_STOP;
         });
 
-// Handle key-press on the overlay actor; guard against pushModal failure
-this._overlay.connect('key-press-event', (_, ev) => {
-    if (ev.get_key_symbol() === Clutter.KEY_Escape) {
-        this.hide();
-        return Clutter.EVENT_STOP;
-    }
-    return Clutter.EVENT_PROPAGATE;
-});
+        this._overlay.connect('key-press-event', (_, ev) => {
+            if (ev.get_key_symbol() === Clutter.KEY_Escape) {
+                this.hide();
+                return Clutter.EVENT_STOP;
+            }
+            return Clutter.EVENT_PROPAGATE;
+        });
 
         this._dialog = new (LauncherDialog as any)() as LauncherDialog;
         this._dialog.setup(this);
@@ -2261,9 +1488,6 @@ this._overlay.connect('key-press-event', (_, ev) => {
 
         this._focusId = global.stage.connect('notify::key-focus', () => {
             if (!this._visible || !this._overlay) return;
-            // Skip if a mouse click is being processed — focus shifts
-            // transiently during Clutter button events and would cause
-            // the launcher to close before item-activated fires.
             if (this._clickGuard) return;
             const focus = global.stage.key_focus;
             if (focus && focus !== this._overlay && !this._overlay.contains(focus)) {
@@ -2317,7 +1541,7 @@ this._overlay.connect('key-press-event', (_, ev) => {
         this._dialog.set_position(dx - mon.x, dy - mon.y);
         this._dialog.set_width(dw);
         this._dialog.min_width = dw;
-        // @ts-ignore – max_width exists on Clutter.Actor at runtime
+        // @ts-ignore
         this._dialog.max_width = dw;
     }
 
@@ -2333,8 +1557,6 @@ this._overlay.connect('key-press-event', (_, ev) => {
         this._dialog.opacity = 0;
         this._dialog.translation_y = -20;
 
-        // GNOME 45+: pushModal returns a grab object (not a boolean).
-        // A falsy return means another modal is active — bail out cleanly.
         const grab = Main.pushModal(this._overlay, {
             actionMode: Shell.ActionMode.NORMAL | Shell.ActionMode.OVERVIEW | Shell.ActionMode.POPUP,
         });
@@ -2377,7 +1599,6 @@ this._overlay.connect('key-press-event', (_, ev) => {
         easeActor(ov, { opacity: 0, duration: 120, mode: Clutter.AnimationMode.EASE_IN_QUAD });
     }
 
-    /** Briefly suppress the focus-watcher so click → activate works. */
     _setClickGuard() {
         this._clickGuard = true;
         if (this._clickGuardTimer != null) {
