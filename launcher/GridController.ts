@@ -39,8 +39,8 @@ import { CategoryTab } from '../components/CategoryTab.js';
 import type { LauncherState } from './LauncherState.js';
 
 const STATIC_TABS = [
-    { name: 'Favorites', icon: 'starred-symbolic' },
     { name: 'Library Home', icon: 'go-home-symbolic' },
+    { name: 'Favorites', icon: 'starred-symbolic' },
     { name: 'Office', icon: 'x-office-document-symbolic' },
     { name: 'System', icon: 'emblem-system-symbolic' },
     { name: 'Utilities', icon: 'accessories-calculator-symbolic' },
@@ -412,13 +412,7 @@ export class GridController {
                 this.selectCategory(t.name);
                 s.focus();
             });
-            tab.connect('tab-hovered', () => {
-                if (!s.isDestroyed()) {
-                    if (t.name === 'Favorites') this._filteredCategory = '';
-                    this.selectCategory(t.name);
-                    s.focus();
-                }
-            });
+
             s.tabsBox.add_child(tab);
         });
 
@@ -430,12 +424,7 @@ export class GridController {
                 this.selectCategory(gName);
                 s.focus();
             });
-            tab.connect('tab-hovered', () => {
-                if (!s.isDestroyed()) {
-                    this.selectCategory(gName);
-                    s.focus();
-                }
-            });
+
             s.tabsBox.add_child(tab);
         }
 
@@ -503,7 +492,7 @@ export class GridController {
 
     getCategoriesList(): string[] {
         return [
-            'Favorites', 'Library Home', 'Office', 'System', 'Utilities',
+            'Library Home', 'Favorites', 'Office', 'System', 'Utilities',
             ...Object.keys(this.getCustomGroups()),
         ];
     }

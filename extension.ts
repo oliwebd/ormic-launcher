@@ -795,6 +795,7 @@ const LauncherDialog = GObject.registerClass(
 
             this._searchCtrl.clear();
             this._entry.text = '';
+            const previousCategory = this._activeCategory;
             this._activeCategory = 'Library Home';
             this._isEditing = false;
             this._gridSelIdx = -1;
@@ -850,6 +851,11 @@ const LauncherDialog = GObject.registerClass(
 
                 const gridBox = this._gridBox;
                 this._gridScroll.set_child(gridBox);
+
+                if (previousCategory !== 'Library Home') {
+                    // We switched categories during reset, so we must render the items for Library Home
+                    this._renderGridOnly();
+                }
 
                 this._gridSelIdx = -1;
                 timeoutOnce(10, () => {
