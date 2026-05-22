@@ -13,6 +13,6 @@
   },
   "include": [
     "ambient.d.ts",
-    "*.ts"
+    "**/*.ts"
   ]
 }

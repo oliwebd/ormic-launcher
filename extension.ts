@@ -12,7 +12,7 @@ import St from 'gi://St';
 import Clutter from 'gi://Clutter';
 import GObject from 'gi://GObject';
 import Pango from 'gi://Pango';
-import PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
+import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import { Extension, gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
@@ -37,10 +37,22 @@ import { CategoryTab } from './components/CategoryTab.js';
 import { EditAppRow } from './components/EditAppRow.js';
 import { ResultRow } from './components/ResultRow.js';
 
+import { LauncherState } from './launcher/LauncherState.js';
+import { SearchController } from './launcher/SearchController.js';
+import { GridController } from './launcher/GridController.js';
+import { GroupEditorController } from './launcher/GroupEditorController.js';
+import { KeyboardHandler } from './launcher/KeyboardHandler.js';
+
 // ─── Launcher Dialog ──────────────────────────────────────────────────────────
 
 const LauncherDialog = GObject.registerClass(
     class LauncherDialog extends St.BoxLayout {
+        private _state!: LauncherState;
+        private _searchCtrl!: SearchController;
+        private _gridCtrl!: GridController;
+        private _groupCtrl!: GroupEditorController;
+        private _kbdHandler!: KeyboardHandler;
+
         private _ext!: OrmicLauncherExtension;
         private _providers!: any[];
         private _results!: SearchResult[];
@@ -516,66 +528,93 @@ const LauncherDialog = GObject.registerClass(
 
             this.add_child(new St.Widget({ style_class: 'ormic-sep', x_expand: true }));
             this.add_child(this._tips);
+
+            const dialog = this;
+            this._state = {
+                ext: {
+                    _settings: ext._settings,
+                    hide: () => ext.hide(),
+                    _setClickGuard: () => ext._setClickGuard(),
+                },
+                providers: ext.providers,
+                shellSettings: this._shellSettings,
+
+                get results() { return dialog._results; },
+                set results(v) { dialog._results = v; },
+
+                get selIdx() { return dialog._selIdx; },
+                set selIdx(v) { dialog._selIdx = v; },
+
+                get tid() { return dialog._tid; },
+                set tid(v) { dialog._tid = v; },
+
+                get gen() { return dialog._gen; },
+                set gen(v) { dialog._gen = v; },
+
+                get categoryGridBoxes() { return dialog._categoryGridBoxes; },
+                set categoryGridBoxes(v) { dialog._categoryGridBoxes = v; },
+
+                get allAppsCache() { return dialog._allAppsCache; },
+                set allAppsCache(v) { dialog._allAppsCache = v; },
+
+                get allAppsCacheDirty() { return dialog._allAppsCacheDirty; },
+                set allAppsCacheDirty(v) { dialog._allAppsCacheDirty = v; },
+
+                get renderIdleId() { return dialog._renderIdleId; },
+                set renderIdleId(v) { dialog._renderIdleId = v; },
+
+                get bgRenderIdleId() { return dialog._bgRenderIdleId; },
+                set bgRenderIdleId(v) { dialog._bgRenderIdleId = v; },
+
+                get bgRenderQueue() { return dialog._bgRenderQueue; },
+                set bgRenderQueue(v) { dialog._bgRenderQueue = v; },
+
+                get activeCategory() { return dialog._activeCategory; },
+                set activeCategory(v) { dialog._activeCategory = v; },
+
+                get isEditing() { return dialog._isEditing; },
+                set isEditing(v) { dialog._isEditing = v; },
+
+                get gridSelIdx() { return dialog._gridSelIdx; },
+                set gridSelIdx(v) { dialog._gridSelIdx = v; },
+
+                entryBox: this._entryBox,
+                entry: this._entry,
+                scroll: this._scroll,
+                rbox: this._rbox,
+                tips: this._tips,
+                headerBox: this._headerBox,
+                headerTitleLabel: this._headerTitleLabel,
+                editBtn: this._editBtn,
+                deleteBtn: this._deleteBtn,
+                gridScroll: this._gridScroll,
+                tabsBox: this._tabsBox,
+                vsep: this._vsep,
+                editorBox: this._editorBox,
+                editorNameEntry: this._editorNameEntry,
+                editorScroll: this._editorScroll,
+                editorAppsContainer: this._editorAppsContainer,
+                promptOverlay: this._promptOverlay,
+                promptEntry: this._promptEntry,
+
+                focus: () => this.focus(),
+                getGridBox: () => this._gridBox,
+                getCategoryGridBox: (name: string) => this._getCategoryGridBox(name),
+                setTabsVisible: (v: boolean) => this._setTabsVisible(v),
+                isDestroyed: () => (this as any).is_finalized?.() ?? false,
+            };
+
+            this._searchCtrl = new SearchController(this._state);
+            this._gridCtrl = new GridController(this._state);
+            this._groupCtrl = new GroupEditorController(this._state, this._gridCtrl);
+            this._kbdHandler = new KeyboardHandler(this._state, this._searchCtrl, this._gridCtrl, this._groupCtrl);
         }
 
         vfunc_key_press_event(ev: Clutter.Event): boolean { return this._onKey(ev); }
 
         private _onKey(ev: any): boolean {
-            const sym = ev.get_key_symbol();
-            dbg('Key', `sym=0x${sym.toString(16)} ctrl=${!!(ev.get_state() & Clutter.ModifierType.CONTROL_MASK)}`);
-            const ctrl = !!(ev.get_state() & Clutter.ModifierType.CONTROL_MASK);
-
-            if (this._promptOverlay.visible) {
-                if (sym === Clutter.KEY_Escape) { this._hidePromptOverlay(false); return true; }
-                if (sym === Clutter.KEY_Return || sym === Clutter.KEY_KP_Enter) { this._hidePromptOverlay(true); return true; }
-                return false;
-            }
-
-            if (this._isEditing) {
-                if (sym === Clutter.KEY_Escape) { this._stopEditing(false); return true; }
-                if (sym === Clutter.KEY_Return || sym === Clutter.KEY_KP_Enter) { this._stopEditing(true); return true; }
-                return false;
-            }
-
-            if (this._scroll.visible && ctrl && this._ext._settings.get_boolean('enable-quick-select')
-                && sym >= Clutter.KEY_1 && sym <= Clutter.KEY_9) {
-                this._activateIdx(sym - Clutter.KEY_1); return true;
-            }
-
-            if (!this._scroll.visible && this._entry.text === '' && (sym === Clutter.KEY_Shift_L || sym === Clutter.KEY_Shift_R)) {
-                const cats = this._getCategoriesList();
-                const idx = cats.indexOf(this._activeCategory);
-                if (idx > -1) {
-                    this._selectCategory(cats[(idx + 1) % cats.length]);
-                    this.focus();
-                    return true;
-                }
-            }
-
-            if (sym === Clutter.KEY_Escape) { this._ext.hide(); return true; }
-
-            if (this._scroll.visible) {
-                if (sym === Clutter.KEY_Return || sym === Clutter.KEY_KP_Enter) { this._activateSel(); return true; }
-                if (sym === Clutter.KEY_Up) { this._moveSel(-1); return true; }
-                if (sym === Clutter.KEY_Down) { this._moveSel(1); return true; }
-                if (sym === Clutter.KEY_Tab) { this._complete(); return true; }
-            } else {
-                if (sym === Clutter.KEY_Return || sym === Clutter.KEY_KP_Enter) { this._activateGridSel(); return true; }
-                if (sym === Clutter.KEY_Up) { this._moveGridSel(-7); return true; }
-                if (sym === Clutter.KEY_Down) { this._moveGridSel(7); return true; }
-                if (sym === Clutter.KEY_Left) { this._moveGridSel(-1); return true; }
-                if (sym === Clutter.KEY_Right) { this._moveGridSel(1); return true; }
-
-                const char = Clutter.keysym_to_unicode(sym);
-                if (char && char >= 32 && char <= 126 && !ctrl) {
-                    this._entry.text = String.fromCharCode(char);
-                    this._entry.clutter_text.set_cursor_position(-1);
-                    this._entry.grab_key_focus();
-                    return true;
-                }
-            }
-            return false;
-        }
+        return this._kbdHandler.onKey(ev);
+    }
 
         private _setTabsVisible(visible: boolean) {
             if (visible) {
@@ -588,317 +627,85 @@ const LauncherDialog = GObject.registerClass(
         }
 
         private _onText() {
-            if (this._tid != null) { GLib.source_remove(this._tid as number); this._tid = null; }
-            const gen = ++this._gen;
-            this._tid = timeoutOnce(80, () => {
-                this._tid = null;
-                if (gen !== this._gen) return;
-                this._search(this._entry.text);
-            });
-        }
+        this._searchCtrl.onText();
+    }
 
         private _search(query: string) {
-            dbg('Search', 'query:', query);
-            const q = query.trim();
-            const max = this._ext._settings.get_int('max-results');
-
-            if (!q) {
-                this._clear();
-                this._scroll.hide();
-                this._headerBox.show();
-                this._gridScroll.show();
-                this._setTabsVisible(true);
-                this._headerTitleLabel.text = this._activeCategory;
-                const gridBox = this._gridBox;
-                this._gridScroll.set_child(gridBox);
-                if (gridBox.get_n_children() === 0) {
-                    this._renderGridOnly();
-                } else {
-                    this._gridSelIdx = -1;
-                    timeoutOnce(10, () => {
-                        if (this._gridSelIdx === -1 && this._gridScroll.visible) {
-                            this._selectGridIdx(0);
-                        }
-                    });
-                }
-                return;
-            }
-
-            this._headerBox.hide();
-            this._gridScroll.hide();
-            this._setTabsVisible(false);
-            this._scroll.show();
-
-            this._rbox.destroy_all_children();
-
-            const combined: SearchResult[] = [];
-            for (const p of this._providers) {
-                try { combined.push(...p.search(q)); } catch (_e) { }
-            }
-            combined.sort((a, b) => b.score - a.score || b.providerPriority - a.providerPriority);
-            this._results = combined.slice(0, max);
-            dbg('Search', `results: ${this._results.length} (max ${max})`);
-            this._renderSearchResults();
-        }
+        this._searchCtrl.search(query);
+    }
 
         private _clear() {
-            this._results = [];
-            this._selIdx = -1;
-            this._rbox.destroy_all_children();
-        }
+        this._searchCtrl.clear();
+    }
 
         // ─── Search View Rendering ───────────────────────────────────────────
 
         private _renderSearchResults() {
-            if (!this._results.length) { this._scroll.hide(); return; }
-            this._results.forEach((r, i) => {
-                const row = new (ResultRow as any)() as ResultRow;
-                row.setup(r, i, this._ext._settings, this._shellSettings);
-                row.connect('item-activated', () => { this._ext.hide(); r.activate(); });
-                row.connect('item-hovered', () => {
-                    this._selectIdx(i);
-                });
-                this._rbox.add_child(row);
-            });
-            this._scroll.show();
-            this._selIdx = -1;
-            this._selectIdx(0);
-        }
+        this._searchCtrl.renderSearchResults();
+    }
 
         private _selectIdx(i: number) {
-            const rows = this._rbox.get_children() as ResultRow[];
-            if (!rows.length) return;
-            i = Math.max(0, Math.min(rows.length - 1, i));
-            rows.forEach((r, j) => r.setSelected(j === i));
-            this._selIdx = i;
-
-            scrollToActor(this._scroll, rows[i]);
-        }
+        this._searchCtrl.selectIdx(i);
+    }
 
         private _moveSel(d: number) {
-            const n = this._rbox.get_children().length;
-            if (n) this._selectIdx((this._selIdx + d + n) % n);
-        }
+        this._searchCtrl.moveSel(d);
+    }
 
         private _activateSel() {
-            const r = this._results[this._selIdx];
-            dbg('Activate', 'list sel', this._selIdx, r?.name ?? 'none');
-            if (r) { this._ext.hide(); r.activate(); }
-        }
+        this._searchCtrl.activateSel();
+    }
 
         private _activateIdx(i: number) {
-            const r = this._results[i];
-            if (r) { this._ext.hide(); r.activate(); }
-        }
+        this._searchCtrl.activateIdx(i);
+    }
 
         private _complete() {
-            const r = this._results[this._selIdx];
-            if (r?.name) { this._entry.text = r.name; this._entry.clutter_text.set_cursor_position(-1); }
-        }
+        this._searchCtrl.complete();
+    }
 
         // ─── Grid View Rendering & Management ────────────────────────────────
 
         private _collectGridItems(): GridItem[] {
-            const items: GridItem[] = [];
-            const gridBox = this._gridBox;
-            gridBox.get_children().forEach((row: any) => {
-                if (row.get_children) {
-                    row.get_children().forEach((item: GridItem) => items.push(item));
-                }
-            });
-            return items;
-        }
+        return this._gridCtrl.collectGridItems();
+    }
 
         private _ensureAllAppsCache() {
-            if (!this._allAppsCacheDirty && this._allAppsCache.length > 0) return;
-            this._allAppsCacheDirty = false;
-
-            const apps: SearchResult[] = [];
-            const appProv = this._providers.find(p => p.id === 'apps') as AppProvider | undefined;
-            if (appProv) {
-                for (const [id, cached] of appProv._appsCache.entries()) {
-                    const { app, category } = cached;
-                    const info = app.get_app_info();
-                    if (!info) continue;
-                    apps.push({
-                        id: `app:${id}`, desktopId: id,
-                        name: cached.displayName ?? info.get_name() ?? id,
-                        description: cached.displayDesc ?? info.get_description() ?? '',
-                        score: 0, providerPriority: 10,
-                        createIcon: (s: number) => createAppIcon(app, s),
-                        categoryIcon: 'application-x-executable-symbolic',
-                        category: category,
-                        activate: () => {
-                            dbg('LibraryGrid', `activate: ${id}`);
-                            app.activate();
-                        },
-                    });
-                }
-            }
-            apps.sort((a, b) => a.name.localeCompare(b.name));
-            this._allAppsCache = apps;
-        }
+        this._gridCtrl.ensureAllAppsCache();
+    }
 
         private _cancelRenderJob() {
-            if (this._renderIdleId) {
-                GLib.source_remove(this._renderIdleId);
-                this._renderIdleId = 0;
-            }
-        }
+        this._gridCtrl.cancelRenderJob();
+    }
 
         private _cancelBgRenderJob() {
-            if (this._bgRenderIdleId) {
-                GLib.source_remove(this._bgRenderIdleId);
-                this._bgRenderIdleId = 0;
-            }
-            this._bgRenderQueue = [];
+        this._gridCtrl.cancelBgRenderJob();
+    }
+
+        cleanup() {
+        this._gridCtrl.cleanup();
+        // existing cleanup logic retained for safety
+        this._cancelRenderJob();
+        this._cancelBgRenderJob();
+        if (this._tid != null) {
+            GLib.source_remove(this._tid as number);
+            this._tid = null;
         }
+        if (this._categoryGridBoxes) {
+            this._categoryGridBoxes.forEach(box => {
+                try { box.destroy(); } catch (_) {}
+            });
+            this._categoryGridBoxes.clear();
+        }
+    }
 
         private _selectCategory(categoryName: string) {
-            if (this._activeCategory === categoryName) return;
-            const t0 = GLib.get_monotonic_time();
-            this._activeCategory = categoryName;
-
-            this._cancelRenderJob();
-            this._cancelBgRenderJob();
-
-            const tabs = this._tabsBox.get_children() as CategoryTab[];
-            tabs.forEach(tab => {
-                if (typeof tab.setSelected === 'function') {
-                    tab.setSelected(tab.categoryName === categoryName);
-                }
-            });
-
-            this._headerTitleLabel.text = this._activeCategory;
-            const staticTabs = ['Library Home', 'Office', 'System', 'Utilities'];
-            const isCustom = !staticTabs.includes(this._activeCategory);
-            if (isCustom) {
-                this._editBtn.show();
-                this._deleteBtn.show();
-            } else {
-                this._editBtn.hide();
-                this._deleteBtn.hide();
-            }
-
-            const hasCachedGrid = this._categoryGridBoxes.has(categoryName);
-            const gridBox = this._gridBox;
-            this._gridScroll.set_child(gridBox);
-
-            if (!hasCachedGrid) {
-                dbg('Performance', `selectCategory('${categoryName}') — CACHE MISS, rendering grid`);
-                this._renderGridOnly();
-            } else {
-                const elapsed = (GLib.get_monotonic_time() - t0) / 1000;
-                dbg('Performance', `selectCategory('${categoryName}') — CACHE HIT, took ${elapsed.toFixed(1)}ms`);
-                this._gridSelIdx = -1;
-                timeoutOnce(10, () => {
-                    if (this._gridSelIdx === -1 && this._gridScroll.visible) {
-                        this._selectGridIdx(0);
-                    }
-                });
-                this._startBackgroundPreRender();
-            }
-        }
+        this._gridCtrl.selectCategory(categoryName);
+    }
 
         private _renderGridOnly() {
-            const t0 = GLib.get_monotonic_time();
-            this._ensureAllAppsCache();
-
-            let filteredApps: SearchResult[] = [];
-            if (this._activeCategory === 'Library Home') {
-                filteredApps = this._allAppsCache;
-            } else if (this._activeCategory === 'Office') {
-                filteredApps = this._allAppsCache.filter(a => a.category.toLowerCase().includes('office'));
-            } else if (this._activeCategory === 'System') {
-                filteredApps = this._allAppsCache.filter(a =>
-                    a.category.toLowerCase().includes('system') ||
-                    a.category.toLowerCase().includes('setting') ||
-                    a.category.toLowerCase().includes('administration') ||
-                    a.category.toLowerCase().includes('preferences')
-                );
-            } else if (this._activeCategory === 'Utilities') {
-                filteredApps = this._allAppsCache.filter(a =>
-                    a.category.toLowerCase().includes('utility') ||
-                    a.category.toLowerCase().includes('utilities') ||
-                    a.category.toLowerCase().includes('accessories')
-                );
-            } else {
-                const customGroups = this._getCustomGroups();
-                const customAppIds = customGroups[this._activeCategory] || [];
-                filteredApps = this._allAppsCache.filter(a => customAppIds.includes(a.desktopId ?? ''));
-            }
-
-            const gridBox = this._gridBox;
-            gridBox.get_children().forEach((row: any) => {
-                if (row.get_children) {
-                    row.get_children().forEach((child: any) => {
-                        row.remove_child(child);
-                    });
-                }
-            });
-            gridBox.destroy_all_children();
-            this._gridSelIdx = -1;
-
-            if (!filteredApps.length) {
-                const emptyLabel = new St.Label({
-                    text: _('No applications in this group.\nClick the pencil icon to add apps!'),
-                    style_class: 'ormic-grid-empty',
-                    x_align: Clutter.ActorAlign.CENTER,
-                    y_align: Clutter.ActorAlign.CENTER,
-                });
-                gridBox.add_child(emptyLabel);
-                return;
-            }
-
-            const columns = 7;
-            let currentRow = new St.BoxLayout({ style_class: 'ormic-grid-row', x_expand: true });
-            gridBox.add_child(currentRow);
-
-            let index = 0;
-            const CHUNK_SIZE = 8;
-
-            const renderChunk = () => {
-                const end = Math.min(index + CHUNK_SIZE, filteredApps.length);
-                for (; index < end; index++) {
-                    const app = filteredApps[index];
-                    if (index > 0 && index % columns === 0) {
-                        currentRow = new St.BoxLayout({ style_class: 'ormic-grid-row', x_expand: true });
-                        gridBox.add_child(currentRow);
-                    }
-
-                    const item = new (GridItem as any)() as GridItem;
-                    item.setup(app);
-                    item.connect('item-activated', () => {
-                        this._ext.hide();
-                        app.activate();
-                    });
-                    item.connect('item-hovered', () => {
-                        const allItems = this._collectGridItems();
-                        const idx = allItems.indexOf(item);
-                        if (idx >= 0) this._selectGridIdx(idx);
-                    });
-                    currentRow.add_child(item);
-                }
-
-                if (index < filteredApps.length) {
-                    this._renderIdleId = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
-                        renderChunk();
-                        return GLib.SOURCE_REMOVE;
-                    });
-                } else {
-                    this._renderIdleId = 0;
-                    const elapsed = (GLib.get_monotonic_time() - t0) / 1000;
-                    dbg('Performance', `renderGridOnly('${this._activeCategory}') — ${filteredApps.length} items, took ${elapsed.toFixed(1)}ms`);
-                    
-                    if (this._gridSelIdx === -1 && this._gridScroll.visible) {
-                        this._selectGridIdx(0);
-                    }
-                    this._startBackgroundPreRender();
-                }
-            };
-
-            renderChunk();
-        }
+        this._gridCtrl.renderGridOnly();
+    }
 
         private _renderCategoryGridBackground(categoryName: string, onComplete: () => void) {
             this._ensureAllAppsCache();
@@ -957,6 +764,7 @@ const LauncherDialog = GObject.registerClass(
             const CHUNK_SIZE = 8;
 
             const renderChunk = () => {
+                if ((this as any).is_finalized?.() || !this.get_stage?.()) return;
                 const end = Math.min(index + CHUNK_SIZE, filteredApps.length);
                 for (; index < end; index++) {
                     const app = filteredApps[index];
@@ -1081,203 +889,57 @@ const LauncherDialog = GObject.registerClass(
         }
 
         private _renderGridAndTabs() {
-            dbg('Performance', `renderGridAndTabs — rebuilding tabs, invalidating grid for: ${this._activeCategory}`);
-
-            this._cancelRenderJob();
-            this._cancelBgRenderJob();
-
-            const oldBox = this._categoryGridBoxes.get(this._activeCategory);
-            if (oldBox) {
-                oldBox.destroy();
-                this._categoryGridBoxes.delete(this._activeCategory);
-            }
-
-            this._renderTabsOnly();
-
-            const gridBox = this._gridBox;
-            this._gridScroll.set_child(gridBox);
-            this._renderGridOnly();
+            this._gridCtrl.renderGridAndTabs();
         }
 
         private _selectGridIdx(i: number) {
-            const items = this._collectGridItems();
-            if (!items.length) return;
-            i = Math.max(0, Math.min(items.length - 1, i));
-            items.forEach((item, idx) => item.setSelected(idx === i));
-            this._gridSelIdx = i;
-
-            scrollToActor(this._gridScroll, items[i]);
+            this._gridCtrl.selectGridIdx(i);
         }
 
         private _moveGridSel(d: number) {
-            const items = this._collectGridItems();
-            const n = items.length;
-            if (n) {
-                this._selectGridIdx((this._gridSelIdx + d + n) % n);
-            }
+            this._gridCtrl.moveGridSel(d);
         }
 
         private _activateGridSel() {
-            dbg('Activate', 'grid sel', this._gridSelIdx);
-            const items = this._collectGridItems();
-            const selected = items[this._gridSelIdx];
-            if (selected) {
-                this._ext.hide();
-                selected.result.activate();
-            }
+            this._gridCtrl.activateGridSel();
         }
 
-        // ─── Custom Group Editing checklist Mode ──────────────────────────────
-
         private _startEditing() {
-            this._isEditing = true;
-            this._headerBox.hide();
-            this._gridScroll.hide();
-            this._setTabsVisible(false);
-
-            this._editorNameEntry.text = this._activeCategory;
-            this._editorAppsContainer.destroy_all_children();
-
-            const apps: SearchResult[] = [];
-            const appProv = this._providers.find(p => p.id === 'apps') as AppProvider | undefined;
-            if (appProv) {
-                for (const [id, cached] of appProv._appsCache.entries()) {
-                    const { app, category } = cached;
-                    const info = app.get_app_info();
-                    if (!info) continue;
-                    apps.push({
-                        id: `app:${id}`, desktopId: id,
-                        name: cached.displayName ?? info.get_name() ?? id,
-                        description: cached.displayDesc ?? info.get_description() ?? '',
-                        score: 0, providerPriority: 10,
-                        createIcon: (s: number) => createAppIcon(app, s),
-                        categoryIcon: 'application-x-executable-symbolic',
-                        category: category,
-                        activate: () => app.activate(),
-                    });
-                }
-            }
-            apps.sort((a, b) => a.name.localeCompare(b.name));
-
-            const customGroups = this._getCustomGroups();
-            const groupAppIds = customGroups[this._activeCategory] || [];
-
-            apps.forEach(app => {
-                const row = new (EditAppRow as any)() as EditAppRow;
-                row.setup(app, groupAppIds.includes(app.desktopId ?? ''));
-                this._editorAppsContainer.add_child(row);
-            });
-
-            this._editorBox.show();
-            this._editorNameEntry.grab_key_focus();
+            this._groupCtrl.startEditing();
         }
 
         private _stopEditing(save: boolean) {
-            this._isEditing = false;
-            this._editorBox.hide();
-            this._headerBox.show();
-            this._gridScroll.show();
-            this._setTabsVisible(true);
-
-            if (save) {
-                const newName = this._editorNameEntry.text.trim();
-                const customGroups = this._getCustomGroups();
-
-                const selectedIds: string[] = [];
-                this._editorAppsContainer.get_children().forEach((child: any) => {
-                    const row = child as EditAppRow;
-                    if (row.selected && row.result.desktopId) {
-                        selectedIds.push(row.result.desktopId);
-                    }
-                });
-
-                if (newName && newName !== this._activeCategory) {
-                    delete customGroups[this._activeCategory];
-                    customGroups[newName] = selectedIds;
-                    this._activeCategory = newName;
-                } else if (newName) {
-                    customGroups[this._activeCategory] = selectedIds;
-                }
-
-                this._saveCustomGroups(customGroups);
-            }
-
-            this._renderGridAndTabs();
-            timeoutOnce(50, () => this.focus());
+            this._groupCtrl.stopEditing(save);
         }
 
         private _deleteActiveCategory() {
-            const customGroups = this._getCustomGroups();
-            delete customGroups[this._activeCategory];
-            this._saveCustomGroups(customGroups);
-
-            this._activeCategory = 'Library Home';
-            this._renderGridAndTabs();
-            timeoutOnce(50, () => this.focus());
+            this._groupCtrl.deleteActiveCategory();
         }
 
-        // ─── Prompt Modal Overlay for Group Creation ────────────────────────
-
         private _showPromptOverlay() {
-            this._promptEntry.text = '';
-            this._promptOverlay.show();
-            this._promptEntry.grab_key_focus();
+            this._groupCtrl.showPromptOverlay();
         }
 
         private _hidePromptOverlay(create: boolean) {
-            this._promptOverlay.hide();
-            const gName = this._promptEntry.text.trim();
-
-            if (create && gName) {
-                const customGroups = this._getCustomGroups();
-                if (!customGroups[gName]) {
-                    customGroups[gName] = [];
-                    this._saveCustomGroups(customGroups);
-                    this._activeCategory = gName;
-
-                    this._renderGridAndTabs();
-                    this._startEditing();
-                    return;
-                }
-            }
-
-            this._renderGridAndTabs();
-            timeoutOnce(50, () => this.focus());
+            this._groupCtrl.hidePromptOverlay(create);
         }
 
-        // ─── Settings Helper Methods ──────────────────────────────────────────
-
         private _getCategoriesList(): string[] {
-            const list = ['Library Home', 'Office', 'System', 'Utilities'];
-            const customGroups = this._getCustomGroups();
-            for (const gName of Object.keys(customGroups)) {
-                list.push(gName);
-            }
-            return list;
+            return this._gridCtrl.getCategoriesList();
         }
 
         private _getCustomGroups(): Record<string, string[]> {
-            dbg('Groups', 'getCustomGroups()');
-            try {
-                const str = this._ext._settings.get_string('custom-groups') || '{}';
-                return JSON.parse(str);
-            } catch (_e) {
-                return {};
-            }
+            return this._gridCtrl.getCustomGroups();
         }
 
         private _saveCustomGroups(groups: Record<string, string[]>) {
-            dbg('Groups', 'saveCustomGroups()', Object.keys(groups));
-            try {
-                this._ext._settings.set_string('custom-groups', JSON.stringify(groups));
-            } catch (e: any) {
-                log(`Ormic Launcher: Error saving custom groups: ${e.message}`);
-            }
+            this._gridCtrl.saveCustomGroups(groups);
         }
 
         // ─── External Controls ────────────────────────────────────────────────
 
         focus() {
+            if ((this as any).is_finalized?.() || !this.get_stage?.()) return;
             dbg('Focus', 'grab_key_focus');
             if (this._promptOverlay && this._promptOverlay.visible && this._promptEntry) {
                 global.stage.set_key_focus(this._promptEntry);
@@ -1508,6 +1170,20 @@ export default class OrmicLauncherExtension extends Extension {
         if (this._monId) { Main.layoutManager.disconnect(this._monId); this._monId = null; }
         this._indicator?.destroy(); this._indicator = null;
         Main.wm.removeKeybinding('toggle-ormic-launcher');
+        
+        // Stop any running animations and clean up idle rendering tasks
+        if (this._overlay) {
+            this._overlay.remove_all_transitions();
+        }
+        if (this._dialog) {
+            this._dialog.remove_all_transitions();
+            try {
+                this._dialog.cleanup();
+            } catch (e: any) {
+                dbg('Extension', `Error running dialog cleanup: ${e.message}`);
+            }
+        }
+
         this._overlay?.destroy();
         this._overlay = null;
         this._dialog = null;
@@ -1551,6 +1227,10 @@ export default class OrmicLauncherExtension extends Extension {
         dbg('Launcher', 'show()');
         if (this._visible) return;
         if (!this._dialog || !this._overlay) return;
+        
+        this._overlay.remove_all_transitions();
+        this._dialog.remove_all_transitions();
+
         this._visible = true;
         this._dialog.reset();
         this._overlay.show();
@@ -1577,6 +1257,10 @@ export default class OrmicLauncherExtension extends Extension {
         dbg('Launcher', 'hide()');
         if (!this._visible) return;
         if (!this._dialog || !this._overlay) return;
+        
+        this._overlay.remove_all_transitions();
+        this._dialog.remove_all_transitions();
+
         this._visible = false;
         this._clickGuard = false;
         if (this._clickGuardTimer != null) {
@@ -1594,7 +1278,14 @@ export default class OrmicLauncherExtension extends Extension {
         const ov = this._overlay, dl = this._dialog;
         easeActor(dl, {
             opacity: 0, translation_y: -14, duration: 120, mode: Clutter.AnimationMode.EASE_IN_QUAD,
-            onComplete: () => { ov.hide(); dl.reset(); dl.opacity = 255; dl.translation_y = 0; },
+            onComplete: () => {
+                if (ov && !(ov as any).is_finalized?.() && dl && !(dl as any).is_finalized?.()) {
+                    ov.hide();
+                    dl.reset();
+                    dl.opacity = 255;
+                    dl.translation_y = 0;
+                }
+            },
         });
         easeActor(ov, { opacity: 0, duration: 120, mode: Clutter.AnimationMode.EASE_IN_QUAD });
     }
