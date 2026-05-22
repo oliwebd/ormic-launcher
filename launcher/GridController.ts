@@ -1,22 +1,29 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Ormic Launcher — Grid Controller
 //
-// Manages the library grid view: category filtering, page-based navigation
-// (GNOME app-grid style dots + left/right arrows), grid selection,
-// and the category tabs sidebar.
+// Performance architecture (GNOME 50 optimised)
+// ───────────────────────────────────────────────
+// • Chunked idle rendering — first INITIAL_ROWS rows render synchronously so
+//   the launcher appears instantly. Remaining rows are added one chunk per
+//   GLib.idle_add_once() tick (GLib.idle_add on older shells), keeping the
+//   compositor frame budget free.
 //
-// Performance notes
-// ─────────────────
-// • GridItem pool: up to ITEMS_PER_PAGE (28) items are kept alive between
-//   renders.  setup() swaps callbacks and updates icon/label in-place —
-//   zero GObject allocation, zero signal connect/disconnect on page turns
-//   and category switches.
+// • Render generation counter — if the user switches category while a chunk
+//   render is in flight, stale callbacks detect the mismatch and bail out
+//   immediately. No stale items, no flicker.
 //
-// • Tab cache: CategoryTab widgets are rebuilt only when the actual list of
-//   categories changes (custom groups added/removed/renamed).  Switching the
-//   active category just flips the CSS class on the existing widgets.
+// • Flat _currentItems[] — O(1) access to every live GridItem replaces the
+//   O(n) get_children() widget-tree walk that collectGridItems() used to do.
 //
-// • All dbg() calls compile away when DEBUG=false (utils.ts).
+// • GridItem pool — items are harvested back into the pool on every category
+//   switch and rebound via setup(). Zero GObject allocation, zero signal
+//   churn on warm renders.
+//
+// • Pre-fetched GIcon (AppProvider) — icon creation is a single
+//   new St.Icon({gicon}) call; no property-chain traversal per item.
+//
+// • Tab cache — tab widgets are rebuilt only when the custom-group list
+//   changes; active-category switch just flips CSS classes.
 
 import GLib from 'gi://GLib';
 import St from 'gi://St';
@@ -25,59 +32,60 @@ import Clutter from 'gi://Clutter';
 import { gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
 
 import { SearchResult } from '../types.js';
-import { dbg, timeoutOnce, createAppIcon } from '../utils.js';
+import { dbg, timeoutOnce, idleOnce, createAppIcon } from '../utils.js';
 import { AppProvider } from '../providers/apps.js';
 import { GridItem } from '../components/GridItem.js';
 import { CategoryTab } from '../components/CategoryTab.js';
 import type { LauncherState } from './LauncherState.js';
 
-/** Static category definitions shared by tabs & filtering. */
 const STATIC_TABS = [
-    { name: 'Library Home', icon: 'go-home-symbolic' },
-    { name: 'Office', icon: 'x-office-document-symbolic' },
-    { name: 'System', icon: 'emblem-system-symbolic' },
-    { name: 'Utilities', icon: 'accessories-calculator-symbolic' },
+    { name: 'Favorites',     icon: 'starred-symbolic' },
+    { name: 'Library Home',  icon: 'go-home-symbolic' },
+    { name: 'Office',        icon: 'x-office-document-symbolic' },
+    { name: 'System',        icon: 'emblem-system-symbolic' },
+    { name: 'Utilities',     icon: 'accessories-calculator-symbolic' },
 ] as const;
 
 const COLUMNS = 7;
-const ROWS_PER_PAGE = 4;
-const ITEMS_PER_PAGE = COLUMNS * ROWS_PER_PAGE; // 28 items per page
 
-/** Debounce interval for tab-hover category switching (ms). */
+// How many items to render synchronously on the first call (fills the visible
+// viewport). Everything beyond this renders one chunk per idle frame.
+const INITIAL_ITEMS = COLUMNS * 3;  // 3 rows = 21 items
+
+// Items rendered per idle tick after the initial batch.
+const CHUNK_ITEMS = COLUMNS * 3;    // 3 rows per idle tick
+
 const TAB_HOVER_DEBOUNCE_MS = 150;
 
 export class GridController {
     private _s: LauncherState;
 
-    /** Timer id for debounced tab-hover category switching. */
     private _tabHoverTimerId: number | null = null;
 
-    /** Current page index (0-based). */
-    private _currentPage = 0;
+    // ── Render-gen: incremented on every renderGridOnly() call.
+    // Idle chunk callbacks compare their captured gen against this; if they
+    // differ the render was superseded and the callback returns immediately.
+    private _renderGen = 0;
 
-    /** Total pages for the active category. */
-    private _totalPages = 1;
+    // ── Flat list of every GridItem currently visible in the grid.
+    // Replaces the old O(n) get_children() tree walk.
+    private _currentItems: GridItem[] = [];
 
-    /** Filtered apps for the current category (cached between page changes). */
+    // ── Filtered app list for the active category (invalidated on switch).
     private _filteredApps: SearchResult[] = [];
     private _filteredCategory = '';
 
-    // ── Pool of idle GridItem widgets ────────────────────────────────────
-    // Items are harvested from the grid before each render and re-bound to
-    // new apps via setup().  Capped at ITEMS_PER_PAGE to avoid unbounded
-    // growth; extras are destroyed immediately.
+    // ── Pool of detached-but-alive GridItem widgets for reuse.
     private _itemPool: GridItem[] = [];
 
-    // ── Tab cache ────────────────────────────────────────────────────────
-    // Tracks which custom-group names were present when tabs were last built.
-    // An empty string forces a full rebuild on first call.
+    // ── Tab widget cache key (custom group names joined).
     private _tabCacheKey = '';
 
     constructor(state: LauncherState) {
         this._s = state;
     }
 
-    // ─── Idle job management ─────────────────────────────────────────────
+    // ─── Idle/timeout job management ─────────────────────────────────────
 
     cancelRenderJob(): void {
         if (this._s.renderIdleId) {
@@ -94,7 +102,6 @@ export class GridController {
         this._s.bgRenderQueue = [];
     }
 
-    /** Cancel any pending tab-hover debounce timer. */
     private _cancelTabHoverTimer(): void {
         if (this._tabHoverTimerId != null) {
             GLib.source_remove(this._tabHoverTimerId);
@@ -102,7 +109,7 @@ export class GridController {
         }
     }
 
-    // ─── App cache ───────────────────────────────────────────────────────
+    // ─── App cache ────────────────────────────────────────────────────────
 
     ensureAllAppsCache(): void {
         const s = this._s;
@@ -113,7 +120,7 @@ export class GridController {
         const appProv = s.providers.find(p => p.id === 'apps') as AppProvider | undefined;
         if (appProv) {
             for (const [id, cached] of appProv._appsCache.entries()) {
-                const { app, category } = cached;
+                const { app, category, gicon } = cached;
                 const info = app.get_app_info();
                 if (!info) continue;
                 apps.push({
@@ -121,13 +128,13 @@ export class GridController {
                     name: cached.displayName ?? info.get_name() ?? id,
                     description: cached.displayDesc ?? info.get_description() ?? '',
                     score: 0, providerPriority: 10,
-                    createIcon: (sz: number) => createAppIcon(app, sz),
+                    // Fast path: use pre-cached GIcon from AppProvider
+                    createIcon: gicon
+                        ? (sz: number) => new St.Icon({ gicon, icon_size: sz })
+                        : (sz: number) => createAppIcon(app, sz),
                     categoryIcon: 'application-x-executable-symbolic',
                     category,
-                    activate: () => {
-                        dbg('LibraryGrid', `activate: ${id}`);
-                        app.activate();
-                    },
+                    activate: () => { dbg('LibraryGrid', `activate: ${id}`); app.activate(); },
                 });
             }
         }
@@ -135,12 +142,19 @@ export class GridController {
         s.allAppsCache = apps;
     }
 
-    // ─── Category filtering ──────────────────────────────────────────────
+    // ─── Category filtering ───────────────────────────────────────────────
 
     private _filterApps(categoryName: string): SearchResult[] {
         this.ensureAllAppsCache();
         const all = this._s.allAppsCache;
 
+        if (categoryName === 'Favorites') {
+            const favIds = this._s.shellSettings.get_strv('favorite-apps') as string[];
+            const filtered = all.filter(a => favIds.includes(a.desktopId ?? ''));
+            filtered.sort((a, b) =>
+                favIds.indexOf(a.desktopId ?? '') - favIds.indexOf(b.desktopId ?? ''));
+            return filtered;
+        }
         if (categoryName === 'Library Home') return all;
         if (categoryName === 'Office')
             return all.filter(a => a.category.toLowerCase().includes('office'));
@@ -156,13 +170,10 @@ export class GridController {
                 a.category.toLowerCase().includes('utilities') ||
                 a.category.toLowerCase().includes('accessories'));
 
-        // Custom group
-        const customGroups = this.getCustomGroups();
-        const ids = customGroups[categoryName] || [];
+        const ids = this.getCustomGroups()[categoryName] ?? [];
         return all.filter(a => ids.includes(a.desktopId ?? ''));
     }
 
-    /** Return filtered apps for the current category, using cached result when possible. */
     private _getFilteredApps(): SearchResult[] {
         const s = this._s;
         if (this._filteredCategory !== s.activeCategory) {
@@ -172,149 +183,69 @@ export class GridController {
         return this._filteredApps;
     }
 
-    // ─── GridItem pool helpers ────────────────────────────────────────────
+    // ─── GridItem pool ────────────────────────────────────────────────────
 
     /**
-     * Detach all GridItems currently in the grid and push them onto the pool.
-     * The row St.BoxLayout widgets are left empty then removed via
-     * remove_all_children() on gridBox — rows are lightweight and not pooled.
+     * Detach all live items back into the pool and clear the grid rows.
+     * Uses the flat _currentItems array — no widget tree traversal needed.
      */
     private _harvestItems(): void {
-        const s = this._s;
-        const gridBox = s.getGridBox();
-        gridBox.get_children().forEach((row: any) => {
-            if (!row.get_children) return;
-            (row.get_children() as GridItem[]).forEach(item => {
-                row.remove_child(item);
-                if (this._itemPool.length < ITEMS_PER_PAGE) {
-                    this._itemPool.push(item);
-                } else {
-                    try { item.destroy(); } catch (_) {}
-                }
-            });
-        });
-        // Rows now empty — remove without destroy (they're cheap St.BoxLayouts)
-        gridBox.remove_all_children();
+        for (const item of this._currentItems) {
+            item.get_parent()?.remove_child(item);
+            this._itemPool.push(item);
+        }
+        this._currentItems = [];
+        // Remove now-empty row containers (cheap St.BoxLayouts)
+        this._s.getGridBox().remove_all_children();
+        // Increment render gen so any in-flight idle chunks abort
+        this._renderGen++;
     }
 
-    /**
-     * Return a GridItem ready for re-use from the pool, or allocate a new one
-     * if the pool is empty.
-     */
     private _getPoolItem(): GridItem {
         return this._itemPool.pop() ?? new (GridItem as any)() as GridItem;
     }
 
-    // ─── Grid items helpers ──────────────────────────────────────────────
+    // ─── collectGridItems — O(1) via flat array ───────────────────────────
 
     collectGridItems(): GridItem[] {
-        const items: GridItem[] = [];
-        const gridBox = this._s.getGridBox();
-        gridBox.get_children().forEach((row: any) => {
-            if (row.get_children) {
-                row.get_children().forEach((item: GridItem) => items.push(item));
-            }
-        });
-        return items;
+        return this._currentItems;
     }
 
-    // ─── Page navigation ─────────────────────────────────────────────────
+    // ─── No-op stubs (pagination removed) ────────────────────────────────
 
-    goToPage(page: number): void {
-        const clampedPage = Math.max(0, Math.min(this._totalPages - 1, page));
-        if (clampedPage === this._currentPage && this._filteredCategory === this._s.activeCategory) {
-            this._updatePageNav();
-            return;
-        }
-        this._currentPage = clampedPage;
-        this.renderGridOnly();
-    }
+    nextPage(): void {}
+    prevPage(): void {}
 
-    nextPage(): void {
-        if (this._currentPage < this._totalPages - 1)
-            this.goToPage(this._currentPage + 1);
-    }
-
-    prevPage(): void {
-        if (this._currentPage > 0)
-            this.goToPage(this._currentPage - 1);
-    }
-
-    resetPage(): void {
-        this._currentPage = 0;
-        this._filteredCategory = ''; // force re-filter
-    }
-
-    /** Rebuild page-dot indicators and update arrow button states. */
-    private _updatePageNav(): void {
-        const s = this._s;
-        if (!s.pageDotsBox || !s.prevPageBtn || !s.nextPageBtn) return;
-
-        s.pageDotsBox.destroy_all_children();
-        for (let i = 0; i < this._totalPages; i++) {
-            const dot = new St.Widget({
-                style_class: i === this._currentPage
-                    ? 'ormic-page-dot ormic-page-dot-active'
-                    : 'ormic-page-dot',
-                reactive: true,
-                track_hover: true,
-            });
-            const pageIdx = i;
-            dot.connect('button-press-event', () => {
-                this.goToPage(pageIdx);
-                s.focus();
-                return Clutter.EVENT_STOP;
-            });
-            s.pageDotsBox.add_child(dot);
-        }
-
-        const atFirst = this._currentPage === 0;
-        const atLast = this._currentPage >= this._totalPages - 1;
-        s.prevPageBtn.reactive = !atFirst;
-        s.prevPageBtn.opacity = atFirst ? 60 : 255;
-        s.nextPageBtn.reactive = !atLast;
-        s.nextPageBtn.opacity = atLast ? 60 : 255;
-
-        if (this._totalPages > 1) s.pageNavBox.show();
-        else s.pageNavBox.hide();
-    }
-
-    // ─── Header edit/delete button sync ──────────────────────────────────
+    // ─── Header button sync ───────────────────────────────────────────────
 
     private _syncHeaderButtons(): void {
         const s = this._s;
         s.headerTitleLabel.text = s.activeCategory;
         const isCustom = !STATIC_TABS.some(t => t.name === s.activeCategory);
         if (isCustom) { s.editBtn.show(); s.deleteBtn.show(); }
-        else { s.editBtn.hide(); s.deleteBtn.hide(); }
+        else          { s.editBtn.hide(); s.deleteBtn.hide(); }
     }
 
-    // ─── Select category ─────────────────────────────────────────────────
+    // ─── Select category ──────────────────────────────────────────────────
 
     selectCategory(categoryName: string): void {
         const s = this._s;
         if (s.activeCategory === categoryName) return;
         const t0 = GLib.get_monotonic_time();
         s.activeCategory = categoryName;
-
-        this._currentPage = 0;
-        this._filteredCategory = ''; // force re-filter
+        this._filteredCategory = '';
 
         this.cancelRenderJob();
         this.cancelBgRenderJob();
         this._cancelTabHoverTimer();
 
-        // Update tab selection in-place — no widget rebuild needed
         (s.tabsBox.get_children() as CategoryTab[]).forEach(tab => {
-            if (typeof tab.setSelected === 'function') {
+            if (typeof tab.setSelected === 'function')
                 tab.setSelected(tab.categoryName === categoryName);
-            }
         });
 
         this._syncHeaderButtons();
-
-        const gridBox = s.getGridBox();
-        s.gridScroll.set_child(gridBox);
+        s.gridScroll.set_child(s.getGridBox());
 
         const elapsed = (GLib.get_monotonic_time() - t0) / 1000;
         dbg('Performance', `selectCategory('${categoryName}') — ${elapsed.toFixed(1)}ms`);
@@ -322,158 +253,181 @@ export class GridController {
         this.renderGridOnly();
     }
 
-    // ─── Render active category grid (current page only) ─────────────────
+    // ─── Core render — chunked idle ───────────────────────────────────────
 
     renderGridOnly(): void {
         const s = this._s;
         const t0 = GLib.get_monotonic_time();
 
-        const filteredApps = this._getFilteredApps();
+        const apps = this._getFilteredApps();
 
-        this._totalPages = Math.max(1, Math.ceil(filteredApps.length / ITEMS_PER_PAGE));
-        this._currentPage = Math.max(0, Math.min(this._totalPages - 1, this._currentPage));
-
-        const pageStart = this._currentPage * ITEMS_PER_PAGE;
-        const pageEnd = Math.min(pageStart + ITEMS_PER_PAGE, filteredApps.length);
-        const pageApps = filteredApps.slice(pageStart, pageEnd);
-
-        // Harvest existing items into the pool before clearing the grid
+        // Harvest items and bump gen before any async work
         this._harvestItems();
+        const gen = this._renderGen;
+
         s.gridSelIdx = -1;
+        s.pageNavBox.hide();
 
         const gridBox = s.getGridBox();
 
-        if (!filteredApps.length) {
-            const emptyLabel = new St.Label({
-                text: _('No applications in this group.\nClick the pencil icon to add apps!'),
+        if (!apps.length) {
+            gridBox.add_child(new St.Label({
+                text: s.activeCategory === 'Favorites'
+                    ? _('No favourite apps yet.\nPin apps using the ★ button in search results!')
+                    : _('No applications in this group.\nClick the pencil icon to add apps!'),
                 style_class: 'ormic-grid-empty',
                 x_align: Clutter.ActorAlign.CENTER,
                 y_align: Clutter.ActorAlign.CENTER,
-            });
-            gridBox.add_child(emptyLabel);
-            this._updatePageNav();
+            }));
             return;
         }
 
-        // Render page items — reuse pooled GridItems via setup() (no allocation
-        // when pool is warm; only the first cold render allocates new widgets)
-        let currentRow = new St.BoxLayout({
-            style_class: 'ormic-grid-row',
-            x_expand: false,
-            x_align: Clutter.ActorAlign.START,
-        });
-        gridBox.add_child(currentRow);
+        // Pre-create all row containers in one pass (cheap; just layout hints).
+        // Adding empty containers first prevents layout-pass stutter as items
+        // arrive in later idle chunks.
+        const numRows = Math.ceil(apps.length / COLUMNS);
+        const rows: St.BoxLayout[] = [];
+        for (let r = 0; r < numRows; r++) {
+            const row = new St.BoxLayout({
+                style_class: 'ormic-grid-row',
+                x_expand: false,
+                x_align: Clutter.ActorAlign.START,
+            });
+            gridBox.add_child(row);
+            rows.push(row);
+        }
 
-        pageApps.forEach((app, localIdx) => {
-            if (localIdx > 0 && localIdx % COLUMNS === 0) {
-                currentRow = new St.BoxLayout({
-                    style_class: 'ormic-grid-row',
-                    x_expand: false,
-                    x_align: Clutter.ActorAlign.START,
-                });
-                gridBox.add_child(currentRow);
-            }
+        // ── Synchronous first batch — fills the visible viewport ──────────
+        const syncEnd = Math.min(INITIAL_ITEMS, apps.length);
+        this._fillSlice(apps, rows, 0, syncEnd, gen);
 
-            const item = this._getPoolItem();
-            const capturedLocalIdx = localIdx;
-            const capturedGlobalIdx = pageStart + localIdx;
-
-            item.setup(
-                app,
-                // onActivate
-                () => {
-                    s.ext.hide();
-                    app.activate();
-                },
-                // onHover
-                () => {
-                    if (s.gridSelIdx !== capturedGlobalIdx) {
-                        s.gridSelIdx = capturedGlobalIdx;
-                        const allItems = this.collectGridItems();
-                        allItems.forEach((it, idx) => it.setSelected(idx === capturedLocalIdx));
-                    }
-                },
-            );
-            currentRow.add_child(item);
-        });
-
-        s.renderIdleId = 0;
-
-        // Auto-select first item
-        if (s.gridSelIdx === -1 && s.gridScroll.visible) {
-            s.gridSelIdx = pageStart;
+        // Auto-select first item after initial render
+        if (s.gridScroll.visible) {
+            s.gridSelIdx = 0;
             timeoutOnce(10, () => {
-                if (s.gridScroll.visible) this.selectGridIdx(s.gridSelIdx);
+                if (s.gridScroll.visible) this.selectGridIdx(0);
             });
         }
 
-        this._updatePageNav();
-
         const elapsed = (GLib.get_monotonic_time() - t0) / 1000;
-        dbg('Performance', `renderGridOnly('${s.activeCategory}') page ${this._currentPage}/${this._totalPages - 1} — ${pageApps.length} items, ${elapsed.toFixed(1)}ms`);
+        dbg('Performance',
+            `renderGridOnly('${s.activeCategory}') sync ${syncEnd}/${apps.length} items — ${elapsed.toFixed(1)}ms`);
+
+        // ── Schedule remaining rows as idle chunks ────────────────────────
+        if (apps.length > syncEnd)
+            this._scheduleChunk(gen, apps, rows, syncEnd);
     }
-
-    // ─── Background pre-render (no-op with pagination) ───────────────────
-
-    startBackgroundPreRender(): void {
-        // No-op: page-based rendering is fast enough on demand.
-    }
-
-    // ─── Tabs rendering ──────────────────────────────────────────────────
 
     /**
-     * Render (or refresh) the category tab bar.
-     *
-     * Full widget rebuild only happens when the set of custom groups has
-     * changed.  For every other call (e.g. launcher open, category switch)
-     * we just flip the active CSS class on the existing tab widgets.
+     * Bind GridItems for apps[start..end) into the pre-created row widgets.
+     * Safe to call from both sync context and idle callbacks.
      */
+    private _fillSlice(
+        apps: SearchResult[],
+        rows: St.BoxLayout[],
+        start: number,
+        end: number,
+        gen: number,
+    ): void {
+        for (let i = start; i < end; i++) {
+            const app = apps[i];
+            const rowIdx = Math.floor(i / COLUMNS);
+            const item = this._getPoolItem();
+            const capturedIdx = i;
+
+            item.setup(
+                app,
+                () => { this._s.ext.hide(); app.activate(); },
+                () => {
+                    if (this._s.gridSelIdx !== capturedIdx) {
+                        this._s.gridSelIdx = capturedIdx;
+                        // O(1) iteration over flat array
+                        this._currentItems.forEach(
+                            (it, j) => it.setSelected(j === capturedIdx));
+                    }
+                },
+            );
+
+            rows[rowIdx].add_child(item);
+            this._currentItems.push(item);
+        }
+        void gen; // suppress unused warning — gen is checked by caller
+    }
+
+    /**
+     * Schedule the next idle chunk.  Captures `gen` so stale callbacks from a
+     * superseded render bail out immediately without touching the widget tree.
+     */
+    private _scheduleChunk(
+        gen: number,
+        apps: SearchResult[],
+        rows: St.BoxLayout[],
+        startIdx: number,
+    ): void {
+        idleOnce(() => {
+            // Bail if render was superseded by a category switch or harvest
+            if (gen !== this._renderGen) return;
+            if (this._s.isDestroyed()) return;
+
+            const endIdx = Math.min(startIdx + CHUNK_ITEMS, apps.length);
+            this._fillSlice(apps, rows, startIdx, endIdx, gen);
+
+            if (endIdx < apps.length)
+                this._scheduleChunk(gen, apps, rows, endIdx);
+        });
+    }
+
+    // ─── Background pre-render (no-op) ────────────────────────────────────
+
+    startBackgroundPreRender(): void {}
+
+    // ─── Tab rendering ────────────────────────────────────────────────────
+
     renderTabsOnly(): void {
         const s = this._s;
-
-        // Build a cheap cache key from custom-group names only
-        // (static tabs never change, so they don't need to be part of the key)
         const customGroups = this.getCustomGroups();
         const groupNames = Object.keys(customGroups);
         const newKey = groupNames.join('|');
 
         if (newKey === this._tabCacheKey && s.tabsBox.get_n_children() > 0) {
-            // Fast path: tabs are already built — just update selection state
             dbg('Grid', `renderTabsOnly — fast path (key="${newKey}")`);
             (s.tabsBox.get_children() as CategoryTab[]).forEach(tab => {
-                if (typeof tab.setSelected === 'function') {
+                if (typeof tab.setSelected === 'function')
                     tab.setSelected(tab.categoryName === s.activeCategory);
-                }
             });
             this._syncHeaderButtons();
             return;
         }
 
-        // Slow path: group list changed — rebuild all tabs
         dbg('Grid', `renderTabsOnly — rebuild (key="${newKey}" was "${this._tabCacheKey}")`);
         this._tabCacheKey = newKey;
-
         s.tabsBox.destroy_all_children();
 
         STATIC_TABS.forEach(t => {
             const tab = new (CategoryTab as any)() as CategoryTab;
             tab.setup(t.name, t.icon);
             tab.setSelected(s.activeCategory === t.name);
+            if (t.name === 'Favorites')
+                tab.add_style_class_name('ormic-favorites-tab');
+
             tab.connect('tab-selected', () => {
                 this._cancelTabHoverTimer();
+                if (t.name === 'Favorites') this._filteredCategory = '';
                 this.selectCategory(t.name);
                 s.focus();
             });
             tab.connect('tab-hovered', () => {
                 this._cancelTabHoverTimer();
-                this._tabHoverTimerId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, TAB_HOVER_DEBOUNCE_MS, () => {
-                    this._tabHoverTimerId = null;
-                    if (!s.isDestroyed()) {
-                        this.selectCategory(t.name);
-                        s.focus();
-                    }
-                    return GLib.SOURCE_REMOVE;
-                });
+                this._tabHoverTimerId = GLib.timeout_add(
+                    GLib.PRIORITY_DEFAULT, TAB_HOVER_DEBOUNCE_MS, () => {
+                        this._tabHoverTimerId = null;
+                        if (!s.isDestroyed()) {
+                            if (t.name === 'Favorites') this._filteredCategory = '';
+                            this.selectCategory(t.name);
+                            s.focus();
+                        }
+                        return GLib.SOURCE_REMOVE;
+                    });
             });
             s.tabsBox.add_child(tab);
         });
@@ -489,14 +443,12 @@ export class GridController {
             });
             tab.connect('tab-hovered', () => {
                 this._cancelTabHoverTimer();
-                this._tabHoverTimerId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, TAB_HOVER_DEBOUNCE_MS, () => {
-                    this._tabHoverTimerId = null;
-                    if (!s.isDestroyed()) {
-                        this.selectCategory(gName);
-                        s.focus();
-                    }
-                    return GLib.SOURCE_REMOVE;
-                });
+                this._tabHoverTimerId = GLib.timeout_add(
+                    GLib.PRIORITY_DEFAULT, TAB_HOVER_DEBOUNCE_MS, () => {
+                        this._tabHoverTimerId = null;
+                        if (!s.isDestroyed()) { this.selectCategory(gName); s.focus(); }
+                        return GLib.SOURCE_REMOVE;
+                    });
             });
             s.tabsBox.add_child(tab);
         }
@@ -515,102 +467,61 @@ export class GridController {
 
     renderGridAndTabs(): void {
         const s = this._s;
-        dbg('Performance', `renderGridAndTabs — resetting page for: ${s.activeCategory}`);
+        dbg('Performance', `renderGridAndTabs — for: ${s.activeCategory}`);
 
         this.cancelRenderJob();
         this.cancelBgRenderJob();
 
-        // Invalidate cached grid box for the active category so it re-renders
         const oldBox = s.categoryGridBoxes.get(s.activeCategory);
-        if (oldBox) {
-            oldBox.destroy();
-            s.categoryGridBoxes.delete(s.activeCategory);
-        }
+        if (oldBox) { oldBox.destroy(); s.categoryGridBoxes.delete(s.activeCategory); }
 
-        // Invalidate tab cache so the next renderTabsOnly() does a full rebuild
         this._tabCacheKey = '';
-        this._currentPage = 0;
         this._filteredCategory = '';
 
         this.renderTabsOnly();
-
-        const gridBox = s.getGridBox();
-        s.gridScroll.set_child(gridBox);
+        s.gridScroll.set_child(s.getGridBox());
         this.renderGridOnly();
     }
 
-    // ─── Grid selection ──────────────────────────────────────────────────
+    // ─── Grid selection ───────────────────────────────────────────────────
 
-    selectGridIdx(globalIdx: number): void {
-        const filteredApps = this._getFilteredApps();
-        if (!filteredApps.length) return;
-
-        const total = filteredApps.length;
-        globalIdx = Math.max(0, Math.min(total - 1, globalIdx));
-
-        const targetPage = Math.floor(globalIdx / ITEMS_PER_PAGE);
-
-        if (targetPage !== this._currentPage) {
-            this._currentPage = targetPage;
-            this._s.gridSelIdx = globalIdx;
-            this.renderGridOnly();
-            const localIdx = globalIdx - targetPage * ITEMS_PER_PAGE;
-            timeoutOnce(20, () => {
-                const items = this.collectGridItems();
-                items.forEach((item, idx) => item.setSelected(idx === localIdx));
-            });
-            return;
-        }
-
-        const localIdx = globalIdx - this._currentPage * ITEMS_PER_PAGE;
-        const items = this.collectGridItems();
-        if (!items.length) return;
-
-        items.forEach((item, idx) => item.setSelected(idx === localIdx));
-        this._s.gridSelIdx = globalIdx;
+    selectGridIdx(idx: number): void {
+        const apps = this._getFilteredApps();
+        if (!apps.length) return;
+        idx = Math.max(0, Math.min(apps.length - 1, idx));
+        // O(1) flat array iteration
+        this._currentItems.forEach((item, i) => item.setSelected(i === idx));
+        this._s.gridSelIdx = idx;
     }
 
     moveGridSel(d: number): void {
-        const filteredApps = this._getFilteredApps();
-        const total = filteredApps.length;
+        const total = this._getFilteredApps().length;
         if (!total) return;
-
-        const currentGlobal = this._s.gridSelIdx;
-        const startGlobal = currentGlobal < 0 ? 0 : currentGlobal;
-        const newGlobal = ((startGlobal + d) % total + total) % total;
-        this.selectGridIdx(newGlobal);
+        const cur = this._s.gridSelIdx < 0 ? 0 : this._s.gridSelIdx;
+        this.selectGridIdx(((cur + d) % total + total) % total);
     }
 
     activateGridSel(): void {
         const s = this._s;
         dbg('Activate', 'grid sel', s.gridSelIdx);
-        const filteredApps = this._getFilteredApps();
-        const selected = filteredApps[s.gridSelIdx];
-        if (selected) {
-            s.ext.hide();
-            selected.activate();
-        }
+        const selected = this._getFilteredApps()[s.gridSelIdx];
+        if (selected) { s.ext.hide(); selected.activate(); }
     }
 
-    // ─── Settings helpers ────────────────────────────────────────────────
+    // ─── Settings helpers ─────────────────────────────────────────────────
 
     getCategoriesList(): string[] {
-        const list = ['Library Home', 'Office', 'System', 'Utilities'];
-        const customGroups = this.getCustomGroups();
-        for (const gName of Object.keys(customGroups)) {
-            list.push(gName);
-        }
-        return list;
+        return [
+            'Favorites', 'Library Home', 'Office', 'System', 'Utilities',
+            ...Object.keys(this.getCustomGroups()),
+        ];
     }
 
     getCustomGroups(): Record<string, string[]> {
         dbg('Groups', 'getCustomGroups()');
         try {
-            const str = this._s.ext._settings.get_string('custom-groups') || '{}';
-            return JSON.parse(str);
-        } catch (_e) {
-            return {};
-        }
+            return JSON.parse(this._s.ext._settings.get_string('custom-groups') || '{}');
+        } catch (_e) { return {}; }
     }
 
     saveCustomGroups(groups: Record<string, string[]>): void {
@@ -622,26 +533,23 @@ export class GridController {
         }
     }
 
-    // ─── Full cleanup (called on disable) ────────────────────────────────
+    // ─── Cleanup ──────────────────────────────────────────────────────────
 
     cleanup(): void {
         this.cancelRenderJob();
         this.cancelBgRenderJob();
         this._cancelTabHoverTimer();
+        // Bump gen so any pending idle chunks abort cleanly
+        this._renderGen++;
 
-        // Destroy all pooled items so GObject finalizers run cleanly
+        this._currentItems = [];
         this._itemPool.forEach(item => { try { item.destroy(); } catch (_) {} });
         this._itemPool = [];
 
         const s = this._s;
-        if (s.tid != null) {
-            GLib.source_remove(s.tid as number);
-            s.tid = null;
-        }
+        if (s.tid != null) { GLib.source_remove(s.tid as number); s.tid = null; }
         if (s.categoryGridBoxes) {
-            s.categoryGridBoxes.forEach(box => {
-                try { box.destroy(); } catch (_) {}
-            });
+            s.categoryGridBoxes.forEach(box => { try { box.destroy(); } catch (_) {} });
             s.categoryGridBoxes.clear();
         }
     }

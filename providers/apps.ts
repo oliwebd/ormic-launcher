@@ -2,12 +2,13 @@
 // Ormic Launcher — App Search Provider
 
 import GLib from 'gi://GLib';
+import St from 'gi://St';
 import Shell from 'gi://Shell';
 import GMenu from 'gi://GMenu';
 
 import { gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
 import { SearchResult } from '../types.js';
-import { dbg, createAppIcon } from '../utils.js';
+import { dbg } from '../utils.js';
 
 export class AppProvider {
     id = 'apps';
@@ -19,35 +20,38 @@ export class AppProvider {
     private _dirty = true;
     private _dirtyDebounceId: number | null = null;
 
-    /** Debounce interval for tree/installed-changed signals (ms). */
     private static readonly DIRTY_DEBOUNCE_MS = 500;
 
-    get dirty(): boolean {
-        return this._dirty;
-    }
-
-    _appsCache: Map<string, {
-        app: any; category: string;
-        name: string; desc: string; exec: string; kw: string;
-        displayName: string; displayDesc: string;
-    }> = new Map();
+    get dirty(): boolean { return this._dirty; }
 
     /**
-     * Coalesce rapid GMenu signals into a single dirty-mark.
-     * GNOME 50's GMenu fires `changed` much more aggressively
-     * (during shell activities, app launches, etc.), so we debounce
-     * to avoid triggering synchronous reload() on every signal.
+     * GIcon is pre-fetched once at cache-build time.
+     * Icon creation during grid render then becomes just:
+     *   new St.Icon({ gicon: cached.gicon, icon_size: sz })
+     * — a single GObject allocation with no extra property-chain calls.
      */
+    _appsCache: Map<string, {
+        app: any;
+        category: string;
+        name: string;
+        desc: string;
+        exec: string;
+        kw: string;
+        displayName: string;
+        displayDesc: string;
+        gicon: any | null;  // pre-fetched GIcon
+    }> = new Map();
+
     private _markDirtyDebounced(): void {
-        if (this._dirtyDebounceId != null) {
+        if (this._dirtyDebounceId != null)
             GLib.source_remove(this._dirtyDebounceId);
-        }
-        this._dirtyDebounceId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, AppProvider.DIRTY_DEBOUNCE_MS, () => {
-            this._dirtyDebounceId = null;
-            dbg('AppProvider', 'debounced dirty — marking cache dirty');
-            this._dirty = true;
-            return GLib.SOURCE_REMOVE;
-        });
+        this._dirtyDebounceId = GLib.timeout_add(
+            GLib.PRIORITY_DEFAULT, AppProvider.DIRTY_DEBOUNCE_MS, () => {
+                this._dirtyDebounceId = null;
+                dbg('AppProvider', 'debounced dirty — marking cache dirty');
+                this._dirty = true;
+                return GLib.SOURCE_REMOVE;
+            });
     }
 
     constructor() {
@@ -83,9 +87,7 @@ export class AppProvider {
     }
 
     onOpen() {
-        if (this._dirty) {
-            this.reload();
-        }
+        if (this._dirty) this.reload();
     }
 
     reload() {
@@ -101,9 +103,8 @@ export class AppProvider {
                     while ((type = iter.next()) !== GMenu.TreeItemType.INVALID) {
                         if (type === GMenu.TreeItemType.DIRECTORY) {
                             const dir = iter.get_directory();
-                            if (dir && !dir.get_is_nodisplay()) {
+                            if (dir && !dir.get_is_nodisplay())
                                 this._loadCategory(dir, dir.get_name(), true);
-                            }
                         }
                     }
                     this._loadCategory(root, _('App'), false);
@@ -115,79 +116,78 @@ export class AppProvider {
         }
     }
 
-    private _loadCategory(dir: any, categoryName: string, recursive: boolean = true) {
+    private _loadCategory(dir: any, categoryName: string, recursive = true) {
         const iter = dir.iter();
         let type;
         while ((type = iter.next()) !== GMenu.TreeItemType.INVALID) {
             if (type === GMenu.TreeItemType.ENTRY) {
                 const entry = iter.get_entry();
                 if (!entry) continue;
-                let id;
-                try {
-                    id = entry.get_desktop_file_id();
-                } catch {
-                    continue;
-                }
-                if (!id) continue;
-                if (this._appsCache.has(id)) continue;
+                let id: string | null;
+                try { id = entry.get_desktop_file_id(); } catch { continue; }
+                if (!id || this._appsCache.has(id)) continue;
 
                 let app = this._sys.lookup_app(id);
                 if (!app) {
-                    try {
-                        app = new Shell.App({ app_info: entry.get_app_info() });
-                    } catch {
-                        continue;
-                    }
+                    try { app = new Shell.App({ app_info: entry.get_app_info() }); }
+                    catch { continue; }
                 }
-                if (app && app.get_app_info()?.should_show()) {
-                    const info = app.get_app_info();
-                    this._appsCache.set(id, {
-                        app,
-                        category: categoryName,
-                        name: (info.get_name() ?? '').toLowerCase(),
-                        desc: (info.get_description() ?? '').toLowerCase(),
-                        exec: (info.get_executable() ?? '').toLowerCase(),
-                        kw: (info.get_keywords() ?? []).join(' ').toLowerCase(),
-                        displayName: info.get_name() ?? id,
-                        displayDesc: info.get_description() ?? '',
-                    });
-                }
+                if (!app?.get_app_info()?.should_show()) continue;
+
+                const info = app.get_app_info();
+
+                // Pre-fetch GIcon once — avoids repeated property chain at render time
+                let gicon: any = null;
+                try { gicon = info.get_icon() ?? null; } catch (_) {}
+
+                this._appsCache.set(id, {
+                    app, category: categoryName,
+                    name: (info.get_name() ?? '').toLowerCase(),
+                    desc: (info.get_description() ?? '').toLowerCase(),
+                    exec: (info.get_executable() ?? '').toLowerCase(),
+                    kw: (info.get_keywords() ?? []).join(' ').toLowerCase(),
+                    displayName: info.get_name() ?? id,
+                    displayDesc: info.get_description() ?? '',
+                    gicon,
+                });
+
             } else if (recursive && type === GMenu.TreeItemType.DIRECTORY) {
                 const subdir = iter.get_directory();
-                if (subdir && !subdir.get_is_nodisplay()) {
+                if (subdir && !subdir.get_is_nodisplay())
                     this._loadCategory(subdir, categoryName, true);
-                }
             }
         }
     }
 
     search(q: string): SearchResult[] {
-        if (this._dirty) {
-            this.reload();
-        }
+        if (this._dirty) this.reload();
         if (!q) return [];
         const lq = q.toLowerCase().trim();
         const out: SearchResult[] = [];
+
         for (const [id, cached] of this._appsCache.entries()) {
-            const { app, category, name, desc, exec, kw, displayName, displayDesc } = cached;
+            const { app, category, name, desc, exec, kw,
+                displayName, displayDesc, gicon } = cached;
 
             const score =
                 name === lq ? 100 :
-                    name.startsWith(lq) ? 80 :
-                        name.includes(lq) ? 60 :
-                            exec.includes(lq) ? 40 :
-                                desc.includes(lq) ? 20 :
-                                    kw.includes(lq) ? 10 : 0;
+                name.startsWith(lq) ? 80 :
+                name.includes(lq) ? 60 :
+                exec.includes(lq) ? 40 :
+                desc.includes(lq) ? 20 :
+                kw.includes(lq) ? 10 : 0;
             if (!score) continue;
 
             out.push({
                 id: `app:${id}`, desktopId: id,
-                name: displayName,
-                description: displayDesc,
+                name: displayName, description: displayDesc,
                 score, providerPriority: this.priority,
-                createIcon: (s: number) => createAppIcon(app, s),
+                // Use pre-cached GIcon when available
+                createIcon: gicon
+                    ? (sz: number) => new St.Icon({ gicon, icon_size: sz })
+                    : (sz: number) => app.create_icon_texture?.(sz) ?? null,
                 categoryIcon: 'application-x-executable-symbolic',
-                category: category,
+                category,
                 activate: () => {
                     dbg('AppProvider', `activate: ${displayName}`);
                     app.activate();
