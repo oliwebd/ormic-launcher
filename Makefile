@@ -1,7 +1,7 @@
 UUID = ormic-launcher@github.com
 DEST = $(HOME)/.local/share/gnome-shell/extensions/$(UUID)
 
-.PHONY: all build clean install uninstall dev-install
+.PHONY: all build clean install uninstall dev-install lint lint-fix pack
 
 all: build
 
@@ -32,6 +32,18 @@ uninstall:
 	rm -rf $(DEST)
 	@echo "Extension uninstalled successfully."
 
+lint: node_modules
+	pnpm run lint
+
+lint-fix: node_modules
+	pnpm run lint:fix
+
+pack: build
+	@echo "Packaging extension..."
+	cd dist && zip -qr ../$(UUID).zip *
+	@echo "Package created: $(UUID).zip"
+
 clean:
-	rm -rf dist node_modules
-	@echo "Cleaned build artifacts and node_modules."
+	rm -rf dist node_modules $(UUID).zip
+	@echo "Cleaned build artifacts, node_modules, and zip files."
+

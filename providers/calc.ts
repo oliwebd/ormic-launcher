@@ -27,7 +27,7 @@ export class CalcProvider {
                 .replace(/\blog\b/g, 'Math.log10').replace(/\bln\b/g, 'Math.log')
                 .replace(/\bexp\b/g, 'Math.exp').replace(/\bpi\b/gi, 'Math.PI')
                 .replace(/(?<![A-Za-z])e(?![A-Za-z])/g, 'Math.E');
-            // eslint-disable-next-line no-new-func
+             
             const v = new Function(`"use strict"; return (${s})`)();
             if (typeof v !== 'number' || !isFinite(v)) return [];
             const display = Number.isInteger(v) ? String(v) : parseFloat(v.toPrecision(10)).toString();

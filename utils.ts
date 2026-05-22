@@ -2,7 +2,6 @@
 // Ormic Launcher — Shared Utilities
 
 import GLib from 'gi://GLib';
-import Gio from 'gi://Gio';
 import Meta from 'gi://Meta';
 import Shell from 'gi://Shell';
 import St from 'gi://St';
@@ -89,7 +88,7 @@ export function scrollToActor(scrollView: St.ScrollView, actor: Clutter.Actor) {
         const adj = scrollView.vadjustment;
         if (!adj) return;
 
-        const [ax, ay] = actor.get_transformed_position();
+        const [, ay] = actor.get_transformed_position();
         const [, svy] = scrollView.get_transformed_position();
 
         const relY = ay - svy + adj.value;

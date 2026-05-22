@@ -1,16 +1,21 @@
 {
   "name": "ormic-launcher",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Ormic Launcher GNOME Extension in TypeScript",
   "type": "module",
   "private": true,
   "scripts": {
     "build": "tsc",
-    "local-install": "make install"
+    "local-install": "make install",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@girs/gjs": "4.0.0-rc.15",
     "@girs/gnome-shell": "^50.0.0",
-    "typescript": "^5.9.3"
+    "eslint": "^10.4.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.59.4"
   }
 }

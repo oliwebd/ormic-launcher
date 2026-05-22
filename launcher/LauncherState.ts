@@ -3,7 +3,6 @@
 
 import St from 'gi://St';
 import Gio from 'gi://Gio';
-import Clutter from 'gi://Clutter';
 
 import { SearchResult } from '../types.js';
 

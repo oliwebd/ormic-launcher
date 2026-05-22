@@ -11,7 +11,6 @@ import Shell from 'gi://Shell';
 import St from 'gi://St';
 import Clutter from 'gi://Clutter';
 import GObject from 'gi://GObject';
-import Pango from 'gi://Pango';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
@@ -21,9 +20,7 @@ import { SearchResult } from './types.js';
 import {
     dbg,
     timeoutOnce,
-    easeActor,
-    scrollToActor,
-    createAppIcon
+    easeActor
 } from './utils.js';
 
 import { AppProvider } from './providers/apps.js';
@@ -34,8 +31,6 @@ import { WindowProvider } from './providers/window.js';
 
 import { GridItem } from './components/GridItem.js';
 import { CategoryTab } from './components/CategoryTab.js';
-import { EditAppRow } from './components/EditAppRow.js';
-import { ResultRow } from './components/ResultRow.js';
 
 import { LauncherState } from './launcher/LauncherState.js';
 import { SearchController } from './launcher/SearchController.js';
@@ -125,8 +120,7 @@ const LauncherDialog = GObject.registerClass(
                     brightness: 0.95,
                     mode: Shell.BlurMode.BACKGROUND,
                 });
-                // @ts-ignore
-                blur.sigma = 65;
+                (blur as any).sigma = 65;
                 this.add_effect_with_name('blur', blur);
             } catch (e: any) {
                 log(`Ormic Launcher: blur effect error: ${e.message}`);
@@ -205,7 +199,7 @@ const LauncherDialog = GObject.registerClass(
                         adj.set_value(adj.value + step);
                         return Clutter.EVENT_STOP;
                     } else if (dir === Clutter.ScrollDirection.SMOOTH) {
-                        const [dx, dy] = ev.get_scroll_delta();
+                        const [, dy] = ev.get_scroll_delta();
                         adj.set_value(adj.value + dy * step);
                         return Clutter.EVENT_STOP;
                     }
@@ -330,7 +324,7 @@ const LauncherDialog = GObject.registerClass(
                 } else if (dir === Clutter.ScrollDirection.DOWN) {
                     delta = 1;
                 } else if (dir === Clutter.ScrollDirection.SMOOTH) {
-                    const [dx, dy] = ev.get_scroll_delta();
+                    const [, dy] = ev.get_scroll_delta();
                     if (dy < 0) delta = -1;
                     else if (dy > 0) delta = 1;
                 }
@@ -432,8 +426,7 @@ const LauncherDialog = GObject.registerClass(
                     brightness: 0.90,
                     mode: Shell.BlurMode.BACKGROUND,
                 });
-                // @ts-ignore
-                blur.sigma = 40;
+                (blur as any).sigma = 40;
                 promptCard.add_effect_with_name('blur', blur);
             } catch (e: any) {
                 log(`Ormic Launcher: prompt card blur error: ${e.message}`);
@@ -529,6 +522,7 @@ const LauncherDialog = GObject.registerClass(
             this.add_child(new St.Widget({ style_class: 'ormic-sep', x_expand: true }));
             this.add_child(this._tips);
 
+            // eslint-disable-next-line @typescript-eslint/no-this-alias
             const dialog = this;
             this._state = {
                 ext: {
@@ -1217,11 +1211,16 @@ export default class OrmicLauncherExtension extends Extension {
         this._dialog.set_position(dx - mon.x, dy - mon.y);
         this._dialog.set_width(dw);
         this._dialog.min_width = dw;
-        // @ts-ignore
-        this._dialog.max_width = dw;
+        (this._dialog as any).max_width = dw;
     }
 
-    toggle() { this._visible ? this.hide() : this.show(); }
+    toggle() {
+        if (this._visible) {
+            this.hide();
+        } else {
+            this.show();
+        }
+    }
 
     show() {
         dbg('Launcher', 'show()');

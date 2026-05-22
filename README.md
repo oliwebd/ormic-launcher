@@ -135,6 +135,22 @@ Configure extension options and maximum results:
 gnome-extensions prefs ormic-launcher@github.com
 ```
 
+### 4. Code Quality & Linting
+Run the linter to verify code quality and style:
+```bash
+# Check code style and rules
+make lint
+
+# Automatically fix fixable code style and rule violations
+make lint-fix
+```
+
+### 5. Packaging
+Prepare a release package zip file:
+```bash
+make pack
+```
+
 ## License
 
 This project is licensed under the GPL-2.0-or-later license.
