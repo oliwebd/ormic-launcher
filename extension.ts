@@ -1817,7 +1817,6 @@ currentRow.add_child(item);
         /**
          * Rebuild tabs + grid for the active category.
          * Only invalidates the CURRENT category's cached grid box.
-         * Grid items (icon textures) are preserved in _gridItemsCache.
          */
         private _renderGridAndTabs() {
             dbg('Performance', `renderGridAndTabs — rebuilding tabs, invalidating grid for: ${this._activeCategory}`);
@@ -2086,7 +2085,7 @@ if (oldBox) {
                     this._renderGridOnly();
                 });
             } else {
-                dbg('Performance', `FAST PATH: reusing ${this._categoryGridBoxes.size} cached grid boxes, ${this._gridItemsCache.size} cached items`);
+                dbg('Performance', `FAST PATH: reusing ${this._categoryGridBoxes.size} cached grid boxes`);
 
                 // Reuse existing tabs — just update selection state (no destroy/create)
                 const tabs = this._tabsBox.get_children() as CategoryTab[];
