@@ -305,23 +305,24 @@
 /* ── Grid Card Item ──────────────────────────────────────────────────────── */
 .ormic-grid-item {
   padding: 8px;
-  border-radius: 12px;
-  background-color: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 0px;
+  background-color: transparent;
+  border: 1px solid transparent;
+  border-bottom: 4px solid transparent;
   min-width: 82px;
   min-height: 96px;
   transition-duration: 80ms;
 }
 
 .ormic-grid-item:hover {
-  background-color: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.09);
+  background-color: rgba(255, 255, 255, 0.04);
 }
 
 .ormic-grid-item.selected {
-  background-color: rgba(250, 184, 75, 0.12);
-  border-color: #FAB84B;
-  box-shadow: 0 4px 18px rgba(250, 184, 75, 0.18);
+  background-color: rgba(250, 184, 75, 0.09);
+  border: 1px solid transparent;
+  border-bottom: 4px solid #FAB84B;
+  border-radius: 0px;
 }
 
 .ormic-grid-item-box {

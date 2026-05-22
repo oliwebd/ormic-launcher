@@ -42,6 +42,11 @@
       <summary>Custom user groups and their apps</summary>
     </key>
 
+    <key name="show-groups-sidebar" type="b">
+      <default>true</default>
+      <summary>Show groups sidebar</summary>
+    </key>
+
     <key name="show-search-bar" type="b">
       <default>false</default>
       <summary>Show search bar by default</summary>

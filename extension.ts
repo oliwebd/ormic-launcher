@@ -611,7 +611,8 @@ const LauncherDialog = GObject.registerClass(
     }
 
         private _setTabsVisible(visible: boolean) {
-            if (visible) {
+            const shouldShowGroups = this._ext._settings.get_boolean('show-groups-sidebar');
+            if (visible && shouldShowGroups) {
                 this._tabsBox.show();
                 this._vsep.show();
             } else {

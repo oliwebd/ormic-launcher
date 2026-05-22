@@ -66,7 +66,7 @@ export function easeActor(actor: Clutter.Actor, params: any): Promise<void> {
     if (IS_50_PLUS && typeof (actor as any).easeAsync === 'function') {
         return (actor as any).easeAsync(rest).then(() => {
             if (onComplete) onComplete();
-        });
+        }).catch(() => { /* ignore animation cancellation */ });
     }
     return new Promise<void>(resolve => {
         actor.ease({ ...rest, onComplete: () => { onComplete?.(); resolve(); } });

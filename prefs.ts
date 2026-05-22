@@ -112,6 +112,14 @@ export default class OrmicLauncherPrefs extends ExtensionPreferences {
         s.bind('show-search-bar', sbRow, 'active', Gio.SettingsBindFlags.DEFAULT);
         kbGroup.add(sbRow);
 
+        // Show groups sidebar
+        const gsRow = new Adw.SwitchRow({
+            title: _('Show Groups Sidebar'),
+            subtitle: _('Show the category/groups sidebar on the left'),
+        });
+        s.bind('show-groups-sidebar', gsRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        kbGroup.add(gsRow);
+
         // ── Results ───────────────────────────────────────────────────────
         const resGroup = new Adw.PreferencesGroup({ title: _('Results') });
         genPage.add(resGroup);
