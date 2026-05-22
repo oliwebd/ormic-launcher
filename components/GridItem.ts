@@ -9,80 +9,104 @@ import Pango from 'gi://Pango';
 import { SearchResult } from '../types.js';
 import { dbg } from '../utils.js';
 
-export const GridItem = GObject.registerClass({
-    Signals: { 'item-activated': {}, 'item-hovered': {} },
-}, class GridItem extends St.Button {
-    private _result!: SearchResult;
-    private _box!: St.BoxLayout;
+/**
+ * GridItem is designed for pooled reuse.
+ *
+ * The widget tree (icon bin + label) is built once in _init() and kept alive
+ * across re-uses.  Signal handlers (button-release, notify::hover) are also
+ * connected once; they dispatch through the _activateCb / _hoverCb function
+ * slots, which are swapped in on every setup() call.  This means zero widget
+ * allocation and zero signal connect/disconnect churn when GridController
+ * recycles items from its pool.
+ */
+export const GridItem = GObject.registerClass(
+    class GridItem extends St.Button {
+        private _result!: SearchResult;
+        private _iconBin!: St.Bin;
+        private _nameLabel!: St.Label;
+        private _activateCb: (() => void) | null = null;
+        private _hoverCb: (() => void) | null = null;
 
-    _init() {
-        super._init({
-            style_class: 'ormic-grid-item',
-            reactive: true, track_hover: true, can_focus: false,
-        });
-    }
+        _init() {
+            super._init({
+                style_class: 'ormic-grid-item',
+                reactive: true, track_hover: true, can_focus: false,
+            });
 
-    setup(result: SearchResult) {
-        this._result = result;
+            // ── Build widget tree once ───────────────────────────────────
+            const box = new St.BoxLayout({
+                orientation: Clutter.Orientation.VERTICAL,
+                style_class: 'ormic-grid-item-box',
+                x_expand: true, y_expand: true,
+            });
 
-        this._box = new St.BoxLayout({
-            orientation: Clutter.Orientation.VERTICAL,
-            style_class: 'ormic-grid-item-box',
-            x_expand: true, y_expand: true,
-        });
+            this._iconBin = new St.Bin({ style_class: 'ormic-grid-icon-bin' });
+            box.add_child(this._iconBin);
 
-        const iconBin = new St.Bin({ style_class: 'ormic-grid-icon-bin' });
-        if (result.createIcon) {
-            const texture = result.createIcon(44);
-            if (texture) {
-                texture.set_size(44, 44);
-                iconBin.set_child(texture);
-            }
-        } else if (result.icon) {
-            result.icon.set_size(44, 44);
-            iconBin.set_child(result.icon);
-        } else {
-            iconBin.set_child(new St.Icon({
-                icon_name: result.iconName ?? 'application-x-executable-symbolic',
-                icon_size: 44,
-                style_class: 'ormic-grid-icon-sym',
-            }));
+            this._nameLabel = new St.Label({
+                style_class: 'ormic-grid-label',
+                x_align: Clutter.ActorAlign.CENTER,
+            });
+            this._nameLabel.clutter_text.ellipsize = Pango.EllipsizeMode.END;
+            this._nameLabel.clutter_text.line_wrap = false;
+            box.add_child(this._nameLabel);
+
+            this.set_child(box);
+
+            // ── Connect input events once ────────────────────────────────
+            this.connect('button-release-event', (_actor, ev) => {
+                if (ev.get_button() === 1) {
+                    dbg('GridItem', `clicked on ${this._result?.name}`);
+                    this._activateCb?.();
+                    return Clutter.EVENT_STOP;
+                }
+                return Clutter.EVENT_PROPAGATE;
+            });
+
+            this.connect('notify::hover', () => {
+                if (this.hover) this._hoverCb?.();
+            });
         }
-        this._box.add_child(iconBin);
 
-        const nameLabel = new St.Label({
-            text: result.name,
-            style_class: 'ormic-grid-label',
-            x_align: Clutter.ActorAlign.CENTER,
-        });
-        nameLabel.clutter_text.ellipsize = Pango.EllipsizeMode.END;
-        nameLabel.clutter_text.line_wrap = false;
-        this._box.add_child(nameLabel);
+        /**
+         * Bind (or re-bind) this item to a new SearchResult and callbacks.
+         * Safe to call on freshly-created items and on items taken from the
+         * pool — no signal leaks, no extra widget allocation.
+         */
+        setup(result: SearchResult, onActivate: () => void, onHover: () => void) {
+            this._result = result;
+            this._activateCb = onActivate;
+            this._hoverCb = onHover;
 
-        this.set_child(this._box);
-
-        this.connect('button-release-event', (actor, ev) => {
-            if (ev.get_button() === 1) {
-                dbg('GridItem', `clicked on ${result.name}`);
-                this.emit('item-activated');
-                return Clutter.EVENT_STOP;
+            // Update icon — reuse the existing St.Icon node when possible
+            let iconWidget: any = null;
+            if (result.createIcon) {
+                iconWidget = result.createIcon(44);
+            } else if (result.icon) {
+                iconWidget = result.icon;
             }
-            return Clutter.EVENT_PROPAGATE;
-        });
 
-        this.connect('notify::hover', () => {
-            if (this.hover) this.emit('item-hovered');
-        });
-    }
+            if (iconWidget) {
+                iconWidget.set_size(44, 44);
+                this._iconBin.set_child(iconWidget);
+            } else {
+                this._iconBin.set_child(new St.Icon({
+                    icon_name: result.iconName ?? 'application-x-executable-symbolic',
+                    icon_size: 44,
+                    style_class: 'ormic-grid-icon-sym',
+                }));
+            }
 
-    get result() { return this._result; }
-
-    setSelected(on: boolean) {
-        if (on) {
-            this.add_style_class_name('selected');
-        } else {
-            this.remove_style_class_name('selected');
+            // Update label text in-place (no widget allocation)
+            this._nameLabel.text = result.name;
         }
-    }
-});
+
+        get result() { return this._result; }
+
+        setSelected(on: boolean) {
+            if (on) this.add_style_class_name('selected');
+            else this.remove_style_class_name('selected');
+        }
+    },
+);
 export type GridItem = InstanceType<typeof GridItem>;
