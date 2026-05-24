@@ -935,6 +935,13 @@ const ACCENT_COLORS = {
         hover: '#94A3B8',
         active: '#475569',
     },
+    // GNOME 48+ uses 'brown' as a valid accent name
+    brown: {
+        accent: '#A16207',
+        rgb: '161, 98, 7',
+        hover: '#CA8A04',
+        active: '#854D0E',
+    },
 };
 
 export default class OrmicLauncherExtension extends Extension {
@@ -1047,6 +1054,7 @@ export default class OrmicLauncherExtension extends Extension {
         this._dialog = new (LauncherDialog as any)() as LauncherDialog;
         this._dialog.setup(this);
         this._overlay.add_child(this._dialog);
+        this._updateAccentColor(); // re-apply so dialog actor gets vars on first enable
         Main.layoutManager.addTopChrome(this._overlay);
 
         this._monId = Main.layoutManager.connect('monitors-changed', () => this._pos());
@@ -1243,9 +1251,9 @@ export default class OrmicLauncherExtension extends Extension {
         let colorName = this._settings.get_string('accent-color') || 'gnome';
         if (colorName === 'gnome') {
             try {
-                const interfaceSettings = new Gio.Settings({ schema_id: 'org.gnome.desktop.interface' });
-                if (interfaceSettings.settings_schema.has_key('accent-color')) {
-                    colorName = interfaceSettings.get_string('accent-color') || 'blue';
+                const iface = this._interfaceSettings;
+                if (iface && iface.settings_schema.has_key('accent-color')) {
+                    colorName = iface.get_string('accent-color') || 'blue';
                 } else {
                     colorName = 'blue';
                 }
@@ -1261,24 +1269,32 @@ export default class OrmicLauncherExtension extends Extension {
         const colorName = this._getResolvedAccentColor();
         const colorInfo = ACCENT_COLORS[colorName as keyof typeof ACCENT_COLORS] || ACCENT_COLORS.blue;
         const rgb = colorInfo.rgb;
-        this._overlay.set_style(`
-        --ormic-accent-color: ${colorInfo.accent};
-        --ormic-accent-color-rgb: ${rgb};
-        --ormic-accent-color-hover: ${colorInfo.hover};
-        --ormic-accent-color-active: ${colorInfo.active};
-        --ormic-accent-a06: rgba(${rgb}, 0.06);
-        --ormic-accent-a07: rgba(${rgb}, 0.07);
-        --ormic-accent-a09: rgba(${rgb}, 0.09);
-        --ormic-accent-a12: rgba(${rgb}, 0.12);
-        --ormic-accent-a14: rgba(${rgb}, 0.14);
-        --ormic-accent-a18: rgba(${rgb}, 0.18);
-        --ormic-accent-a20: rgba(${rgb}, 0.20);
-        --ormic-accent-a25: rgba(${rgb}, 0.25);
-        --ormic-accent-a30: rgba(${rgb}, 0.30);
-        --ormic-accent-a32: rgba(${rgb}, 0.32);
-        --ormic-accent-a72: rgba(${rgb}, 0.72);
-        --ormic-accent-a80: rgba(${rgb}, 0.80);
-        --ormic-accent-a85: rgba(${rgb}, 0.85);
-    `);
+        // Build the style string once — no whitespace/newlines inside values
+        const styleStr = [
+            `--ormic-accent-color: ${colorInfo.accent}`,
+            `--ormic-accent-color-rgb: ${rgb}`,
+            `--ormic-accent-color-hover: ${colorInfo.hover}`,
+            `--ormic-accent-color-active: ${colorInfo.active}`,
+            `--ormic-accent-a06: rgba(${rgb}, 0.06)`,
+            `--ormic-accent-a07: rgba(${rgb}, 0.07)`,
+            `--ormic-accent-a09: rgba(${rgb}, 0.09)`,
+            `--ormic-accent-a12: rgba(${rgb}, 0.12)`,
+            `--ormic-accent-a14: rgba(${rgb}, 0.14)`,
+            `--ormic-accent-a18: rgba(${rgb}, 0.18)`,
+            `--ormic-accent-a20: rgba(${rgb}, 0.20)`,
+            `--ormic-accent-a25: rgba(${rgb}, 0.25)`,
+            `--ormic-accent-a30: rgba(${rgb}, 0.30)`,
+            `--ormic-accent-a32: rgba(${rgb}, 0.32)`,
+            `--ormic-accent-a72: rgba(${rgb}, 0.72)`,
+            `--ormic-accent-a80: rgba(${rgb}, 0.80)`,
+            `--ormic-accent-a85: rgba(${rgb}, 0.85)`,
+        ].join('; ') + ';';
+
+        // Set on the overlay (keeps .ormic-overlay fallbacks in sync)
+        this._overlay.set_style(styleStr);
+        // GNOME 50: CSS custom properties no longer cascade from overlay to dialog
+        // via set_style(). Mirror them directly onto the dialog actor so every
+        // descendant class that uses var(--ormic-accent-*) resolves correctly.
+        if (this._dialog) this._dialog.set_style(styleStr);
     }
 }

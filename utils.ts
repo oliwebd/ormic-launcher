@@ -66,11 +66,13 @@ export function createBlurEffect(
   brightness = 1.0,
   mode: Shell.BlurMode = Shell.BlurMode.BACKGROUND,
 ): Shell.BlurEffect {
-  // All three properties are passed in the constructor.
-  // The type stubs for older @girs versions may not list `sigma` here, but
-  // the underlying GObject machinery accepts any property by name at init time,
-  // so this is safe on GNOME 45+ even when the TypeScript types lag behind.
-  return new Shell.BlurEffect({ sigma, brightness, mode } as any);
+  const effectParams: any = { brightness, mode };
+  if (IS_50_PLUS) {
+    effectParams.radius = sigma * 2.0;
+  } else {
+    effectParams.sigma = sigma;
+  }
+  return new Shell.BlurEffect(effectParams);
 }
 
 /**
