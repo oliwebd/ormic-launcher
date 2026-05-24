@@ -19,9 +19,6 @@
 
 /* ── Dialog card ─────────────────────────────────────────────────────────── */
 .ormic-dialog {
-  /* Semi-transparent so the blurred wallpaper clone shows through (glassmorphism).
-     Slightly more opaque than before since the dialog no longer self-blurs —
-     the blur effect comes from the Clutter.Clone behind the full overlay. */
   background-color: rgba(14, 14, 20, 0.48);
   border: 1px solid rgba(255, 255, 255, 0.13);
   border-radius: 14px;
@@ -92,13 +89,7 @@
 }
 
 /* ── Layout containers ───────────────────────────────────────────────────── */
-.ormic-content-container {
-  /* flex row: sidebar (if any) + right panel */
-}
-
-.ormic-right-panel {
-  /* vertical stack: scroll / header / grid / editor / prompt */
-}
+/* .ormic-content-container and .ormic-right-panel are structural only */
 
 /* ── Search Results List View ────────────────────────────────────────────── */
 .ormic-scroll {
@@ -138,9 +129,8 @@
   background-color: rgba(var(--ormic-accent-color-rgb), 0.09);
 }
 
-/* Result row inner box — must expand to fill width */
+/* Result row inner box */
 .ormic-result-box {
-  x-expand: true;
   spacing: 0;
 }
 
@@ -261,14 +251,12 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 
 /* ── Category Header ─────────────────────────────────────────────────────── */
-/* Compact action-only header — active category shown in the tab bar */
 .ormic-header {
   padding: 6px 12px 6px 12px;
 }
 
 .ormic-header-title {
-  /* Hidden; tab bar communicates the active category */
-  visible: false;
+  /* visibility is managed in code, not CSS */
 }
 
 .ormic-header-control {
@@ -301,7 +289,6 @@
   max-height: 500px;
 }
 
-/* Hide grid scrollbar until hover — thin overlay track appears on scroll */
 .ormic-grid-scroll StScrollBar {
   opacity: 0;
   transition-duration: 200ms;
@@ -316,19 +303,15 @@
   spacing: 14px;
 }
 
-/* Rows align to START so incomplete last row doesn't leave empty right gap */
 .ormic-grid-row {
   spacing: 6px;
-  x-align: start;
 }
 
 .ormic-grid-empty {
   color: rgba(255, 255, 255, 0.4);
   font-size: 13.5px;
   font-weight: 300;
-  text-align: center;
   padding: 60px 0;
-  line-height: 1.6;
 }
 
 /* ── Grid Card Item ──────────────────────────────────────────────────────── */
@@ -375,10 +358,8 @@
   color: rgba(255, 255, 255, 0.84);
   font-size: 9.5px;
   font-weight: 500;
-  text-align: center;
   letter-spacing: 0.05px;
 }
-
 
 /* ── Top Header Category Tabs scroll ────────────────────────────────────── */
 .ormic-tabs-scroll {
@@ -408,11 +389,7 @@
   border-radius: 9999px;
   background-color: transparent;
   border: 1px solid transparent;
-  border-bottom-width: 1px;
   transition-duration: 100ms;
-  x-align: start;
-  /* Each tab only as wide as its content — prevents empty right side */
-  x-expand: false;
 }
 
 .ormic-category-tab:hover {
@@ -423,7 +400,6 @@
 .ormic-category-tab.active {
   border-color: rgba(var(--ormic-accent-color-rgb), 0.85);
   border-radius: 9999px;
-  border-bottom-width: 1px;
 }
 
 .ormic-category-tab-box {
@@ -450,12 +426,9 @@
   letter-spacing: 0.1px;
 }
 
-/* HOVER: make label text clearly visible */
 .ormic-category-tab:hover .ormic-category-tab-label {
   color: rgba(255, 255, 255, 0.95);
 }
-
-.ormic-category-tab.active .ormic-category-tab-label {}
 
 .ormic-vsep {
   width: 1px;
@@ -594,7 +567,6 @@
 }
 
 .ormic-prompt-card {
-  /* Translucent so the card's own BlurEffect shows the content behind it */
   background-color: rgba(16, 16, 24, 0.32);
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 20px;
@@ -607,7 +579,6 @@
   font-size: 18px;
   font-weight: 700;
   color: rgba(255, 255, 255, 0.98);
-  text-align: center;
   margin-bottom: 8px;
 }
 
@@ -734,7 +705,7 @@
   background-color: rgba(255, 255, 255, 0.38);
 }
 
-/* Editor scroll — also hide until hover */
+/* Editor scroll — hide until hover */
 .ormic-editor-scroll StScrollBar {
   opacity: 0;
   transition-duration: 200ms;
