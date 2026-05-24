@@ -965,6 +965,10 @@ export default class OrmicLauncherExtension extends Extension {
     _overlayCapturedId!: number | null;
     _overlayPressId!: number | null;
     _overlayKeyId!: number | null;
+    _dynamicCssFile: Gio.File | null = null;
+    _theme: St.Theme | null = null;
+    _blurWrapper: any = null;
+    _dialogSizeId: number | null = null;
 
     enable() {
         dbg('Extension', 'enable() called');
@@ -999,22 +1003,24 @@ export default class OrmicLauncherExtension extends Extension {
             this._interfaceSettings = null;
         }
 
-        // GNOME 50-compatible background blur.
-        // Shell.BlurEffect.BACKGROUND is unreliable for top-chrome actors on GNOME 50
-        // because the render pipeline no longer exposes the desktop framebuffer at that
-        // layer.  Instead: clone the wallpaper background group and apply ACTOR-mode
-        // blur to the clone — this always works because it blurs the clone's own texture.
+        // GNOME 50-compatible background blur restricted to dialog bounds
+        this._blurWrapper = new St.Widget({
+            clip_to_allocation: true,
+            style: 'border-radius: 14px;' // Try to match dialog border radius
+        });
+
         try {
             const bgGroup = (Main.layoutManager as any)._backgroundGroup;
             if (bgGroup) {
                 this._blurBgClone = new Clutter.Clone({ source: bgGroup });
                 this._blurBgClone.add_effect(createBlurEffect(32, 0.70, Shell.BlurMode.ACTOR));
-                // Insert as first child so it renders behind the dialog
-                this._overlay.insert_child_at_index(this._blurBgClone, 0);
+                this._blurWrapper.add_child(this._blurBgClone);
             }
         } catch (e: any) {
-            log(`Ormic: bg blur clone failed: ${e.message}`);
+            console.error(`Ormic: bg blur clone failed: ${e.message}`);
         }
+        
+        this._overlay.insert_child_at_index(this._blurWrapper, 0);
 
         this._overlayCapturedId = this._overlay.connect('captured-event', (_, ev: any) => {
             const t = typeof ev.type === 'function' ? ev.type() : ev.type;
@@ -1056,6 +1062,16 @@ export default class OrmicLauncherExtension extends Extension {
         this._overlay.add_child(this._dialog);
         this._updateAccentColor(); // re-apply so dialog actor gets vars on first enable
         Main.layoutManager.addTopChrome(this._overlay);
+
+        this._dialogSizeId = this._dialog.connect('notify::allocation', () => {
+            if (this._blurWrapper && this._dialog) {
+                this._blurWrapper.set_position(this._dialog.x, this._dialog.y);
+                this._blurWrapper.set_size(this._dialog.width, this._dialog.height);
+                if (this._blurBgClone) {
+                    this._blurBgClone.set_position(-this._dialog.x, -this._dialog.y);
+                }
+            }
+        });
 
         this._monId = Main.layoutManager.connect('monitors-changed', () => this._pos());
         this._pos();
@@ -1110,7 +1126,16 @@ export default class OrmicLauncherExtension extends Extension {
             this._overlay.remove_all_transitions();
             this._overlay.destroy();
         }
-        this._blurBgClone = null; // was a child of overlay, destroyed above
+        if (this._dialog && this._dialogSizeId) {
+            this._dialog.disconnect(this._dialogSizeId);
+            this._dialogSizeId = null;
+        }
+        if (this._blurWrapper) {
+            this._blurWrapper.remove_all_transitions();
+            this._blurWrapper.destroy();
+        }
+        this._blurBgClone = null; // child of wrapper
+        this._blurWrapper = null;
         if (this._dialog) {
             this._dialog.remove_all_transitions();
             try {
@@ -1120,6 +1145,8 @@ export default class OrmicLauncherExtension extends Extension {
             }
             this._dialog.destroy();
         }
+
+ 
 
         this._overlay = null;
         this._dialog = null;
@@ -1157,7 +1184,7 @@ export default class OrmicLauncherExtension extends Extension {
         const dy = mon.y + Math.floor(mon.height * 0.14);
         this._overlay.set_position(mon.x, mon.y);
         this._overlay.set_size(mon.width, mon.height);
-        // Size the blur clone to fill the monitor (it is at index 0 inside the overlay)
+        // Size the blur clone to fill the monitor
         if (this._blurBgClone) {
             this._blurBgClone.set_size(mon.width, mon.height);
         }
@@ -1185,6 +1212,10 @@ export default class OrmicLauncherExtension extends Extension {
         this._overlay.show();
         this._dialog.opacity = 0;
         this._dialog.translation_y = -20;
+        if (this._blurWrapper) {
+            this._blurWrapper.opacity = 0;
+            this._blurWrapper.translation_y = -20;
+        }
 
         const grab = Main.pushModal(this._overlay, {
             actionMode: Shell.ActionMode.NORMAL | Shell.ActionMode.OVERVIEW | Shell.ActionMode.POPUP,
@@ -1199,6 +1230,9 @@ export default class OrmicLauncherExtension extends Extension {
 
         easeActor(this._overlay, { opacity: 255, duration: 150, mode: Clutter.AnimationMode.EASE_OUT_QUAD });
         easeActor(this._dialog, { opacity: 255, translation_y: 0, duration: 200, mode: Clutter.AnimationMode.EASE_OUT_EXPO });
+        if (this._blurWrapper) {
+            easeActor(this._blurWrapper, { opacity: 255, translation_y: 0, duration: 200, mode: Clutter.AnimationMode.EASE_OUT_EXPO });
+        }
         timeoutOnce(10, () => this._dialog?.focus());
     }
 
@@ -1221,7 +1255,7 @@ export default class OrmicLauncherExtension extends Extension {
             catch (e: any) { dbg('Launcher', `popModal failed: ${e.message}`); }
             this._grab = null;
         }
-        const ov = this._overlay, dl = this._dialog;
+        const ov = this._overlay, dl = this._dialog, bw = this._blurWrapper;
         easeActor(dl, {
             opacity: 0, translation_y: -14, duration: 120, mode: Clutter.AnimationMode.EASE_IN_QUAD,
             onComplete: () => {
@@ -1229,9 +1263,16 @@ export default class OrmicLauncherExtension extends Extension {
                     ov.hide();
                     dl.opacity = 255;
                     dl.translation_y = 0;
+                    if (bw && !(bw as any).is_finalized?.()) {
+                        bw.opacity = 255;
+                        bw.translation_y = 0;
+                    }
                 }
             },
         });
+        if (bw) {
+            easeActor(bw, { opacity: 0, translation_y: -14, duration: 120, mode: Clutter.AnimationMode.EASE_IN_QUAD });
+        }
         easeActor(ov, { opacity: 0, duration: 120, mode: Clutter.AnimationMode.EASE_IN_QUAD });
     }
 
@@ -1253,12 +1294,12 @@ export default class OrmicLauncherExtension extends Extension {
             try {
                 const iface = this._interfaceSettings;
                 if (iface && iface.settings_schema.has_key('accent-color')) {
-                    colorName = iface.get_string('accent-color') || 'blue';
+                    colorName = iface.get_string('accent-color') || 'yellow';
                 } else {
-                    colorName = 'blue';
+                    colorName = 'yellow';
                 }
             } catch (_) {
-                colorName = 'blue';
+                colorName = 'yellow';
             }
         }
         return colorName;
@@ -1266,35 +1307,18 @@ export default class OrmicLauncherExtension extends Extension {
 
     _updateAccentColor() {
         if (!this._overlay) return;
-        const colorName = this._getResolvedAccentColor();
-        const colorInfo = ACCENT_COLORS[colorName as keyof typeof ACCENT_COLORS] || ACCENT_COLORS.blue;
-        const rgb = colorInfo.rgb;
-        // Build the style string once — no whitespace/newlines inside values
-        const styleStr = [
-            `--ormic-accent-color: ${colorInfo.accent}`,
-            `--ormic-accent-color-rgb: ${rgb}`,
-            `--ormic-accent-color-hover: ${colorInfo.hover}`,
-            `--ormic-accent-color-active: ${colorInfo.active}`,
-            `--ormic-accent-a06: rgba(${rgb}, 0.06)`,
-            `--ormic-accent-a07: rgba(${rgb}, 0.07)`,
-            `--ormic-accent-a09: rgba(${rgb}, 0.09)`,
-            `--ormic-accent-a12: rgba(${rgb}, 0.12)`,
-            `--ormic-accent-a14: rgba(${rgb}, 0.14)`,
-            `--ormic-accent-a18: rgba(${rgb}, 0.18)`,
-            `--ormic-accent-a20: rgba(${rgb}, 0.20)`,
-            `--ormic-accent-a25: rgba(${rgb}, 0.25)`,
-            `--ormic-accent-a30: rgba(${rgb}, 0.30)`,
-            `--ormic-accent-a32: rgba(${rgb}, 0.32)`,
-            `--ormic-accent-a72: rgba(${rgb}, 0.72)`,
-            `--ormic-accent-a80: rgba(${rgb}, 0.80)`,
-            `--ormic-accent-a85: rgba(${rgb}, 0.85)`,
-        ].join('; ') + ';';
+        let colorName = this._getResolvedAccentColor();
+        
+        if (!ACCENT_COLORS.hasOwnProperty(colorName)) {
+            colorName = 'yellow';
+        }
 
-        // Set on the overlay (keeps .ormic-overlay fallbacks in sync)
-        this._overlay.set_style(styleStr);
-        // GNOME 50: CSS custom properties no longer cascade from overlay to dialog
-        // via set_style(). Mirror them directly onto the dialog actor so every
-        // descendant class that uses var(--ormic-accent-*) resolves correctly.
-        if (this._dialog) this._dialog.set_style(styleStr);
+        // 1. Remove all old accent classes
+        Object.keys(ACCENT_COLORS).forEach(color => {
+            this._overlay!.remove_style_class_name(`ormic-accent-${color}`);
+        });
+
+        // 2. Add the new accent class
+        this._overlay.add_style_class_name(`ormic-accent-${colorName}`);
     }
 }

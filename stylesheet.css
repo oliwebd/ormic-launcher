@@ -370,7 +370,6 @@
 }
 
 .ormic-category-tab.active {
-  background-color: rgba(255, 255, 255, 0.075);
   border-color: rgba(250, 184, 75, 0.85);
 }
 
@@ -1733,4 +1732,3 @@
   color: rgba(161, 98, 7, 0.80);
   background-color: rgba(161, 98, 7, 0.09);
 }
-
