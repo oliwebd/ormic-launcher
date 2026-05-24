@@ -1,19 +1,32 @@
 /* ═══════════════════════════════════════════════════════════════════════════
    Ormic Launcher — Stylesheet
-   Design: Premium dark glassmorphism layout with 7-column Grid & Top Tabs
-   Accent: #FAB84B  (Pop!_OS orange)
    ═══════════════════════════════════════════════════════════════════════════ */
 
 .ormic-overlay {
-  /* Dynamic accent color custom properties (fallback defaults) */
+  /* Solid accent variables — set at runtime via set_style().
+     These fallbacks use the default yellow so the stylesheet parses cleanly
+     even before the first _updateAccentColor() call. */
   --ormic-accent-color: #FAB84B;
-  --ormic-accent-color-rgb: 250, 184, 75;
   --ormic-accent-color-hover: #fccb7b;
   --ormic-accent-color-active: #e5a43b;
 
-  /* Dark scrim — fallback when blur clone is unavailable.
-     When the Clutter.Clone blur is active this is mostly hidden behind it,
-     but provides contrast on very bright wallpapers. */
+  /* Pre-computed rgba tints — avoids rgba(var(--rgb), alpha) which GNOME's
+     St CSS parser cannot evaluate at stylesheet-parse time. These are
+     overwritten by _updateAccentColor() in TypeScript on every colour change. */
+  --ormic-accent-a06: rgba(250, 184, 75, 0.06);
+  --ormic-accent-a07: rgba(250, 184, 75, 0.07);
+  --ormic-accent-a09: rgba(250, 184, 75, 0.09);
+  --ormic-accent-a12: rgba(250, 184, 75, 0.12);
+  --ormic-accent-a14: rgba(250, 184, 75, 0.14);
+  --ormic-accent-a18: rgba(250, 184, 75, 0.18);
+  --ormic-accent-a20: rgba(250, 184, 75, 0.20);
+  --ormic-accent-a25: rgba(250, 184, 75, 0.25);
+  --ormic-accent-a30: rgba(250, 184, 75, 0.30);
+  --ormic-accent-a32: rgba(250, 184, 75, 0.32);
+  --ormic-accent-a72: rgba(250, 184, 75, 0.72);
+  --ormic-accent-a80: rgba(250, 184, 75, 0.80);
+  --ormic-accent-a85: rgba(250, 184, 75, 0.85);
+
   background-color: rgba(0, 0, 0, 0.30);
 }
 
@@ -46,11 +59,10 @@
   color: rgba(255, 255, 255, 0.95);
   font-size: 17px;
   font-weight: 300;
-  letter-spacing: 0.15px;
   caret-color: var(--ormic-accent-color);
   padding: 0;
   height: 32px;
-  selection-background-color: rgba(var(--ormic-accent-color-rgb), 0.25);
+  selection-background-color: var(--ormic-accent-a25);
 }
 
 .ormic-entry:focus {
@@ -88,15 +100,11 @@
   background-color: rgba(255, 255, 255, 0.065);
 }
 
-/* ── Layout containers ───────────────────────────────────────────────────── */
-/* .ormic-content-container and .ormic-right-panel are structural only */
-
 /* ── Search Results List View ────────────────────────────────────────────── */
 .ormic-scroll {
   max-height: 400px;
 }
 
-/* Hide search result scrollbar until hover */
 .ormic-scroll StScrollBar {
   opacity: 0;
   transition-duration: 200ms;
@@ -111,13 +119,11 @@
   spacing: 0;
 }
 
-/* Result row outer button */
 .ormic-result {
   padding: 0;
   border-radius: 0;
   background-color: transparent;
   transition-duration: 60ms;
-  transition-timing-function: ease;
   min-height: 60px;
 }
 
@@ -126,22 +132,19 @@
 }
 
 .ormic-result.selected {
-  background-color: rgba(var(--ormic-accent-color-rgb), 0.09);
+  background-color: var(--ormic-accent-a09);
 }
 
-/* Result row inner box */
 .ormic-result-box {
   spacing: 0;
 }
 
-/* ── Left accent bar (list view selection) ───────────────────────────────── */
+/* ── Left accent bar ─────────────────────────────────────────────────────── */
 .ormic-accent-bar {
   width: 3px;
-  min-height: 100%;
   background-color: transparent;
   border-radius: 0 2px 2px 0;
   transition-duration: 80ms;
-  transition-timing-function: ease;
 }
 
 .ormic-result.selected .ormic-accent-bar {
@@ -185,7 +188,7 @@
   font-weight: 400;
 }
 
-/* ── Category pill (list view source indicator) ──────────────────────────── */
+/* ── Category pill ───────────────────────────────────────────────────────── */
 .ormic-cat-pill {
   background-color: rgba(255, 255, 255, 0.055);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -202,9 +205,8 @@
 
 .ormic-cat-label {
   color: rgba(255, 255, 255, 0.36);
-  font-size: 10.5px;
+  font-size: 10px;
   font-weight: 600;
-  letter-spacing: 0.4px;
 }
 
 /* ── Favourite button ────────────────────────────────────────────────────── */
@@ -218,7 +220,7 @@
 
 .ormic-fav-btn:hover {
   background-color: rgba(255, 255, 255, 0.09);
-  color: rgba(var(--ormic-accent-color-rgb), 0.85);
+  color: var(--ormic-accent-a85);
 }
 
 .ormic-fav-btn.is-fav {
@@ -226,16 +228,16 @@
 }
 
 .ormic-fav-btn.is-fav:hover {
-  background-color: rgba(var(--ormic-accent-color-rgb), 0.12);
+  background-color: var(--ormic-accent-a12);
 }
 
 /* ── Keyboard shortcut badge ─────────────────────────────────────────────── */
 .ormic-kbd-badge {
-  font-size: 9.5px;
+  font-size: 9px;
   font-weight: 700;
-  color: rgba(var(--ormic-accent-color-rgb), 0.72);
-  background-color: rgba(var(--ormic-accent-color-rgb), 0.07);
-  border: 1px solid rgba(var(--ormic-accent-color-rgb), 0.18);
+  color: var(--ormic-accent-a72);
+  background-color: var(--ormic-accent-a07);
+  border: 1px solid var(--ormic-accent-a18);
   border-radius: 5px;
   padding: 2px 6px;
   margin-right: 6px;
@@ -247,16 +249,12 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   Grid & Library Layout Styles
+   Grid & Library Layout
    ═══════════════════════════════════════════════════════════════════════════ */
 
 /* ── Category Header ─────────────────────────────────────────────────────── */
 .ormic-header {
-  padding: 6px 12px 6px 12px;
-}
-
-.ormic-header-title {
-  /* visibility is managed in code, not CSS */
+  padding: 6px 12px;
 }
 
 .ormic-header-control {
@@ -309,7 +307,7 @@
 
 .ormic-grid-empty {
   color: rgba(255, 255, 255, 0.4);
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 300;
   padding: 60px 0;
 }
@@ -332,7 +330,7 @@
 
 .ormic-grid-item.selected {
   background-color: rgba(255, 255, 255, 0.06);
-  border-color: rgba(var(--ormic-accent-color-rgb), 0.32);
+  border-color: var(--ormic-accent-a32);
 }
 
 .ormic-grid-item-box {
@@ -356,12 +354,11 @@
 
 .ormic-grid-label {
   color: rgba(255, 255, 255, 0.84);
-  font-size: 9.5px;
+  font-size: 9px;
   font-weight: 500;
-  letter-spacing: 0.05px;
 }
 
-/* ── Top Header Category Tabs scroll ────────────────────────────────────── */
+/* ── Tab scroll strip ────────────────────────────────────────────────────── */
 .ormic-tabs-scroll {
   background-color: rgba(0, 0, 0, 0.18);
   border-bottom: 1px solid rgba(255, 255, 255, 0.065);
@@ -378,7 +375,7 @@
   margin: 0;
 }
 
-/* ── Category Tabs container ─────────────────────────────────────────────── */
+/* ── Category Tabs ───────────────────────────────────────────────────────── */
 .ormic-tabs-box {
   padding: 6px 12px;
   spacing: 4px;
@@ -398,8 +395,7 @@
 }
 
 .ormic-category-tab.active {
-  border-color: rgba(var(--ormic-accent-color-rgb), 0.85);
-  border-radius: 9999px;
+  border-color: var(--ormic-accent-a85);
 }
 
 .ormic-category-tab-box {
@@ -423,7 +419,6 @@
   font-size: 12px;
   font-weight: 500;
   color: rgba(255, 255, 255, 0.60);
-  letter-spacing: 0.1px;
 }
 
 .ormic-category-tab:hover .ormic-category-tab-label {
@@ -462,14 +457,13 @@
   font-size: 14px;
   caret-color: var(--ormic-accent-color);
   height: 28px;
-  selection-background-color: rgba(var(--ormic-accent-color-rgb), 0.25);
+  selection-background-color: var(--ormic-accent-a25);
   transition-duration: 80ms;
 }
 
 .ormic-editor-entry:focus {
   border-color: var(--ormic-accent-color);
   background-color: rgba(255, 255, 255, 0.06);
-  box-shadow: inset 0 0 0 1px var(--ormic-accent-color);
 }
 
 .ormic-editor-btn-box {
@@ -504,7 +498,6 @@
 .ormic-editor-btn.save-btn:hover {
   background-color: var(--ormic-accent-color-hover);
   border-color: var(--ormic-accent-color-hover);
-  box-shadow: 0 2px 10px rgba(var(--ormic-accent-color-rgb), 0.25);
 }
 
 .ormic-editor-scroll {
@@ -530,8 +523,8 @@
 }
 
 .ormic-edit-row.selected {
-  background-color: rgba(var(--ormic-accent-color-rgb), 0.06);
-  border-color: rgba(var(--ormic-accent-color-rgb), 0.14);
+  background-color: var(--ormic-accent-a06);
+  border-color: var(--ormic-accent-a14);
 }
 
 .ormic-edit-row-box {
@@ -547,7 +540,7 @@
 }
 
 .ormic-edit-name {
-  font-size: 12.5px;
+  font-size: 12px;
   color: rgba(255, 255, 255, 0.88);
 }
 
@@ -560,7 +553,7 @@
   color: var(--ormic-accent-color);
 }
 
-/* ── Prompt Overlay Dim & Popup Card ────────────────────────────────────── */
+/* ── Prompt Overlay ──────────────────────────────────────────────────────── */
 .ormic-prompt-overlay {
   background-color: transparent;
   padding: 30px;
@@ -591,14 +584,13 @@
   font-size: 15px;
   caret-color: var(--ormic-accent-color);
   height: 36px;
-  selection-background-color: rgba(var(--ormic-accent-color-rgb), 0.25);
+  selection-background-color: var(--ormic-accent-a25);
   transition-duration: 150ms;
 }
 
 .ormic-prompt-entry:focus {
   border-color: var(--ormic-accent-color);
   background-color: rgba(0, 0, 0, 0.4);
-  box-shadow: 0 0 0 2px rgba(var(--ormic-accent-color-rgb), 0.3);
 }
 
 .ormic-prompt-btns {
@@ -634,22 +626,19 @@
   background-color: var(--ormic-accent-color);
   color: #111117;
   border: 1px solid var(--ormic-accent-color);
-  box-shadow: 0 4px 12px rgba(var(--ormic-accent-color-rgb), 0.2);
 }
 
 .ormic-prompt-btn.create-btn:hover {
   background-color: var(--ormic-accent-color-hover);
   border-color: var(--ormic-accent-color-hover);
-  box-shadow: 0 6px 16px rgba(var(--ormic-accent-color-rgb), 0.3);
 }
 
 .ormic-prompt-btn.create-btn:active {
   background-color: var(--ormic-accent-color-active);
   border-color: var(--ormic-accent-color-active);
-  box-shadow: none;
 }
 
-/* ── Tip bar & Tips ──────────────────────────────────────────────────────── */
+/* ── Tip bar ─────────────────────────────────────────────────────────────── */
 .ormic-tips {
   padding: 10px 16px;
   spacing: 12px;
@@ -661,10 +650,10 @@
 }
 
 .ormic-tip-key {
-  color: rgba(var(--ormic-accent-color-rgb), 0.80);
+  color: var(--ormic-accent-a80);
   font-size: 10px;
   font-weight: 700;
-  background-color: rgba(var(--ormic-accent-color-rgb), 0.09);
+  background-color: var(--ormic-accent-a09);
   border-radius: 4px;
   padding: 1px 5px;
 }
@@ -674,7 +663,7 @@
   font-size: 10px;
 }
 
-/* ── Scrollbar customization ─────────────────────────────────────────────── */
+/* ── Scrollbars ──────────────────────────────────────────────────────────── */
 .ormic-scroll StScrollBar,
 .ormic-grid-scroll StScrollBar,
 .ormic-editor-scroll StScrollBar {
@@ -705,7 +694,6 @@
   background-color: rgba(255, 255, 255, 0.38);
 }
 
-/* Editor scroll — hide until hover */
 .ormic-editor-scroll StScrollBar {
   opacity: 0;
   transition-duration: 200ms;

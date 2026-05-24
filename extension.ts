@@ -203,7 +203,7 @@ const LauncherDialog = GObject.registerClass(
                     const adj = sv.vadjustment;
                     const step = adj.step_increment * 2.5;
                     if (delta === -1) { adj.set_value(adj.value - step); return Clutter.EVENT_STOP; }
-                    if (delta === 1)  { adj.set_value(adj.value + step); return Clutter.EVENT_STOP; }
+                    if (delta === 1) { adj.set_value(adj.value + step); return Clutter.EVENT_STOP; }
                 }
                 return Clutter.EVENT_PROPAGATE;
             });
@@ -1260,11 +1260,25 @@ export default class OrmicLauncherExtension extends Extension {
         if (!this._overlay) return;
         const colorName = this._getResolvedAccentColor();
         const colorInfo = ACCENT_COLORS[colorName as keyof typeof ACCENT_COLORS] || ACCENT_COLORS.blue;
+        const rgb = colorInfo.rgb;
         this._overlay.set_style(`
-            --ormic-accent-color: ${colorInfo.accent};
-            --ormic-accent-color-rgb: ${colorInfo.rgb};
-            --ormic-accent-color-hover: ${colorInfo.hover};
-            --ormic-accent-color-active: ${colorInfo.active};
-        `);
+        --ormic-accent-color: ${colorInfo.accent};
+        --ormic-accent-color-rgb: ${rgb};
+        --ormic-accent-color-hover: ${colorInfo.hover};
+        --ormic-accent-color-active: ${colorInfo.active};
+        --ormic-accent-a06: rgba(${rgb}, 0.06);
+        --ormic-accent-a07: rgba(${rgb}, 0.07);
+        --ormic-accent-a09: rgba(${rgb}, 0.09);
+        --ormic-accent-a12: rgba(${rgb}, 0.12);
+        --ormic-accent-a14: rgba(${rgb}, 0.14);
+        --ormic-accent-a18: rgba(${rgb}, 0.18);
+        --ormic-accent-a20: rgba(${rgb}, 0.20);
+        --ormic-accent-a25: rgba(${rgb}, 0.25);
+        --ormic-accent-a30: rgba(${rgb}, 0.30);
+        --ormic-accent-a32: rgba(${rgb}, 0.32);
+        --ormic-accent-a72: rgba(${rgb}, 0.72);
+        --ormic-accent-a80: rgba(${rgb}, 0.80);
+        --ormic-accent-a85: rgba(${rgb}, 0.85);
+    `);
     }
 }
