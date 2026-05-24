@@ -120,6 +120,41 @@ export default class OrmicLauncherPrefs extends ExtensionPreferences {
         s.bind('show-groups-sidebar', gsRow, 'active', Gio.SettingsBindFlags.DEFAULT);
         kbGroup.add(gsRow);
 
+        // Accent Color
+        const accentRow = new Adw.ComboRow({
+            title: _('Accent Color'),
+            subtitle: _('Highlight and selection color for the launcher'),
+            model: new Gtk.StringList({
+                strings: [
+                    _('System Default (GNOME)'),
+                    _('Yellow (Pop!_OS Orange)'),
+                    _('Blue (Sleek Blue)'),
+                    _('Purple (Vibrant Purple)'),
+                    _('Red (Coral Red)'),
+                    _('Green (Emerald Green)'),
+                    _('Pink (Hot Pink)'),
+                    _('Teal (Modern Teal)'),
+                    _('Orange (Vibrant Orange)'),
+                    _('Slate (Slate Grey)'),
+                ],
+            }),
+        });
+        const colors = ['gnome', 'yellow', 'blue', 'purple', 'red', 'green', 'pink', 'teal', 'orange', 'slate'];
+        const refreshAccent = () => {
+            const val = s.get_string('accent-color') || 'gnome';
+            const idx = colors.indexOf(val);
+            if (idx !== -1)
+                accentRow.set_selected(idx);
+        };
+        refreshAccent();
+        accentRow.connect('notify::selected', () => {
+            const idx = accentRow.get_selected();
+            if (idx >= 0 && idx < colors.length)
+                s.set_string('accent-color', colors[idx]);
+        });
+        s.connect('changed::accent-color', refreshAccent);
+        kbGroup.add(accentRow);
+
         // ── Results ───────────────────────────────────────────────────────
         const resGroup = new Adw.PreferencesGroup({ title: _('Results') });
         genPage.add(resGroup);

@@ -5,6 +5,12 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 
 .ormic-overlay {
+  /* Dynamic accent color custom properties (fallback defaults) */
+  --ormic-accent-color: #FAB84B;
+  --ormic-accent-color-rgb: 250, 184, 75;
+  --ormic-accent-color-hover: #fccb7b;
+  --ormic-accent-color-active: #e5a43b;
+
   /* Dark scrim — fallback when blur clone is unavailable.
      When the Clutter.Clone blur is active this is mostly hidden behind it,
      but provides contrast on very bright wallpapers. */
@@ -44,10 +50,10 @@
   font-size: 17px;
   font-weight: 300;
   letter-spacing: 0.15px;
-  caret-color: #FAB84B;
+  caret-color: var(--ormic-accent-color);
   padding: 0;
   height: 32px;
-  selection-background-color: rgba(250, 184, 75, 0.25);
+  selection-background-color: rgba(var(--ormic-accent-color-rgb), 0.25);
 }
 
 .ormic-entry:focus {
@@ -129,7 +135,7 @@
 }
 
 .ormic-result.selected {
-  background-color: rgba(250, 184, 75, 0.09);
+  background-color: rgba(var(--ormic-accent-color-rgb), 0.09);
 }
 
 /* Result row inner box — must expand to fill width */
@@ -149,7 +155,7 @@
 }
 
 .ormic-result.selected .ormic-accent-bar {
-  background-color: #FAB84B;
+  background-color: var(--ormic-accent-color);
 }
 
 /* ── Icon bins ───────────────────────────────────────────────────────────── */
@@ -180,7 +186,7 @@
 }
 
 .ormic-result.selected .ormic-name {
-  color: #FAB84B;
+  color: var(--ormic-accent-color);
 }
 
 .ormic-desc {
@@ -222,24 +228,24 @@
 
 .ormic-fav-btn:hover {
   background-color: rgba(255, 255, 255, 0.09);
-  color: rgba(250, 184, 75, 0.85);
+  color: rgba(var(--ormic-accent-color-rgb), 0.85);
 }
 
 .ormic-fav-btn.is-fav {
-  color: #FAB84B;
+  color: var(--ormic-accent-color);
 }
 
 .ormic-fav-btn.is-fav:hover {
-  background-color: rgba(250, 184, 75, 0.12);
+  background-color: rgba(var(--ormic-accent-color-rgb), 0.12);
 }
 
 /* ── Keyboard shortcut badge ─────────────────────────────────────────────── */
 .ormic-kbd-badge {
   font-size: 9.5px;
   font-weight: 700;
-  color: rgba(250, 184, 75, 0.72);
-  background-color: rgba(250, 184, 75, 0.07);
-  border: 1px solid rgba(250, 184, 75, 0.18);
+  color: rgba(var(--ormic-accent-color-rgb), 0.72);
+  background-color: rgba(var(--ormic-accent-color-rgb), 0.07);
+  border: 1px solid rgba(var(--ormic-accent-color-rgb), 0.18);
   border-radius: 5px;
   padding: 2px 6px;
   margin-right: 6px;
@@ -247,7 +253,7 @@
 }
 
 .ormic-result.selected .ormic-kbd-badge {
-  border-color: #FAB84B;
+  border-color: var(--ormic-accent-color);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -343,7 +349,7 @@
 
 .ormic-grid-item.selected {
   background-color: rgba(255, 255, 255, 0.06);
-  border-color: rgba(250, 184, 75, 0.32);
+  border-color: rgba(var(--ormic-accent-color-rgb), 0.32);
 }
 
 .ormic-grid-item-box {
@@ -415,7 +421,7 @@
 }
 
 .ormic-category-tab.active {
-  border-color: rgba(250, 184, 75, 0.85);
+  border-color: rgba(var(--ormic-accent-color-rgb), 0.85);
   border-radius: 9999px;
   border-bottom-width: 1px;
 }
@@ -481,16 +487,16 @@
   color: rgba(255, 255, 255, 0.95);
   padding: 6px 12px;
   font-size: 14px;
-  caret-color: #FAB84B;
+  caret-color: var(--ormic-accent-color);
   height: 28px;
-  selection-background-color: rgba(250, 184, 75, 0.25);
+  selection-background-color: rgba(var(--ormic-accent-color-rgb), 0.25);
   transition-duration: 80ms;
 }
 
 .ormic-editor-entry:focus {
-  border-color: #FAB84B;
+  border-color: var(--ormic-accent-color);
   background-color: rgba(255, 255, 255, 0.06);
-  box-shadow: inset 0 0 0 1px #FAB84B;
+  box-shadow: inset 0 0 0 1px var(--ormic-accent-color);
 }
 
 .ormic-editor-btn-box {
@@ -517,15 +523,15 @@
 }
 
 .ormic-editor-btn.save-btn {
-  background-color: #FAB84B;
+  background-color: var(--ormic-accent-color);
   color: #111117;
-  border: 1px solid #FAB84B;
+  border: 1px solid var(--ormic-accent-color);
 }
 
 .ormic-editor-btn.save-btn:hover {
-  background-color: #fccb7b;
-  border-color: #fccb7b;
-  box-shadow: 0 2px 10px rgba(250, 184, 75, 0.25);
+  background-color: var(--ormic-accent-color-hover);
+  border-color: var(--ormic-accent-color-hover);
+  box-shadow: 0 2px 10px rgba(var(--ormic-accent-color-rgb), 0.25);
 }
 
 .ormic-editor-scroll {
@@ -551,8 +557,8 @@
 }
 
 .ormic-edit-row.selected {
-  background-color: rgba(250, 184, 75, 0.06);
-  border-color: rgba(250, 184, 75, 0.14);
+  background-color: rgba(var(--ormic-accent-color-rgb), 0.06);
+  border-color: rgba(var(--ormic-accent-color-rgb), 0.14);
 }
 
 .ormic-edit-row-box {
@@ -578,7 +584,7 @@
 }
 
 .ormic-edit-row.selected .ormic-edit-checkbox {
-  color: #FAB84B;
+  color: var(--ormic-accent-color);
 }
 
 /* ── Prompt Overlay Dim & Popup Card ────────────────────────────────────── */
@@ -612,16 +618,16 @@
   color: rgba(255, 255, 255, 0.98);
   padding: 12px 16px;
   font-size: 15px;
-  caret-color: #FAB84B;
+  caret-color: var(--ormic-accent-color);
   height: 36px;
-  selection-background-color: rgba(250, 184, 75, 0.25);
+  selection-background-color: rgba(var(--ormic-accent-color-rgb), 0.25);
   transition-duration: 150ms;
 }
 
 .ormic-prompt-entry:focus {
-  border-color: #FAB84B;
+  border-color: var(--ormic-accent-color);
   background-color: rgba(0, 0, 0, 0.4);
-  box-shadow: 0 0 0 2px rgba(250, 184, 75, 0.3);
+  box-shadow: 0 0 0 2px rgba(var(--ormic-accent-color-rgb), 0.3);
 }
 
 .ormic-prompt-btns {
@@ -654,21 +660,21 @@
 }
 
 .ormic-prompt-btn.create-btn {
-  background-color: #FAB84B;
+  background-color: var(--ormic-accent-color);
   color: #111117;
-  border: 1px solid #FAB84B;
-  box-shadow: 0 4px 12px rgba(250, 184, 75, 0.2);
+  border: 1px solid var(--ormic-accent-color);
+  box-shadow: 0 4px 12px rgba(var(--ormic-accent-color-rgb), 0.2);
 }
 
 .ormic-prompt-btn.create-btn:hover {
-  background-color: #fccb7b;
-  border-color: #fccb7b;
-  box-shadow: 0 6px 16px rgba(250, 184, 75, 0.3);
+  background-color: var(--ormic-accent-color-hover);
+  border-color: var(--ormic-accent-color-hover);
+  box-shadow: 0 6px 16px rgba(var(--ormic-accent-color-rgb), 0.3);
 }
 
 .ormic-prompt-btn.create-btn:active {
-  background-color: #e5a43b;
-  border-color: #e5a43b;
+  background-color: var(--ormic-accent-color-active);
+  border-color: var(--ormic-accent-color-active);
   box-shadow: none;
 }
 
@@ -684,10 +690,10 @@
 }
 
 .ormic-tip-key {
-  color: rgba(250, 184, 75, 0.80);
+  color: rgba(var(--ormic-accent-color-rgb), 0.80);
   font-size: 10px;
   font-weight: 700;
-  background-color: rgba(250, 184, 75, 0.09);
+  background-color: rgba(var(--ormic-accent-color-rgb), 0.09);
   border-radius: 4px;
   padding: 1px 5px;
 }

@@ -880,6 +880,63 @@ type OrmicIndicator = InstanceType<typeof OrmicIndicator>;
 
 // ─── Extension ────────────────────────────────────────────────────────────────
 
+const ACCENT_COLORS = {
+    yellow: {
+        accent: '#FAB84B',
+        rgb: '250, 184, 75',
+        hover: '#fccb7b',
+        active: '#e5a43b',
+    },
+    blue: {
+        accent: '#3B82F6',
+        rgb: '59, 130, 246',
+        hover: '#60A5FA',
+        active: '#2563EB',
+    },
+    purple: {
+        accent: '#8B5CF6',
+        rgb: '139, 92, 246',
+        hover: '#A78BFA',
+        active: '#7C3AED',
+    },
+    red: {
+        accent: '#EF4444',
+        rgb: '239, 68, 68',
+        hover: '#F87171',
+        active: '#DC2626',
+    },
+    green: {
+        accent: '#10B981',
+        rgb: '16, 185, 129',
+        hover: '#34D399',
+        active: '#059669',
+    },
+    pink: {
+        accent: '#EC4899',
+        rgb: '236, 72, 153',
+        hover: '#F472B6',
+        active: '#DB2777',
+    },
+    teal: {
+        accent: '#14B8A6',
+        rgb: '20, 184, 166',
+        hover: '#2DD4BF',
+        active: '#0D9488',
+    },
+    orange: {
+        accent: '#F97316',
+        rgb: '249, 115, 22',
+        hover: '#FB923C',
+        active: '#EA580C',
+    },
+    slate: {
+        accent: '#64748B',
+        rgb: '100, 116, 139',
+        hover: '#94A3B8',
+        active: '#475569',
+    },
+};
+
 export default class OrmicLauncherExtension extends Extension {
     providers!: any[];
     _visible!: boolean;
@@ -887,6 +944,7 @@ export default class OrmicLauncherExtension extends Extension {
     _clickGuard = false;
     _clickGuardTimer: number | null | undefined = null;
     _settings!: Gio.Settings;
+    _interfaceSettings: Gio.Settings | null = null;
     _overlay!: St.Widget | null;
     _dialog!: LauncherDialog | null;
     _indicator!: OrmicIndicator | null;
@@ -894,6 +952,8 @@ export default class OrmicLauncherExtension extends Extension {
     _monId!: number | null;
     _keyId!: number | null;
     _cfgId!: number | null;
+    _accentColorId!: number | null;
+    _sysAccentId!: number | null;
     _focusId!: number | null;
     _overlayCapturedId!: number | null;
     _overlayPressId!: number | null;
@@ -907,12 +967,30 @@ export default class OrmicLauncherExtension extends Extension {
             new RecentProvider(this._settings), new CommandProvider(),
             new WindowProvider(this._settings),
         ];
-        this._visible = false; this._indicator = null; this._cfgId = null; this._focusId = null;
+        this._visible = false; this._indicator = null; this._cfgId = null; this._accentColorId = null; this._focusId = null;
 
         this._overlay = new St.Widget({
             style_class: 'ormic-overlay', reactive: true, visible: false,
             x: 0, y: 0, opacity: 0,
         });
+
+        this._updateAccentColor();
+        this._accentColorId = this._settings.connect('changed::accent-color', () => this._updateAccentColor());
+
+        // Connect listener for system-wide GNOME accent color
+        try {
+            this._interfaceSettings = new Gio.Settings({ schema_id: 'org.gnome.desktop.interface' });
+            if (this._interfaceSettings.settings_schema.has_key('accent-color')) {
+                this._sysAccentId = this._interfaceSettings.connect('changed::accent-color', () => {
+                    const currentSelection = this._settings.get_string('accent-color');
+                    if (currentSelection === 'gnome') {
+                        this._updateAccentColor();
+                    }
+                });
+            }
+        } catch (_) {
+            this._interfaceSettings = null;
+        }
 
         // GNOME 50-compatible background blur.
         // Shell.BlurEffect.BACKGROUND is unreliable for top-chrome actors on GNOME 50
@@ -1006,6 +1084,12 @@ export default class OrmicLauncherExtension extends Extension {
         dbg('Extension', 'disable() called');
         if (this._focusId) { global.stage.disconnect(this._focusId); this._focusId = null; }
         if (this._cfgId) { this._settings.disconnect(this._cfgId); this._cfgId = null; }
+        if (this._accentColorId) { this._settings.disconnect(this._accentColorId); this._accentColorId = null; }
+        if (this._interfaceSettings && this._sysAccentId) {
+            this._interfaceSettings.disconnect(this._sysAccentId);
+            this._sysAccentId = null;
+        }
+        this._interfaceSettings = null;
         if (this._keyId) { global.stage.disconnect(this._keyId); this._keyId = null; }
         if (this._monId) { Main.layoutManager.disconnect(this._monId); this._monId = null; }
         this._indicator?.destroy(); this._indicator = null;
@@ -1153,5 +1237,34 @@ export default class OrmicLauncherExtension extends Extension {
             this._clickGuardTimer = null;
             return GLib.SOURCE_REMOVE;
         });
+    }
+
+    _getResolvedAccentColor(): string {
+        let colorName = this._settings.get_string('accent-color') || 'gnome';
+        if (colorName === 'gnome') {
+            try {
+                const interfaceSettings = new Gio.Settings({ schema_id: 'org.gnome.desktop.interface' });
+                if (interfaceSettings.settings_schema.has_key('accent-color')) {
+                    colorName = interfaceSettings.get_string('accent-color') || 'blue';
+                } else {
+                    colorName = 'blue';
+                }
+            } catch (_) {
+                colorName = 'blue';
+            }
+        }
+        return colorName;
+    }
+
+    _updateAccentColor() {
+        if (!this._overlay) return;
+        const colorName = this._getResolvedAccentColor();
+        const colorInfo = ACCENT_COLORS[colorName as keyof typeof ACCENT_COLORS] || ACCENT_COLORS.blue;
+        this._overlay.set_style(`
+            --ormic-accent-color: ${colorInfo.accent};
+            --ormic-accent-color-rgb: ${colorInfo.rgb};
+            --ormic-accent-color-hover: ${colorInfo.hover};
+            --ormic-accent-color-active: ${colorInfo.active};
+        `);
     }
 }

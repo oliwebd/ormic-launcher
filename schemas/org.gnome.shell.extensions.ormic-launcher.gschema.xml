@@ -52,5 +52,11 @@
       <summary>Show search bar by default</summary>
     </key>
 
+    <key name="accent-color" type="s">
+      <default>'gnome'</default>
+      <summary>Accent color for the theme</summary>
+      <description>Accent color used for highlights and selections. Choices: gnome, yellow, blue, purple, red, green, pink, teal, orange, slate.</description>
+    </key>
+
   </schema>
 </schemalist>
