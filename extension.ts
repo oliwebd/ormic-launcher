@@ -22,6 +22,7 @@ import {
     timeoutOnce,
     easeActor,
     createBlurEffect,
+    IS_50_PLUS
 } from './utils.js';
 
 import { AppProvider } from './providers/apps.js';
@@ -659,6 +660,15 @@ const LauncherDialog = GObject.registerClass(
             this._gridCtrl = new GridController(this._state);
             this._groupCtrl = new GroupEditorController(this._state, this._gridCtrl);
             this._kbdHandler = new KeyboardHandler(this._state, this._searchCtrl, this._gridCtrl, this._groupCtrl);
+
+            // ── GNOME 50: prevent hover repaints from damaging blur wrapper ──
+            if (IS_50_PLUS) {
+                try {
+                    this.add_effect(new (Clutter.OffscreenEffect as any)());
+                } catch (e: any) {
+                    log(`Ormic: OffscreenEffect failed: ${e.message}`);
+                }
+            }
         }
 
         vfunc_key_press_event(ev: Clutter.Event): boolean { return this._onKey(ev); }
