@@ -123,14 +123,10 @@ const LauncherDialog = GObject.registerClass(
         _promptEntry!: St.Entry;
 
         _init() {
+            // No blur effect here — blur lives on _blurWrapper (a non-interactive
+            // sibling in the overlay) so hover repaints in this widget tree never
+            // trigger a blur re-sample.
             super._init({ style_class: 'ormic-dialog', orientation: Clutter.Orientation.VERTICAL, reactive: true });
-            // Shell.BlurEffect with BACKGROUND mode composites whatever is rendered
-            // behind this actor — wallpaper AND open windows.
-            try {
-                this.add_effect_with_name('bg-blur', createBlurEffect(32, 0.72, Shell.BlurMode.BACKGROUND));
-            } catch (e: any) {
-                console.error(`Ormic: dialog bg blur failed: ${e.message}`);
-            }
         }
 
         setup(ext: OrmicLauncherExtension) {
@@ -199,7 +195,6 @@ const LauncherDialog = GObject.registerClass(
                     else if (dy > 0) delta = 1;
                 }
 
-
                 // Search/editor view: scroll the list
                 let sv: St.ScrollView | null = null;
                 if (this._scroll.visible) sv = this._scroll;
@@ -257,7 +252,6 @@ const LauncherDialog = GObject.registerClass(
             }
 
             // ── Library Grid Header ────────────────────────────────────────────
-            // Compact action-only header — active category shown in the tab bar
             this._headerBox = new St.BoxLayout({
                 style_class: 'ormic-header',
                 x_expand: true,
@@ -265,7 +259,7 @@ const LauncherDialog = GObject.registerClass(
                 y_align: Clutter.ActorAlign.CENTER,
             });
 
-            // Keep a stub title label (never shown) so state references don’t break
+            // Keep a stub title label (never shown) so state references don't break
             this._headerTitleLabel = new St.Label({
                 text: this._activeCategory,
                 style_class: 'ormic-header-title',
@@ -309,7 +303,7 @@ const LauncherDialog = GObject.registerClass(
 
             this._headerBox.add_child(controlBox);
 
-            // ── Library Grid Scroll Box (no scrolling — pages used instead) ──
+            // ── Library Grid Scroll Box ───────────────────────────────────
             this._gridScroll = new St.ScrollView({
                 style_class: 'ormic-grid-scroll',
                 hscrollbar_policy: St.PolicyType.NEVER,
@@ -317,7 +311,7 @@ const LauncherDialog = GObject.registerClass(
                 overlay_scrollbars: true, x_expand: true, y_expand: true,
             });
 
-            // ── Page Navigation Bar (arrows + dots) ──────────────────────
+            // ── Page Navigation Bar ───────────────────────────────────────
             this._pageNavBox = new St.BoxLayout({
                 style_class: 'ormic-page-nav',
                 x_expand: true,
@@ -361,7 +355,7 @@ const LauncherDialog = GObject.registerClass(
             this._pageNavBox.add_child(this._prevPageBtn);
             this._pageNavBox.add_child(this._pageDotsBox);
             this._pageNavBox.add_child(this._nextPageBtn);
-            this._pageNavBox.hide(); // hidden until multiple pages exist
+            this._pageNavBox.hide();
 
             // ── Top Header Tabs Container ─────────────────────────────────
             this._tabsBox = new St.BoxLayout({
@@ -723,23 +717,9 @@ const LauncherDialog = GObject.registerClass(
             this._gridCtrl.selectCategory(categoryName);
         }
 
-        // ─── Tabs & grid rendering — all delegated to GridController ─────
-        // BUG FIX: the old LauncherDialog had its own _renderTabsOnly that
-        // diverged from GridController.renderTabsOnly, causing tab state to be
-        // inconsistent after group create/edit.  Now every render path goes
-        // through a single authoritative implementation in GridController.
-
-        private _renderTabsOnly() {
-            this._gridCtrl.renderTabsOnly();
-        }
-
-        private _renderGridOnly() {
-            this._gridCtrl.renderGridOnly();
-        }
-
-        private _renderGridAndTabs() {
-            this._gridCtrl.renderGridAndTabs();
-        }
+        private _renderTabsOnly() { this._gridCtrl.renderTabsOnly(); }
+        private _renderGridOnly() { this._gridCtrl.renderGridOnly(); }
+        private _renderGridAndTabs() { this._gridCtrl.renderGridAndTabs(); }
 
         private _selectGridIdx(i: number) { this._gridCtrl.selectGridIdx(i); }
         private _moveGridSel(d: number) { this._gridCtrl.moveGridSel(d); }
@@ -755,7 +735,7 @@ const LauncherDialog = GObject.registerClass(
         private _getCustomGroups(): Record<string, string[]> { return this._gridCtrl.getCustomGroups(); }
         private _saveCustomGroups(groups: Record<string, string[]>) { this._gridCtrl.saveCustomGroups(groups); }
 
-        // ─── External Controls ────────────────────────────────────────────────
+        // ─── External Controls ─────────────────────────────────────────────
 
         focus() {
             if ((this as any).is_finalized?.() || !this.get_stage?.()) return;
@@ -799,12 +779,8 @@ const LauncherDialog = GObject.registerClass(
             this._scroll.hide();
             this._headerBox.show();
             this._gridScroll.show();
-            // pageNavBox visibility is managed by GridController._updatePageNav()
             this._setTabsVisible(true);
 
-            // App dirtiness is handled inside GridController.ensureAllAppsCache() now.
-            // Only rebuild the grid widget tree when it has never been built or the
-            // user explicitly cleared it (custom group edit, etc.).
             const needsRebuild = this._allAppsCacheDirty || this._categoryGridBoxes.size === 0;
 
             if (needsRebuild) {
@@ -816,18 +792,14 @@ const LauncherDialog = GObject.registerClass(
                     this._categoryGridBoxes.clear();
                 }
 
-                // Single authoritative render — goes through GridController
                 this._renderTabsOnly();
 
                 const gridBox = this._gridBox;
                 this._gridScroll.set_child(gridBox);
-
-                // Render grid immediately to ensure right side shows content
                 this._renderGridOnly();
             } else {
                 dbg('Performance', `FAST PATH: reusing ${this._categoryGridBoxes.size} cached grid boxes`);
 
-                // Re-sync tab selection without full rebuild
                 const tabs = this._tabsBox.get_children() as CategoryTab[];
                 if (tabs.length === 0) {
                     this._renderTabsOnly();
@@ -846,7 +818,6 @@ const LauncherDialog = GObject.registerClass(
                 this._gridScroll.set_child(gridBox);
 
                 if (previousCategory !== 'Library Home') {
-                    // We switched categories during reset, so we must render the items for Library Home
                     this._renderGridOnly();
                 }
 
@@ -886,67 +857,16 @@ type OrmicIndicator = InstanceType<typeof OrmicIndicator>;
 // ─── Extension ────────────────────────────────────────────────────────────────
 
 const ACCENT_COLORS = {
-    yellow: {
-        accent: '#FAB84B',
-        rgb: '250, 184, 75',
-        hover: '#fccb7b',
-        active: '#e5a43b',
-    },
-    blue: {
-        accent: '#3B82F6',
-        rgb: '59, 130, 246',
-        hover: '#60A5FA',
-        active: '#2563EB',
-    },
-    purple: {
-        accent: '#8B5CF6',
-        rgb: '139, 92, 246',
-        hover: '#A78BFA',
-        active: '#7C3AED',
-    },
-    red: {
-        accent: '#EF4444',
-        rgb: '239, 68, 68',
-        hover: '#F87171',
-        active: '#DC2626',
-    },
-    green: {
-        accent: '#10B981',
-        rgb: '16, 185, 129',
-        hover: '#34D399',
-        active: '#059669',
-    },
-    pink: {
-        accent: '#EC4899',
-        rgb: '236, 72, 153',
-        hover: '#F472B6',
-        active: '#DB2777',
-    },
-    teal: {
-        accent: '#14B8A6',
-        rgb: '20, 184, 166',
-        hover: '#2DD4BF',
-        active: '#0D9488',
-    },
-    orange: {
-        accent: '#F97316',
-        rgb: '249, 115, 22',
-        hover: '#FB923C',
-        active: '#EA580C',
-    },
-    slate: {
-        accent: '#64748B',
-        rgb: '100, 116, 139',
-        hover: '#94A3B8',
-        active: '#475569',
-    },
-    // GNOME 48+ uses 'brown' as a valid accent name
-    brown: {
-        accent: '#A16207',
-        rgb: '161, 98, 7',
-        hover: '#CA8A04',
-        active: '#854D0E',
-    },
+    yellow: { accent: '#FAB84B', rgb: '250, 184, 75', hover: '#fccb7b', active: '#e5a43b' },
+    blue: { accent: '#3B82F6', rgb: '59, 130, 246', hover: '#60A5FA', active: '#2563EB' },
+    purple: { accent: '#8B5CF6', rgb: '139, 92, 246', hover: '#A78BFA', active: '#7C3AED' },
+    red: { accent: '#EF4444', rgb: '239, 68, 68', hover: '#F87171', active: '#DC2626' },
+    green: { accent: '#10B981', rgb: '16, 185, 129', hover: '#34D399', active: '#059669' },
+    pink: { accent: '#EC4899', rgb: '236, 72, 153', hover: '#F472B6', active: '#DB2777' },
+    teal: { accent: '#14B8A6', rgb: '20, 184, 166', hover: '#2DD4BF', active: '#0D9488' },
+    orange: { accent: '#F97316', rgb: '249, 115, 22', hover: '#FB923C', active: '#EA580C' },
+    slate: { accent: '#64748B', rgb: '100, 116, 139', hover: '#94A3B8', active: '#475569' },
+    brown: { accent: '#A16207', rgb: '161, 98, 7', hover: '#CA8A04', active: '#854D0E' },
 };
 
 export default class OrmicLauncherExtension extends Extension {
@@ -972,6 +892,12 @@ export default class OrmicLauncherExtension extends Extension {
     _dynamicCssFile: Gio.File | null = null;
     _theme: St.Theme | null = null;
     _dialogSizeId: number | null = null;
+
+    // ── Blur backdrop ─────────────────────────────────────────────────────────
+    // Kept as a non-interactive sibling of _dialog so BlurMode.BACKGROUND never
+    // re-fires from hover/focus repaints inside the dialog's own widget subtree.
+    _blurWrapper: St.Widget | null = null;
+    _dialogAllocId: number | null = null;
 
     enable() {
         dbg('Extension', 'enable() called');
@@ -1006,9 +932,19 @@ export default class OrmicLauncherExtension extends Extension {
             this._interfaceSettings = null;
         }
 
-        // Background blur is applied directly on the dialog via Shell.BlurEffect
-        // (BlurMode.BACKGROUND), which composites everything behind the actor —
-        // both the wallpaper and any open windows. No clone needed.
+        // ── Blur wrapper — inserted BEFORE the dialog so it sits behind it ──
+        // BlurMode.BACKGROUND samples the compositor framebuffer behind this
+        // actor at draw time (wallpaper + open windows). Because this widget has
+        // no interactive children it is never repainted by hover/focus events in
+        // the dialog, eliminating the flicker that occurs when the effect is
+        // attached to the dialog actor itself.
+        this._blurWrapper = new St.Widget({ reactive: false });
+        try {
+            this._blurWrapper.add_effect(createBlurEffect(32, 0.72));
+        } catch (e: any) {
+            console.error(`Ormic: blur wrapper error: ${e.message}`);
+        }
+        this._overlay.add_child(this._blurWrapper);
 
         this._overlayCapturedId = this._overlay.connect('captured-event', (_, ev: any) => {
             const t = typeof ev.type === 'function' ? ev.type() : ev.type;
@@ -1048,10 +984,12 @@ export default class OrmicLauncherExtension extends Extension {
         this._dialog = new (LauncherDialog as any)() as LauncherDialog;
         this._dialog.setup(this);
         this._overlay.add_child(this._dialog);
-        this._updateAccentColor(); // re-apply so dialog actor gets vars on first enable
+        this._updateAccentColor();
         Main.layoutManager.addTopChrome(this._overlay);
 
-        // No size-sync needed — blur effect tracks the dialog actor automatically.
+        // Track dialog allocation to keep blur wrapper geometry in sync.
+        // This fires on position + size changes (including first layout pass).
+        this._dialogAllocId = this._dialog.connect('notify::allocation', () => this._syncBlurWrapper());
 
         this._monId = Main.layoutManager.connect('monitors-changed', () => this._pos());
         this._pos();
@@ -1099,6 +1037,13 @@ export default class OrmicLauncherExtension extends Extension {
         this._indicator?.destroy(); this._indicator = null;
         Main.wm.removeKeybinding('toggle-ormic-launcher');
 
+        // Disconnect allocation tracker before dialog is destroyed
+        if (this._dialog && this._dialogAllocId) {
+            this._dialog.disconnect(this._dialogAllocId);
+            this._dialogAllocId = null;
+        }
+        this._blurWrapper = null; // child of _overlay — destroyed with it below
+
         if (this._overlay) {
             if (this._overlayCapturedId) this._overlay.disconnect(this._overlayCapturedId);
             if (this._overlayPressId) this._overlay.disconnect(this._overlayPressId);
@@ -1110,7 +1055,6 @@ export default class OrmicLauncherExtension extends Extension {
             this._dialog.disconnect(this._dialogSizeId);
             this._dialogSizeId = null;
         }
-        // blur effect lives on the dialog actor — destroyed with it below.
         if (this._dialog) {
             this._dialog.remove_all_transitions();
             try {
@@ -1120,8 +1064,6 @@ export default class OrmicLauncherExtension extends Extension {
             }
             this._dialog.destroy();
         }
-
- 
 
         this._overlay = null;
         this._dialog = null;
@@ -1141,6 +1083,16 @@ export default class OrmicLauncherExtension extends Extension {
         this._visible = false;
     }
 
+    _syncBlurWrapper() {
+        const bw = this._blurWrapper;
+        const dl = this._dialog;
+        if (!bw || !dl) return;
+        const w = dl.width;
+        const h = dl.height;
+        bw.set_position(dl.x, dl.y);
+        if (w > 0 && h > 0) bw.set_size(w, h);
+    }
+
     _syncInd() {
         if (this._settings.get_boolean('show-indicator')) {
             if (!this._indicator) {
@@ -1155,13 +1107,14 @@ export default class OrmicLauncherExtension extends Extension {
         if (!this._overlay || !this._dialog) return;
         const mon = Main.layoutManager.primaryMonitor; if (!mon) return;
         const dw = Math.min(1060, mon.width * 0.66);
+        const dh = Math.min(700, mon.height * 0.72);   // ← ADD THIS
         const dx = mon.x + Math.floor((mon.width - dw) / 2);
         const dy = mon.y + Math.floor(mon.height * 0.14);
         this._overlay.set_position(mon.x, mon.y);
         this._overlay.set_size(mon.width, mon.height);
-        // Blur effect is attached to the dialog; no separate sizing needed.
         this._dialog.set_position(dx - mon.x, dy - mon.y);
         this._dialog.set_width(dw);
+        this._dialog.set_height(dh);
         this._dialog.min_width = dw;
         (this._dialog as any).max_width = dw;
     }
@@ -1178,13 +1131,19 @@ export default class OrmicLauncherExtension extends Extension {
 
         this._overlay.remove_all_transitions();
         this._dialog.remove_all_transitions();
+        this._blurWrapper?.remove_all_transitions();
 
         this._visible = true;
         this._dialog.reset();
         this._overlay.show();
+
+        // Animate dialog + blur wrapper together so they move as one
         this._dialog.opacity = 0;
         this._dialog.translation_y = -20;
-
+        if (this._blurWrapper) {
+            this._blurWrapper.opacity = 0;
+            this._blurWrapper.translation_y = -20;
+        }
 
         const grab = Main.pushModal(this._overlay, {
             actionMode: Shell.ActionMode.NORMAL | Shell.ActionMode.OVERVIEW | Shell.ActionMode.POPUP,
@@ -1199,6 +1158,9 @@ export default class OrmicLauncherExtension extends Extension {
 
         easeActor(this._overlay, { opacity: 255, duration: 150, mode: Clutter.AnimationMode.EASE_OUT_QUAD });
         easeActor(this._dialog, { opacity: 255, translation_y: 0, duration: 200, mode: Clutter.AnimationMode.EASE_OUT_EXPO });
+        if (this._blurWrapper) {
+            easeActor(this._blurWrapper, { opacity: 255, translation_y: 0, duration: 200, mode: Clutter.AnimationMode.EASE_OUT_EXPO });
+        }
 
         timeoutOnce(10, () => this._dialog?.focus());
     }
@@ -1210,6 +1172,7 @@ export default class OrmicLauncherExtension extends Extension {
 
         this._overlay.remove_all_transitions();
         this._dialog.remove_all_transitions();
+        this._blurWrapper?.remove_all_transitions();
 
         this._visible = false;
         this._clickGuard = false;
@@ -1222,7 +1185,11 @@ export default class OrmicLauncherExtension extends Extension {
             catch (e: any) { dbg('Launcher', `popModal failed: ${e.message}`); }
             this._grab = null;
         }
-        const ov = this._overlay, dl = this._dialog;
+
+        const ov = this._overlay;
+        const dl = this._dialog;
+        const bw = this._blurWrapper;
+
         easeActor(dl, {
             opacity: 0, translation_y: -14, duration: 120, mode: Clutter.AnimationMode.EASE_IN_QUAD,
             onComplete: () => {
@@ -1230,11 +1197,18 @@ export default class OrmicLauncherExtension extends Extension {
                     ov.hide();
                     dl.opacity = 255;
                     dl.translation_y = 0;
+                    if (bw && !(bw as any).is_finalized?.()) {
+                        bw.opacity = 255;
+                        bw.translation_y = 0;
+                    }
                 }
             },
         });
 
         easeActor(ov, { opacity: 0, duration: 120, mode: Clutter.AnimationMode.EASE_IN_QUAD });
+        if (bw) {
+            easeActor(bw, { opacity: 0, translation_y: -14, duration: 120, mode: Clutter.AnimationMode.EASE_IN_QUAD });
+        }
     }
 
     _setClickGuard() {
@@ -1269,17 +1243,14 @@ export default class OrmicLauncherExtension extends Extension {
     _updateAccentColor() {
         if (!this._overlay) return;
         let colorName = this._getResolvedAccentColor();
-        
+
         if (!ACCENT_COLORS.hasOwnProperty(colorName)) {
             colorName = 'yellow';
         }
 
-        // 1. Remove all old accent classes
         Object.keys(ACCENT_COLORS).forEach(color => {
             this._overlay!.remove_style_class_name(`ormic-accent-${color}`);
         });
-
-        // 2. Add the new accent class
         this._overlay.add_style_class_name(`ormic-accent-${colorName}`);
     }
 }

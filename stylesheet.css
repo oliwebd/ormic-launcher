@@ -259,7 +259,7 @@
 
 /* ── Grid Container ──────────────────────────────────────────────────────── */
 .ormic-grid-scroll {
-  max-height: 500px;
+  y-expand: true;
 }
 
 .ormic-grid-scroll StScrollBar {
