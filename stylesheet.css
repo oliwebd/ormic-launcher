@@ -58,7 +58,7 @@
   color: rgba(255, 255, 255, 0.38);
   border-radius: 8px;
   padding: 6px;
-  transition-duration: 80ms;
+  padding: 6px;
 }
 
 .ormic-close-btn:hover {
@@ -99,7 +99,6 @@
   padding: 0;
   border-radius: 0;
   background-color: transparent;
-  transition-duration: 60ms;
   min-height: 60px;
 }
 
@@ -120,7 +119,7 @@
   width: 3px;
   background-color: transparent;
   border-radius: 0 2px 2px 0;
-  transition-duration: 80ms;
+  border-radius: 0 2px 2px 0;
 }
 
 .ormic-result.selected .ormic-accent-bar {
@@ -191,7 +190,7 @@
   border-radius: 6px;
   padding: 5px;
   margin-right: 4px;
-  transition-duration: 60ms;
+  margin-right: 4px;
 }
 
 .ormic-fav-btn:hover {
@@ -217,7 +216,7 @@
   border-radius: 5px;
   padding: 2px 6px;
   margin-right: 6px;
-  transition-duration: 60ms;
+  margin-right: 6px;
 }
 
 .ormic-result.selected .ormic-kbd-badge {
@@ -242,7 +241,7 @@
   background-color: rgba(255, 255, 255, 0.035);
   border: 1px solid rgba(255, 255, 255, 0.06);
   color: rgba(255, 255, 255, 0.55);
-  transition-duration: 80ms;
+  color: rgba(255, 255, 255, 0.55);
 }
 
 .ormic-header-btn:hover {
@@ -295,7 +294,7 @@
   border: 1px solid transparent;
   width: 88px;
   height: 88px;
-  transition-duration: 100ms;
+  height: 88px;
 }
 
 .ormic-grid-item:hover {
