@@ -6,6 +6,12 @@
   background-color: rgba(0, 0, 0, 0.30);
 }
 
+/* ── Blur wrapper — non-interactive sibling behind the dialog ────────────── */
+.ormic-blur-wrapper {
+  border-radius: 14px;
+  background-color: transparent;
+}
+
 /* ── Dialog card ─────────────────────────────────────────────────────────── */
 .ormic-dialog {
   background-color: rgba(14, 14, 20, 0.48);
