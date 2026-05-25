@@ -124,8 +124,13 @@ const LauncherDialog = GObject.registerClass(
 
         _init() {
             super._init({ style_class: 'ormic-dialog', orientation: Clutter.Orientation.VERTICAL, reactive: true });
-            // No Shell.BlurEffect here — background blur is handled by the
-            // Clutter.Clone wallpaper actor in OrmicLauncherExtension.enable().
+            // Shell.BlurEffect with BACKGROUND mode composites whatever is rendered
+            // behind this actor — wallpaper AND open windows.
+            try {
+                this.add_effect_with_name('bg-blur', createBlurEffect(32, 0.72, Shell.BlurMode.BACKGROUND));
+            } catch (e: any) {
+                console.error(`Ormic: dialog bg blur failed: ${e.message}`);
+            }
         }
 
         setup(ext: OrmicLauncherExtension) {
@@ -955,7 +960,6 @@ export default class OrmicLauncherExtension extends Extension {
     _overlay!: St.Widget | null;
     _dialog!: LauncherDialog | null;
     _indicator!: OrmicIndicator | null;
-    _blurBgClone: any = null;   // Clutter.Clone of wallpaper — GNOME-50-safe blur
     _monId!: number | null;
     _keyId!: number | null;
     _cfgId!: number | null;
@@ -967,7 +971,6 @@ export default class OrmicLauncherExtension extends Extension {
     _overlayKeyId!: number | null;
     _dynamicCssFile: Gio.File | null = null;
     _theme: St.Theme | null = null;
-    _blurWrapper: any = null;
     _dialogSizeId: number | null = null;
 
     enable() {
@@ -1003,24 +1006,9 @@ export default class OrmicLauncherExtension extends Extension {
             this._interfaceSettings = null;
         }
 
-        // GNOME 50-compatible background blur restricted to dialog bounds
-        this._blurWrapper = new St.Widget({
-            clip_to_allocation: true,
-            style: 'border-radius: 14px;' // Try to match dialog border radius
-        });
-
-        try {
-            const bgGroup = (Main.layoutManager as any)._backgroundGroup;
-            if (bgGroup) {
-                this._blurBgClone = new Clutter.Clone({ source: bgGroup });
-                this._blurBgClone.add_effect(createBlurEffect(32, 0.70, Shell.BlurMode.ACTOR));
-                this._blurWrapper.add_child(this._blurBgClone);
-            }
-        } catch (e: any) {
-            console.error(`Ormic: bg blur clone failed: ${e.message}`);
-        }
-        
-        this._overlay.insert_child_at_index(this._blurWrapper, 0);
+        // Background blur is applied directly on the dialog via Shell.BlurEffect
+        // (BlurMode.BACKGROUND), which composites everything behind the actor —
+        // both the wallpaper and any open windows. No clone needed.
 
         this._overlayCapturedId = this._overlay.connect('captured-event', (_, ev: any) => {
             const t = typeof ev.type === 'function' ? ev.type() : ev.type;
@@ -1063,15 +1051,7 @@ export default class OrmicLauncherExtension extends Extension {
         this._updateAccentColor(); // re-apply so dialog actor gets vars on first enable
         Main.layoutManager.addTopChrome(this._overlay);
 
-        this._dialogSizeId = this._dialog.connect('notify::allocation', () => {
-            if (this._blurWrapper && this._dialog) {
-                this._blurWrapper.set_position(this._dialog.x, this._dialog.y);
-                this._blurWrapper.set_size(this._dialog.width, this._dialog.height);
-                if (this._blurBgClone) {
-                    this._blurBgClone.set_position(-this._dialog.x, -this._dialog.y);
-                }
-            }
-        });
+        // No size-sync needed — blur effect tracks the dialog actor automatically.
 
         this._monId = Main.layoutManager.connect('monitors-changed', () => this._pos());
         this._pos();
@@ -1130,12 +1110,7 @@ export default class OrmicLauncherExtension extends Extension {
             this._dialog.disconnect(this._dialogSizeId);
             this._dialogSizeId = null;
         }
-        if (this._blurWrapper) {
-            this._blurWrapper.remove_all_transitions();
-            this._blurWrapper.destroy();
-        }
-        this._blurBgClone = null; // child of wrapper
-        this._blurWrapper = null;
+        // blur effect lives on the dialog actor — destroyed with it below.
         if (this._dialog) {
             this._dialog.remove_all_transitions();
             try {
@@ -1184,10 +1159,7 @@ export default class OrmicLauncherExtension extends Extension {
         const dy = mon.y + Math.floor(mon.height * 0.14);
         this._overlay.set_position(mon.x, mon.y);
         this._overlay.set_size(mon.width, mon.height);
-        // Size the blur clone to fill the monitor
-        if (this._blurBgClone) {
-            this._blurBgClone.set_size(mon.width, mon.height);
-        }
+        // Blur effect is attached to the dialog; no separate sizing needed.
         this._dialog.set_position(dx - mon.x, dy - mon.y);
         this._dialog.set_width(dw);
         this._dialog.min_width = dw;
@@ -1212,10 +1184,7 @@ export default class OrmicLauncherExtension extends Extension {
         this._overlay.show();
         this._dialog.opacity = 0;
         this._dialog.translation_y = -20;
-        if (this._blurWrapper) {
-            this._blurWrapper.opacity = 0;
-            this._blurWrapper.translation_y = -20;
-        }
+
 
         const grab = Main.pushModal(this._overlay, {
             actionMode: Shell.ActionMode.NORMAL | Shell.ActionMode.OVERVIEW | Shell.ActionMode.POPUP,
@@ -1230,9 +1199,7 @@ export default class OrmicLauncherExtension extends Extension {
 
         easeActor(this._overlay, { opacity: 255, duration: 150, mode: Clutter.AnimationMode.EASE_OUT_QUAD });
         easeActor(this._dialog, { opacity: 255, translation_y: 0, duration: 200, mode: Clutter.AnimationMode.EASE_OUT_EXPO });
-        if (this._blurWrapper) {
-            easeActor(this._blurWrapper, { opacity: 255, translation_y: 0, duration: 200, mode: Clutter.AnimationMode.EASE_OUT_EXPO });
-        }
+
         timeoutOnce(10, () => this._dialog?.focus());
     }
 
@@ -1255,7 +1222,7 @@ export default class OrmicLauncherExtension extends Extension {
             catch (e: any) { dbg('Launcher', `popModal failed: ${e.message}`); }
             this._grab = null;
         }
-        const ov = this._overlay, dl = this._dialog, bw = this._blurWrapper;
+        const ov = this._overlay, dl = this._dialog;
         easeActor(dl, {
             opacity: 0, translation_y: -14, duration: 120, mode: Clutter.AnimationMode.EASE_IN_QUAD,
             onComplete: () => {
@@ -1263,16 +1230,10 @@ export default class OrmicLauncherExtension extends Extension {
                     ov.hide();
                     dl.opacity = 255;
                     dl.translation_y = 0;
-                    if (bw && !(bw as any).is_finalized?.()) {
-                        bw.opacity = 255;
-                        bw.translation_y = 0;
-                    }
                 }
             },
         });
-        if (bw) {
-            easeActor(bw, { opacity: 0, translation_y: -14, duration: 120, mode: Clutter.AnimationMode.EASE_IN_QUAD });
-        }
+
         easeActor(ov, { opacity: 0, duration: 120, mode: Clutter.AnimationMode.EASE_IN_QUAD });
     }
 
