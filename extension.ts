@@ -124,9 +124,12 @@ const LauncherDialog = GObject.registerClass(
         _promptEntry!: St.Entry;
 
         _init() {
-            // No blur effect here — blur lives on _blurWrapper (a non-interactive
-            // sibling in the overlay) so hover repaints in this widget tree never
-            // trigger a blur re-sample.
+            // No blur effect here — blur lives on _blurWrapper, a completely
+            // separate chrome layer registered independently with
+            // Main.layoutManager.addChrome(). This mirrors the GNOME Shell
+            // overview / lockscreen pattern: two scene-graph-independent
+            // branches so hover/repaint events in this dialog tree can never
+            // reach or invalidate the blur actor.
             super._init({ style_class: 'ormic-dialog', orientation: Clutter.Orientation.VERTICAL, reactive: true });
         }
 
@@ -661,14 +664,11 @@ const LauncherDialog = GObject.registerClass(
             this._groupCtrl = new GroupEditorController(this._state, this._gridCtrl);
             this._kbdHandler = new KeyboardHandler(this._state, this._searchCtrl, this._gridCtrl, this._groupCtrl);
 
-            // ── GNOME 50: prevent hover repaints from damaging blur wrapper ──
-            if (IS_50_PLUS) {
-                try {
-                    this.add_effect(new (Clutter.OffscreenEffect as any)());
-                } catch (e: any) {
-                    log(`Ormic: OffscreenEffect failed: ${e.message}`);
-                }
-            }
+            // NOTE: No OffscreenEffect or blur added here. Blur isolation is
+            // achieved structurally — _blurWrapper is a completely separate
+            // chrome entry registered independently in the extension's enable().
+            // Hover repaints inside this dialog tree have zero shared ancestor
+            // with the blur actor, so they can never invalidate it.
         }
 
         vfunc_key_press_event(ev: Clutter.Event): boolean { return this._onKey(ev); }
@@ -975,19 +975,30 @@ export default class OrmicLauncherExtension extends Extension {
 
         this._dialog = new (LauncherDialog as any)() as LauncherDialog;
         this._dialog.setup(this);
+        this._overlay.add_child(this._dialog);
 
-        // ── Blur wrapper ──────────────────────────────────────────────────────
-        // Blur lives on this non-interactive sibling BEHIND the dialog — not on
-        // the dialog itself. This is the definitive fix for hover/child-repaint
-        // breaking the blur effect:
+        // ── Blur wrapper — separate chrome layer ──────────────────────────
         //
-        //   Shell.BlurEffect (BACKGROUND mode) re-samples whatever is behind the
-        //   actor every time that actor repaints. When blur is on the dialog,
-        //   any child hover-state change triggers child repaint → parent repaint
-        //   → blur re-samples at an incomplete frame → broken / missing blur.
+        // This follows the same pattern GNOME Shell uses for the overview and
+        // lock screen: the blur actor and the interactive content actor are
+        // registered as *independent* chrome entries so they live in entirely
+        // separate scene-graph branches.
         //
-        //   Moving blur to a childless sibling means child repaints inside the
-        //   dialog never touch the blur wrapper, so the effect stays stable.
+        // Why this matters:
+        //   Shell.BlurEffect (BACKGROUND mode) re-samples whatever is painted
+        //   behind its actor on every repaint of that actor or any ancestor.
+        //   When blur and dialog share a parent (_overlay), a GridItem or
+        //   CategoryTab hover-state change repaints the dialog → marks _overlay
+        //   dirty → compositor re-composites all children including _blurWrapper
+        //   → blur re-samples at an incomplete frame → visible glitch.
+        //
+        //   With two independent chrome entries there is NO shared ancestor
+        //   inside the Shell UI layer. A repaint anywhere inside _overlay/_dialog
+        //   cannot reach or invalidate _blurWrapper. The glitch becomes
+        //   architecturally impossible on all supported GNOME versions (45–50).
+        //
+        // Z-ordering: addChrome (lower) registers _blurWrapper first so it
+        // paints behind; addTopChrome (higher) registers _overlay on top.
         this._blurWrapper = new St.Widget({
             style_class: 'ormic-blur-wrapper',
             reactive: false,
@@ -998,11 +1009,16 @@ export default class OrmicLauncherExtension extends Extension {
         } catch (e: any) {
             console.error(`Ormic: blur wrapper error: ${e.message}`);
         }
-        // Add blur wrapper first so it sits behind the dialog in paint order
-        this._overlay.add_child(this._blurWrapper);
-        this._overlay.add_child(this._dialog);
+
+        // Register blur wrapper as its own chrome entry BELOW _overlay
+        Main.layoutManager.addChrome(this._blurWrapper, {
+            affectsStruts: false,
+            trackFullscreen: true,
+        });
 
         this._updateAccentColor();
+
+        // Register _overlay AFTER blur wrapper so it sits on top
         Main.layoutManager.addTopChrome(this._overlay);
 
         this._monId = Main.layoutManager.connect('monitors-changed', () => this._pos());
@@ -1057,20 +1073,24 @@ export default class OrmicLauncherExtension extends Extension {
             this._dialogAllocId = null;
         }
 
-        // Destroy blur wrapper before overlay
+        // Destroy blur wrapper — remove from its own chrome entry first
         if (this._blurWrapper) {
             this._blurWrapper.remove_all_transitions();
+            Main.layoutManager.removeChrome(this._blurWrapper);
             this._blurWrapper.destroy();
             this._blurWrapper = null;
         }
 
+        // Destroy overlay chrome entry
         if (this._overlay) {
             if (this._overlayCapturedId) this._overlay.disconnect(this._overlayCapturedId);
             if (this._overlayPressId) this._overlay.disconnect(this._overlayPressId);
             if (this._overlayKeyId) this._overlay.disconnect(this._overlayKeyId);
             this._overlay.remove_all_transitions();
+            Main.layoutManager.removeChrome(this._overlay);
             this._overlay.destroy();
         }
+
         if (this._dialog && this._dialogSizeId) {
             this._dialog.disconnect(this._dialogSizeId);
             this._dialogSizeId = null;
@@ -1120,17 +1140,21 @@ export default class OrmicLauncherExtension extends Extension {
         const dh = Math.min(700, mon.height * 0.72);
         const dx = mon.x + Math.floor((mon.width - dw) / 2);
         const dy = mon.y + Math.floor(mon.height * 0.14);
+
+        // _overlay covers the full monitor for click-outside-to-close detection
         this._overlay.set_position(mon.x, mon.y);
         this._overlay.set_size(mon.width, mon.height);
+
+        // _dialog is positioned relative to _overlay (its parent)
         this._dialog.set_position(dx - mon.x, dy - mon.y);
         this._dialog.set_width(dw);
         this._dialog.set_height(dh);
         this._dialog.min_width = dw;
         (this._dialog as any).max_width = dw;
 
-        // Keep blur wrapper exactly aligned with the dialog at all times
+        // _blurWrapper is a top-level chrome actor — position in stage coords
         if (this._blurWrapper) {
-            this._blurWrapper.set_position(dx - mon.x, dy - mon.y);
+            this._blurWrapper.set_position(dx, dy);
             this._blurWrapper.set_size(dw, dh);
         }
     }
@@ -1151,10 +1175,14 @@ export default class OrmicLauncherExtension extends Extension {
 
         this._visible = true;
         this._dialog.reset();
+
+        // Show both chrome actors
         this._overlay.show();
         this._blurWrapper?.show();
 
-        // Animate dialog + blur wrapper together so they move as one
+        // Animate dialog + blur wrapper together so they move as one unit.
+        // Even though they are separate chrome entries they share the same
+        // position/size so visually they are one surface.
         this._dialog.opacity = 0;
         this._dialog.translation_y = -20;
         if (this._blurWrapper) {
