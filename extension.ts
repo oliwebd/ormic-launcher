@@ -476,7 +476,7 @@ const LauncherDialog = GObject.registerClass(
                 reactive: true,
             });
             try {
-                promptCard.add_effect_with_name('blur', createBlurEffect(36, 0.88));
+                promptCard.add_effect_with_name('blur', createBlurEffect(36, 1.0));
             } catch (e: any) {
                 log(`Ormic Launcher: prompt card blur error: ${e.message}`);
             }

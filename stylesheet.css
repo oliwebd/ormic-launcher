@@ -9,7 +9,10 @@
 /* ── Blur wrapper — non-interactive sibling behind the dialog ────────────── */
 .ormic-blur-wrapper {
   border-radius: 14px;
-  background-color: transparent;
+  /* Minimal non-transparent fill so the BACKGROUND-mode blur shader
+     recognises this actor as a paintable surface worth sampling through.
+     Fully transparent → compositor may skip the blur pipeline entirely. */
+  background-color: rgba(0, 0, 0, 0.004);
 }
 
 /* ── Dialog card ─────────────────────────────────────────────────────────── */
@@ -366,7 +369,8 @@
   border-radius: 999px;
   background-color: transparent;
   border: 1px solid transparent;
-  transition-duration: 100ms;
+  /* No transition — instant state changes prevent multi-frame partial
+     redraws that trigger blur re-sampling glitches in the compositor. */
 }
 
 .ormic-category-tab:hover {
@@ -438,7 +442,6 @@
   caret-color: #FAB84B;
   height: 28px;
   selection-background-color: rgba(250, 184, 75, 0.25);
-  transition-duration: 80ms;
 }
 
 .ormic-editor-entry:focus {
@@ -455,7 +458,6 @@
   border-radius: 8px;
   font-size: 13px;
   font-weight: 600;
-  transition-duration: 80ms;
 }
 
 .ormic-editor-btn.cancel-btn {
@@ -494,7 +496,6 @@
   border-radius: 10px;
   background-color: transparent;
   border: 1px solid transparent;
-  transition-duration: 60ms;
   min-height: 48px;
 }
 
@@ -565,7 +566,6 @@
   caret-color: #FAB84B;
   height: 36px;
   selection-background-color: rgba(250, 184, 75, 0.25);
-  transition-duration: 150ms;
 }
 
 .ormic-prompt-entry:focus {
@@ -583,7 +583,6 @@
   border-radius: 10px;
   font-size: 14px;
   font-weight: 600;
-  transition-duration: 150ms;
 }
 
 .ormic-prompt-btn.cancel-btn {
