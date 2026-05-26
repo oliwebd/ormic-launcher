@@ -1,0 +1,46 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libglib2.0-dev zip
+        
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Build and Pack
+        run: make pack
+        
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ormic-launcher@github.com.zip
+          generate_release_notes: true
+          body: |
+            ## 🚀 Quick Install
+            Run the following command in your terminal to instantly download and install this release:
+            
+            ```bash
+            curl -L -o /tmp/ormic.zip https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/ormic-launcher@github.com.zip && gnome-extensions install /tmp/ormic.zip --force && rm /tmp/ormic.zip
+            ```
+            
+            *Note: After installing, you may need to restart GNOME Shell (Alt+F2 -> `r` -> Enter on X11, or log out and log back in on Wayland) and ensure the extension is enabled via the `gnome-extensions enable ormic-launcher@github.com` command or the Extension Manager app.*

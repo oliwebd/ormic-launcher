@@ -45,7 +45,7 @@ The extension uses a set of runtime shims to seamlessly adapt to changes in GNOM
 ### 2. Sizing & Grid Layout
 - **Dynamic Columns**: Displays items in a clean 7-column layout that scales to fit various display resolutions and aspect ratios.
 - **Visual Sizing**: Spaced generously with an aspect ratio and width designed to fit search results and the application library sidebar cleanly on both high-DPI displays and standard monitors.
-- **Glassmorphic Theme**: Relies on a customized translucent styling system with subtle gradients, active border highlights, and CSS animations.
+- **Glassmorphic Theme & Background Styles**: Relies on a customized translucent styling system with subtle gradients, active border highlights, and CSS animations. Includes a flexible background styling system supporting Blur, various transparency levels (20%, 30%, 50%), and Solid modes to optimize performance on low-end GPUs.
 
 ### 3. Mouse Interaction & Input Grabbing
 - **Input Grab Guard**: Uses GNOME Shell's `Main.pushModal` to lock input focus to the launcher. All interactive UI elements (`GridItem`, `CategoryTab`, `ResultRow`, etc.) are configured with `can_focus: false` to ensure that key-focus remains centered on the text entry at all times.

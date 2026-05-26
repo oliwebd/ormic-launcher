@@ -22,7 +22,7 @@ install: build
 	@echo "Extension installed successfully to $(DEST)!"
 	@echo "Please restart GNOME Shell (Alt+F2 -> r -> Enter on X11, or log out and log in on Wayland) and enable the extension."
 
-dev-install: install
+dev: install
 	@echo "Enabling extension..."
 	gnome-extensions enable $(UUID)
 	@echo "Tailing GNOME Shell logs for 'Ormic' (Ctrl+C to stop)..."

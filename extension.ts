@@ -1156,14 +1156,30 @@ export default class OrmicLauncherExtension extends Extension {
         // _dialog is positioned relative to _overlay (its parent)
         this._dialog.set_position(dx - mon.x, dy - mon.y);
         this._dialog.set_width(dw);
-        this._dialog.set_height(dh);
+        
+        // Use inline style to enforce maximum height while allowing it to shrink to fit content
+        this._dialog.style = `max-height: ${dh}px;`;
+        
         this._dialog.min_width = dw;
         (this._dialog as any).max_width = dw;
 
         // _blurWrapper is a top-level chrome actor — position in stage coords
         if (this._blurWrapper) {
             this._blurWrapper.set_position(dx, dy);
-            this._blurWrapper.set_size(dw, dh);
+            this._blurWrapper.set_size(dw, this._dialog.height || dh);
+        }
+
+        if (this._dialog && this._dialogAllocId) {
+            this._dialog.disconnect(this._dialogAllocId);
+            this._dialogAllocId = null;
+        }
+
+        if (this._dialog) {
+            this._dialogAllocId = this._dialog.connect('notify::height', () => {
+                if (this._blurWrapper && this._dialog) {
+                    this._blurWrapper.set_size(this._dialog.width, this._dialog.height);
+                }
+            });
         }
     }
 
@@ -1248,23 +1264,34 @@ export default class OrmicLauncherExtension extends Extension {
         easeActor(dl, {
             opacity: 0, translation_y: -14, duration: 120, mode: Clutter.AnimationMode.EASE_IN_QUAD,
             onComplete: () => {
-                if (ov && !(ov as any).is_finalized?.() && dl && !(dl as any).is_finalized?.()) {
-                    ov.hide();
+                if (dl && !(dl as any).is_finalized?.()) {
                     dl.opacity = 255;
                     dl.translation_y = 0;
+                }
+            },
+        });
+
+        if (bw) {
+            easeActor(bw, { 
+                opacity: 0, translation_y: -14, duration: 120, mode: Clutter.AnimationMode.EASE_IN_QUAD,
+                onComplete: () => {
                     if (bw && !(bw as any).is_finalized?.()) {
                         bw.hide();
                         bw.opacity = 255;
                         bw.translation_y = 0;
                     }
                 }
-            },
+            });
+        }
+
+        easeActor(ov, { 
+            opacity: 0, duration: 120, mode: Clutter.AnimationMode.EASE_IN_QUAD,
+            onComplete: () => {
+                if (ov && !(ov as any).is_finalized?.()) {
+                    ov.hide();
+                }
+            }
         });
-
-        if (bw)
-            easeActor(bw, { opacity: 0, translation_y: -14, duration: 120, mode: Clutter.AnimationMode.EASE_IN_QUAD });
-
-        easeActor(ov, { opacity: 0, duration: 120, mode: Clutter.AnimationMode.EASE_IN_QUAD });
     }
 
     _setClickGuard() {
