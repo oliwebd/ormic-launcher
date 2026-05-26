@@ -52,6 +52,12 @@
       <summary>Show search bar by default</summary>
     </key>
 
+    <key name="background-style" type="s">
+      <default>'blur'</default>
+      <summary>Background Style</summary>
+      <description>Style of the dialog background (blur, transparent, or solid).</description>
+    </key>
+
     <key name="accent-color" type="s">
       <default>'gnome'</default>
       <summary>Accent color for the theme</summary>

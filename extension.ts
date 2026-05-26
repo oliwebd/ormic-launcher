@@ -896,6 +896,7 @@ export default class OrmicLauncherExtension extends Extension {
     _cfgId!: number | null;
     _accentColorId!: number | null;
     _sysAccentId!: number | null;
+    _bgSettingId!: number | null;
     _focusId!: number | null;
     _overlayCapturedId!: number | null;
     _overlayPressId!: number | null;
@@ -1050,6 +1051,9 @@ export default class OrmicLauncherExtension extends Extension {
 
         this._cfgId = this._settings.connect('changed::show-indicator', () => this._syncInd());
         this._syncInd();
+
+        this._bgSettingId = this._settings.connect('changed::background-style', () => this._syncBackground());
+        this._syncBackground();
     }
 
     disable() {
@@ -1060,6 +1064,10 @@ export default class OrmicLauncherExtension extends Extension {
         if (this._interfaceSettings && this._sysAccentId) {
             this._interfaceSettings.disconnect(this._sysAccentId);
             this._sysAccentId = null;
+        }
+        if (this._bgSettingId) {
+            this._settings.disconnect(this._bgSettingId);
+            this._bgSettingId = null;
         }
         this._interfaceSettings = null;
         if (this._keyId) { global.stage.disconnect(this._keyId); this._keyId = null; }
@@ -1178,7 +1186,9 @@ export default class OrmicLauncherExtension extends Extension {
 
         // Show both chrome actors
         this._overlay.show();
-        this._blurWrapper?.show();
+        if (this._settings.get_string('background-style') === 'blur') {
+            this._blurWrapper?.show();
+        }
 
         // Animate dialog + blur wrapper together so they move as one unit.
         // Even though they are separate chrome entries they share the same
@@ -1298,5 +1308,28 @@ export default class OrmicLauncherExtension extends Extension {
             this._overlay!.remove_style_class_name(`ormic-accent-${color}`);
         });
         this._overlay.add_style_class_name(`ormic-accent-${colorName}`);
+    }
+
+    _syncBackground() {
+        if (!this._dialog) return;
+
+        const style = this._settings.get_string('background-style') || 'blur';
+        
+        // Update dialog CSS classes
+        const classes = ['ormic-bg-blur', 'ormic-bg-transparent-20', 'ormic-bg-transparent-30', 'ormic-bg-transparent-50', 'ormic-bg-solid'];
+        classes.forEach(c => this._dialog!.remove_style_class_name(c));
+        this._dialog.add_style_class_name(`ormic-bg-${style}`);
+
+        if (!this._blurWrapper) return;
+        if (!this._visible) return; // Only sync immediately if visible. Otherwise show() handles it.
+        
+        if (style === 'blur') {
+            this._blurWrapper.show();
+            easeActor(this._blurWrapper, { opacity: 255, duration: 150, mode: Clutter.AnimationMode.EASE_OUT_QUAD });
+        } else {
+            easeActor(this._blurWrapper, { opacity: 0, duration: 150, mode: Clutter.AnimationMode.EASE_IN_QUAD, onComplete: () => {
+                this._blurWrapper?.hide();
+            }});
+        }
     }
 }

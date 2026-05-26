@@ -120,6 +120,35 @@ export default class OrmicLauncherPrefs extends ExtensionPreferences {
         s.bind('show-groups-sidebar', gsRow, 'active', Gio.SettingsBindFlags.DEFAULT);
         kbGroup.add(gsRow);
 
+        // Background Style
+        const bgRow = new Adw.ComboRow({
+            title: _('Background Style'),
+            subtitle: _('Choose the visual style of the launcher background'),
+            model: new Gtk.StringList({
+                strings: [
+                    _('Blur (Glassmorphic)'),
+                    _('Transparent (20%)'),
+                    _('Transparent (30%)'),
+                    _('Transparent (50%)'),
+                    _('Solid / GNOME Default'),
+                ],
+            }),
+        });
+        const bgStyles = ['blur', 'transparent-20', 'transparent-30', 'transparent-50', 'solid'];
+        const refreshBg = () => {
+            const val = s.get_string('background-style') || 'blur';
+            const idx = bgStyles.indexOf(val);
+            if (idx !== -1) bgRow.set_selected(idx);
+        };
+        refreshBg();
+        bgRow.connect('notify::selected', () => {
+            const idx = bgRow.get_selected();
+            if (idx >= 0 && idx < bgStyles.length)
+                s.set_string('background-style', bgStyles[idx]);
+        });
+        s.connect('changed::background-style', refreshBg);
+        kbGroup.add(bgRow);
+
         // Accent Color
         const accentRow = new Adw.ComboRow({
             title: _('Accent Color'),

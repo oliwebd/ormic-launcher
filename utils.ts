@@ -68,7 +68,11 @@ export function createBlurEffect(
 ): Shell.BlurEffect {
   const effectParams: any = { brightness, mode };
   if (IS_50_PLUS) {
-    effectParams.radius = sigma * 2.0;
+    // GNOME 50 removed sigma in favor of radius.
+    // Extremely high radius values (e.g. sigma 36 -> radius 72) without a native
+    // downscale property will completely choke the Cogl pipeline.
+    // Capping the radius drastically improves performance.
+    effectParams.radius = Math.min(sigma, 14.0);
   } else {
     effectParams.sigma = sigma;
   }

@@ -17,22 +17,21 @@
 
 /* ── Dialog card ─────────────────────────────────────────────────────────── */
 .ormic-dialog {
-  background-color: rgba(14, 14, 20, 0.48);
   border: 1px solid rgba(255, 255, 255, 0.13);
   border-radius: 14px;
   padding: 0;
-  spacing: 0;
+  /* spacing: 0; */
 }
 
 /* ── Search row ──────────────────────────────────────────────────────────── */
 .ormic-search-row {
   padding: 14px 14px 10px 14px;
-  spacing: 14px;
+  /* spacing: 14px; */
 }
 
 .ormic-search-icon {
   color: rgba(255, 255, 255, 0.38);
-  icon-size: 18px;
+  /* icon-size: 18px; */
   margin-top: 1px;
 }
 
@@ -46,8 +45,8 @@
   font-weight: 300;
   caret-color: #FAB84B;
   padding: 0;
-  height: 32px;
-  selection-background-color: rgba(250, 184, 75, 0.25);
+  /* height: 32px; */
+  /* selection-background-color: rgba(250, 184, 75, 0.25); */
 }
 
 .ormic-entry:focus {
@@ -81,7 +80,7 @@
 
 /* ── Separators ──────────────────────────────────────────────────────────── */
 .ormic-sep {
-  height: 1px;
+  /* height: 1px; */
   background-color: rgba(255, 255, 255, 0.065);
 }
 
@@ -92,7 +91,6 @@
 
 .ormic-scroll StScrollBar {
   opacity: 0;
-  transition-duration: 200ms;
 }
 
 .ormic-scroll:hover StScrollBar {
@@ -101,7 +99,7 @@
 
 .ormic-rbox {
   padding: 4px 0;
-  spacing: 0;
+  /* spacing: 0; */
 }
 
 .ormic-result {
@@ -120,7 +118,7 @@
 }
 
 .ormic-result-box {
-  spacing: 0;
+  /* spacing: 0; */
 }
 
 /* ── Left accent bar ─────────────────────────────────────────────────────── */
@@ -138,7 +136,7 @@
 /* ── Icon bins ───────────────────────────────────────────────────────────── */
 .ormic-icon-bin {
   width: 42px;
-  height: 42px;
+  /* height: 42px; */
   border-radius: 9px;
   background-color: rgba(255, 255, 255, 0.04);
   margin: 4px 14px 4px 10px;
@@ -147,12 +145,12 @@
 
 .ormic-icon-sym {
   color: rgba(255, 255, 255, 0.70);
-  icon-size: 38px;
+  /* icon-size: 38px; */
 }
 
 /* ── Text column ─────────────────────────────────────────────────────────── */
 .ormic-text-col {
-  spacing: 2px;
+  /* spacing: 2px; */
   padding: 0;
 }
 
@@ -178,13 +176,13 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 999px;
   padding: 3px 9px 3px 7px;
-  spacing: 5px;
+  /* spacing: 5px; */
   margin-right: 12px;
 }
 
 .ormic-cat-icon {
   color: rgba(255, 255, 255, 0.30);
-  icon-size: 11px;
+  /* icon-size: 11px; */
 }
 
 .ormic-cat-label {
@@ -241,7 +239,7 @@
 }
 
 .ormic-header-control {
-  spacing: 6px;
+  /* spacing: 6px; */
 }
 
 .ormic-header-btn {
@@ -272,7 +270,6 @@
 
 .ormic-grid-scroll StScrollBar {
   opacity: 0;
-  transition-duration: 200ms;
 }
 
 .ormic-grid-scroll:hover StScrollBar {
@@ -281,11 +278,11 @@
 
 .ormic-grid-box {
   padding: 14px 26px 18px 18px;
-  spacing: 14px;
+  /* spacing: 14px; */
 }
 
 .ormic-grid-row {
-  spacing: 6px;
+  /* spacing: 6px; */
 }
 
 .ormic-grid-empty {
@@ -302,8 +299,8 @@
   background-color: transparent;
   border: 1px solid transparent;
   width: 88px;
-  height: 88px;
-  height: 88px;
+  /* height: 88px; */
+  /* height: 88px; */
 }
 
 .ormic-grid-item:hover {
@@ -317,22 +314,20 @@
 }
 
 .ormic-grid-item-box {
-  spacing: 6px;
+  /* spacing: 6px; */
 }
 
 .ormic-grid-icon-bin {
   width: 48px;
-  height: 48px;
+  /* height: 48px; */
   border-radius: 10px;
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.09) 0%, rgba(255, 255, 255, 0.025) 100%);
   padding: 3px;
   margin-bottom: 2px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
 }
 
 .ormic-grid-icon-sym {
   color: rgba(255, 255, 255, 0.70);
-  icon-size: 48px;
+  /* icon-size: 48px; */
 }
 
 .ormic-grid-label {
@@ -353,7 +348,7 @@
 .ormic-tabs-scroll StScrollBar StButton#vhandle {
   opacity: 0;
   width: 0;
-  height: 0;
+  /* height: 0; */
   padding: 0;
   margin: 0;
 }
@@ -361,7 +356,7 @@
 /* ── Category Tabs ───────────────────────────────────────────────────────── */
 .ormic-tabs-box {
   padding: 6px 12px;
-  spacing: 4px;
+  /* spacing: 4px; */
 }
 
 .ormic-category-tab {
@@ -383,12 +378,12 @@
 }
 
 .ormic-category-tab-box {
-  spacing: 8px;
+  /* spacing: 8px; */
 }
 
 .ormic-category-tab-icon {
   color: rgba(255, 255, 255, 0.45);
-  icon-size: 15px;
+  /* icon-size: 15px; */
 }
 
 .ormic-category-tab:hover .ormic-category-tab-icon {
@@ -417,11 +412,11 @@
 /* ── Group Editor ────────────────────────────────────────────────────────── */
 .ormic-editor-box {
   padding: 14px 20px;
-  spacing: 12px;
+  /* spacing: 12px; */
 }
 
 .ormic-editor-header {
-  spacing: 12px;
+  /* spacing: 12px; */
   padding-bottom: 10px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
@@ -440,8 +435,8 @@
   padding: 6px 12px;
   font-size: 14px;
   caret-color: #FAB84B;
-  height: 28px;
-  selection-background-color: rgba(250, 184, 75, 0.25);
+  /* height: 28px; */
+  /* selection-background-color: rgba(250, 184, 75, 0.25); */
 }
 
 .ormic-editor-entry:focus {
@@ -450,7 +445,7 @@
 }
 
 .ormic-editor-btn-box {
-  spacing: 8px;
+  /* spacing: 8px; */
 }
 
 .ormic-editor-btn {
@@ -487,7 +482,7 @@
 }
 
 .ormic-editor-apps {
-  spacing: 4px;
+  /* spacing: 4px; */
   padding: 4px 0;
 }
 
@@ -509,12 +504,12 @@
 }
 
 .ormic-edit-row-box {
-  spacing: 12px;
+  /* spacing: 12px; */
 }
 
 .ormic-edit-icon-bin {
   width: 36px;
-  height: 36px;
+  /* height: 36px; */
   border-radius: 8px;
   background-color: rgba(255, 255, 255, 0.03);
   padding: 2px;
@@ -527,7 +522,7 @@
 
 .ormic-edit-checkbox {
   color: rgba(255, 255, 255, 0.25);
-  icon-size: 16px;
+  /* icon-size: 16px; */
 }
 
 .ormic-edit-row.selected .ormic-edit-checkbox {
@@ -545,7 +540,7 @@
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 20px;
   padding: 32px;
-  spacing: 24px;
+  /* spacing: 24px; */
   min-width: 360px;
 }
 
@@ -564,8 +559,8 @@
   padding: 12px 16px;
   font-size: 15px;
   caret-color: #FAB84B;
-  height: 36px;
-  selection-background-color: rgba(250, 184, 75, 0.25);
+  /* height: 36px; */
+  /* selection-background-color: rgba(250, 184, 75, 0.25); */
 }
 
 .ormic-prompt-entry:focus {
@@ -574,7 +569,7 @@
 }
 
 .ormic-prompt-btns {
-  spacing: 12px;
+  /* spacing: 12px; */
   margin-top: 8px;
 }
 
@@ -620,12 +615,12 @@
 /* ── Tip bar ─────────────────────────────────────────────────────────────── */
 .ormic-tips {
   padding: 10px 16px;
-  spacing: 12px;
+  /* spacing: 12px; */
   background-color: rgba(0, 0, 0, 0.08);
 }
 
 .ormic-tip {
-  spacing: 3px;
+  /* spacing: 3px; */
 }
 
 .ormic-tip-key {
@@ -675,7 +670,6 @@
 
 .ormic-editor-scroll StScrollBar {
   opacity: 0;
-  transition-duration: 200ms;
 }
 
 .ormic-editor-scroll:hover StScrollBar {
@@ -690,7 +684,7 @@
 /* ── Yellow ──────────────────────────────────────────────────────────────── */
 .ormic-accent-yellow .ormic-entry {
   caret-color: #FAB84B;
-  selection-background-color: rgba(250, 184, 75, 0.25);
+  /* selection-background-color: rgba(250, 184, 75, 0.25); */
 }
 
 .ormic-accent-yellow .ormic-result.selected {
@@ -737,7 +731,7 @@
 
 .ormic-accent-yellow .ormic-editor-entry {
   caret-color: #FAB84B;
-  selection-background-color: rgba(250, 184, 75, 0.25);
+  /* selection-background-color: rgba(250, 184, 75, 0.25); */
 }
 
 .ormic-accent-yellow .ormic-editor-entry:focus {
@@ -765,7 +759,7 @@
 
 .ormic-accent-yellow .ormic-prompt-entry {
   caret-color: #FAB84B;
-  selection-background-color: rgba(250, 184, 75, 0.25);
+  /* selection-background-color: rgba(250, 184, 75, 0.25); */
 }
 
 .ormic-accent-yellow .ormic-prompt-entry:focus {
@@ -795,7 +789,7 @@
 /* ── Blue ──────────────────────────────────────────────────────────────── */
 .ormic-accent-blue .ormic-entry {
   caret-color: #3B82F6;
-  selection-background-color: rgba(59, 130, 246, 0.25);
+  /* selection-background-color: rgba(59, 130, 246, 0.25); */
 }
 
 .ormic-accent-blue .ormic-result.selected {
@@ -842,7 +836,7 @@
 
 .ormic-accent-blue .ormic-editor-entry {
   caret-color: #3B82F6;
-  selection-background-color: rgba(59, 130, 246, 0.25);
+  /* selection-background-color: rgba(59, 130, 246, 0.25); */
 }
 
 .ormic-accent-blue .ormic-editor-entry:focus {
@@ -870,7 +864,7 @@
 
 .ormic-accent-blue .ormic-prompt-entry {
   caret-color: #3B82F6;
-  selection-background-color: rgba(59, 130, 246, 0.25);
+  /* selection-background-color: rgba(59, 130, 246, 0.25); */
 }
 
 .ormic-accent-blue .ormic-prompt-entry:focus {
@@ -900,7 +894,7 @@
 /* ── Purple ──────────────────────────────────────────────────────────────── */
 .ormic-accent-purple .ormic-entry {
   caret-color: #8B5CF6;
-  selection-background-color: rgba(139, 92, 246, 0.25);
+  /* selection-background-color: rgba(139, 92, 246, 0.25); */
 }
 
 .ormic-accent-purple .ormic-result.selected {
@@ -947,7 +941,7 @@
 
 .ormic-accent-purple .ormic-editor-entry {
   caret-color: #8B5CF6;
-  selection-background-color: rgba(139, 92, 246, 0.25);
+  /* selection-background-color: rgba(139, 92, 246, 0.25); */
 }
 
 .ormic-accent-purple .ormic-editor-entry:focus {
@@ -975,7 +969,7 @@
 
 .ormic-accent-purple .ormic-prompt-entry {
   caret-color: #8B5CF6;
-  selection-background-color: rgba(139, 92, 246, 0.25);
+  /* selection-background-color: rgba(139, 92, 246, 0.25); */
 }
 
 .ormic-accent-purple .ormic-prompt-entry:focus {
@@ -1005,7 +999,7 @@
 /* ── Red ──────────────────────────────────────────────────────────────── */
 .ormic-accent-red .ormic-entry {
   caret-color: #EF4444;
-  selection-background-color: rgba(239, 68, 68, 0.25);
+  /* selection-background-color: rgba(239, 68, 68, 0.25); */
 }
 
 .ormic-accent-red .ormic-result.selected {
@@ -1052,7 +1046,7 @@
 
 .ormic-accent-red .ormic-editor-entry {
   caret-color: #EF4444;
-  selection-background-color: rgba(239, 68, 68, 0.25);
+  /* selection-background-color: rgba(239, 68, 68, 0.25); */
 }
 
 .ormic-accent-red .ormic-editor-entry:focus {
@@ -1080,7 +1074,7 @@
 
 .ormic-accent-red .ormic-prompt-entry {
   caret-color: #EF4444;
-  selection-background-color: rgba(239, 68, 68, 0.25);
+  /* selection-background-color: rgba(239, 68, 68, 0.25); */
 }
 
 .ormic-accent-red .ormic-prompt-entry:focus {
@@ -1110,7 +1104,7 @@
 /* ── Green ──────────────────────────────────────────────────────────────── */
 .ormic-accent-green .ormic-entry {
   caret-color: #10B981;
-  selection-background-color: rgba(16, 185, 129, 0.25);
+  /* selection-background-color: rgba(16, 185, 129, 0.25); */
 }
 
 .ormic-accent-green .ormic-result.selected {
@@ -1157,7 +1151,7 @@
 
 .ormic-accent-green .ormic-editor-entry {
   caret-color: #10B981;
-  selection-background-color: rgba(16, 185, 129, 0.25);
+  /* selection-background-color: rgba(16, 185, 129, 0.25); */
 }
 
 .ormic-accent-green .ormic-editor-entry:focus {
@@ -1185,7 +1179,7 @@
 
 .ormic-accent-green .ormic-prompt-entry {
   caret-color: #10B981;
-  selection-background-color: rgba(16, 185, 129, 0.25);
+  /* selection-background-color: rgba(16, 185, 129, 0.25); */
 }
 
 .ormic-accent-green .ormic-prompt-entry:focus {
@@ -1215,7 +1209,7 @@
 /* ── Pink ──────────────────────────────────────────────────────────────── */
 .ormic-accent-pink .ormic-entry {
   caret-color: #EC4899;
-  selection-background-color: rgba(236, 72, 153, 0.25);
+  /* selection-background-color: rgba(236, 72, 153, 0.25); */
 }
 
 .ormic-accent-pink .ormic-result.selected {
@@ -1262,7 +1256,7 @@
 
 .ormic-accent-pink .ormic-editor-entry {
   caret-color: #EC4899;
-  selection-background-color: rgba(236, 72, 153, 0.25);
+  /* selection-background-color: rgba(236, 72, 153, 0.25); */
 }
 
 .ormic-accent-pink .ormic-editor-entry:focus {
@@ -1290,7 +1284,7 @@
 
 .ormic-accent-pink .ormic-prompt-entry {
   caret-color: #EC4899;
-  selection-background-color: rgba(236, 72, 153, 0.25);
+  /* selection-background-color: rgba(236, 72, 153, 0.25); */
 }
 
 .ormic-accent-pink .ormic-prompt-entry:focus {
@@ -1320,7 +1314,7 @@
 /* ── Teal ──────────────────────────────────────────────────────────────── */
 .ormic-accent-teal .ormic-entry {
   caret-color: #14B8A6;
-  selection-background-color: rgba(20, 184, 166, 0.25);
+  /* selection-background-color: rgba(20, 184, 166, 0.25); */
 }
 
 .ormic-accent-teal .ormic-result.selected {
@@ -1367,7 +1361,7 @@
 
 .ormic-accent-teal .ormic-editor-entry {
   caret-color: #14B8A6;
-  selection-background-color: rgba(20, 184, 166, 0.25);
+  /* selection-background-color: rgba(20, 184, 166, 0.25); */
 }
 
 .ormic-accent-teal .ormic-editor-entry:focus {
@@ -1395,7 +1389,7 @@
 
 .ormic-accent-teal .ormic-prompt-entry {
   caret-color: #14B8A6;
-  selection-background-color: rgba(20, 184, 166, 0.25);
+  /* selection-background-color: rgba(20, 184, 166, 0.25); */
 }
 
 .ormic-accent-teal .ormic-prompt-entry:focus {
@@ -1425,7 +1419,7 @@
 /* ── Orange ──────────────────────────────────────────────────────────────── */
 .ormic-accent-orange .ormic-entry {
   caret-color: #F97316;
-  selection-background-color: rgba(249, 115, 22, 0.25);
+  /* selection-background-color: rgba(249, 115, 22, 0.25); */
 }
 
 .ormic-accent-orange .ormic-result.selected {
@@ -1472,7 +1466,7 @@
 
 .ormic-accent-orange .ormic-editor-entry {
   caret-color: #F97316;
-  selection-background-color: rgba(249, 115, 22, 0.25);
+  /* selection-background-color: rgba(249, 115, 22, 0.25); */
 }
 
 .ormic-accent-orange .ormic-editor-entry:focus {
@@ -1500,7 +1494,7 @@
 
 .ormic-accent-orange .ormic-prompt-entry {
   caret-color: #F97316;
-  selection-background-color: rgba(249, 115, 22, 0.25);
+  /* selection-background-color: rgba(249, 115, 22, 0.25); */
 }
 
 .ormic-accent-orange .ormic-prompt-entry:focus {
@@ -1530,7 +1524,7 @@
 /* ── Slate ──────────────────────────────────────────────────────────────── */
 .ormic-accent-slate .ormic-entry {
   caret-color: #64748B;
-  selection-background-color: rgba(100, 116, 139, 0.25);
+  /* selection-background-color: rgba(100, 116, 139, 0.25); */
 }
 
 .ormic-accent-slate .ormic-result.selected {
@@ -1577,7 +1571,7 @@
 
 .ormic-accent-slate .ormic-editor-entry {
   caret-color: #64748B;
-  selection-background-color: rgba(100, 116, 139, 0.25);
+  /* selection-background-color: rgba(100, 116, 139, 0.25); */
 }
 
 .ormic-accent-slate .ormic-editor-entry:focus {
@@ -1605,7 +1599,7 @@
 
 .ormic-accent-slate .ormic-prompt-entry {
   caret-color: #64748B;
-  selection-background-color: rgba(100, 116, 139, 0.25);
+  /* selection-background-color: rgba(100, 116, 139, 0.25); */
 }
 
 .ormic-accent-slate .ormic-prompt-entry:focus {
@@ -1635,11 +1629,34 @@
 /* ── Brown ──────────────────────────────────────────────────────────────── */
 .ormic-accent-brown .ormic-entry {
   caret-color: #A16207;
-  selection-background-color: rgba(161, 98, 7, 0.25);
+  /* selection-background-color: rgba(161, 98, 7, 0.25); */
 }
 
 .ormic-accent-brown .ormic-result.selected {
   background-color: rgba(161, 98, 7, 0.09);
+}
+
+.ormic-accent-brown {
+  --ormic-accent: #A16207;
+  --ormic-accent-hover: #CA8A04;
+  --ormic-accent-active: #854D0E;
+}
+
+/* ── Background Style Modifiers ──────────────────────────────────────────── */
+.ormic-bg-blur {
+  background-color: rgba(14, 14, 20, 0.48);
+}
+.ormic-bg-transparent-20 {
+  background-color: rgba(14, 14, 20, 0.20);
+}
+.ormic-bg-transparent-30 {
+  background-color: rgba(14, 14, 20, 0.30);
+}
+.ormic-bg-transparent-50 {
+  background-color: rgba(14, 14, 20, 0.50);
+}
+.ormic-bg-solid {
+  background-color: rgb(36, 36, 36);
 }
 
 .ormic-accent-brown .ormic-result.selected .ormic-accent-bar {
@@ -1682,7 +1699,7 @@
 
 .ormic-accent-brown .ormic-editor-entry {
   caret-color: #A16207;
-  selection-background-color: rgba(161, 98, 7, 0.25);
+  /* selection-background-color: rgba(161, 98, 7, 0.25); */
 }
 
 .ormic-accent-brown .ormic-editor-entry:focus {
@@ -1710,7 +1727,7 @@
 
 .ormic-accent-brown .ormic-prompt-entry {
   caret-color: #A16207;
-  selection-background-color: rgba(161, 98, 7, 0.25);
+  /* selection-background-color: rgba(161, 98, 7, 0.25); */
 }
 
 .ormic-accent-brown .ormic-prompt-entry:focus {
