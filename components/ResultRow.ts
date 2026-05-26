@@ -38,7 +38,7 @@ export const ResultRow = GObject.registerClass({
             x_expand: true,
         });
 
-        this._accentBar = new St.Widget({ style_class: 'ormic-accent-bar' });
+        this._accentBar = new St.Widget({ name: 'ormic-accent-bar', style_class: 'ormic-accent-bar' });
         mainBox.add_child(this._accentBar);
 
         const iconBin = new St.Bin({ style_class: 'ormic-icon-bin' });

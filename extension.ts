@@ -394,7 +394,7 @@ const LauncherDialog = GObject.registerClass(
                 }
                 return Clutter.EVENT_PROPAGATE;
             });
-            this._vsep = new St.Widget({ style_class: 'ormic-vsep', y_expand: true });
+            this._vsep = new St.Widget({ name: 'ormic-vsep', style_class: 'ormic-vsep', y_expand: true });
             this._vsep.hide();
 
             // ── Group Editor Screen ───────────────────────────────────────
@@ -538,7 +538,7 @@ const LauncherDialog = GObject.registerClass(
 
             // Assemble everything
             this.add_child(this._entryBox);
-            this.add_child(new St.Widget({ style_class: 'ormic-sep', x_expand: true }));
+            this.add_child(new St.Widget({ name: 'ormic-sep-tabs', style_class: 'ormic-sep', x_expand: true }));
 
             this._tabsBox.orientation = Clutter.Orientation.HORIZONTAL;
             this._tabsBox.x_expand = true;
@@ -576,7 +576,7 @@ const LauncherDialog = GObject.registerClass(
             contentContainer.add_child(rightPanel);
             this.add_child(contentContainer);
 
-            this.add_child(new St.Widget({ style_class: 'ormic-sep', x_expand: true }));
+            this.add_child(new St.Widget({ name: 'ormic-sep-bottom', style_class: 'ormic-sep', x_expand: true }));
             this.add_child(this._tips);
 
             // eslint-disable-next-line @typescript-eslint/no-this-alias
@@ -917,6 +917,7 @@ export default class OrmicLauncherExtension extends Extension {
         this._visible = false; this._indicator = null; this._cfgId = null; this._accentColorId = null; this._focusId = null;
 
         this._overlay = new St.Widget({
+            name: 'ormic-overlay',
             style_class: 'ormic-overlay', reactive: true, visible: false,
             x: 0, y: 0, opacity: 0,
         });
@@ -1001,6 +1002,7 @@ export default class OrmicLauncherExtension extends Extension {
         // Z-ordering: addChrome (lower) registers _blurWrapper first so it
         // paints behind; addTopChrome (higher) registers _overlay on top.
         this._blurWrapper = new St.Widget({
+            name: 'ormic-blur-wrapper',
             style_class: 'ormic-blur-wrapper',
             reactive: false,
             visible: false,
