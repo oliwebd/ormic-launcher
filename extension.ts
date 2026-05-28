@@ -244,6 +244,7 @@ const LauncherDialog = GObject.registerClass(
 
             // ── Tip bar ───────────────────────────────────────────────────
             this._tips = new St.BoxLayout({ style_class: 'ormic-tips', x_expand: true });
+            (this._tips as any).spacing = 12;
             for (const [k, v] of [
                 ['↑↓', _('Navigate')], ['↵', _('Open')], ['Tab', _('Complete')],
                 ['Esc', _('Close')], ['>', _('Command')],

@@ -339,6 +339,10 @@
   /* spacing: 4px; */
 }
 
+.ormic-category-tab-box {
+  spacing: 6px;
+}
+
 .ormic-category-tab {
   padding: 7px 13px;
   border-radius: 999px;
@@ -583,7 +587,7 @@
 /* ── Tip bar ─────────────────────────────────────────────────────────────── */
 .ormic-tips {
   padding: 10px 16px;
-  /* spacing: 12px; */
+  spacing: 12px;
   background-color: rgba(0, 0, 0, 0.08);
 }
 

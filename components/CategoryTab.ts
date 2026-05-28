@@ -36,6 +36,7 @@ export const CategoryTab = GObject.registerClass({
             x_expand: true,
             y_align: Clutter.ActorAlign.CENTER,
         });
+        (box as any).spacing = 6;
 
         const icon = new St.Icon({
             icon_name: iconName,
