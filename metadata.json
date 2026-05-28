@@ -1,6 +1,6 @@
 {
   "name": "Ormic Launcher",
-  "description": "A modular floating app launcher for GNOME Shell — search apps, calculate, run commands and search the web. Inspired by the pop-os/launcher architecture.",
+  "description": "A floating app launcher and application grid system designed for GNOME Shell. This extension provides a fully adaptive, glassmorphic layout that seamlessly integrates into your desktop environment, offering highly responsive mouse and keyboard event handling for quick navigation.\n\nKey features include:\n* Smooth, adaptive glassmorphic user interface\n* Customizable application grouping for better organization\n* Full keyboard and mouse navigation support\n* Quick search capabilities to launch applications instantly",
   "uuid": "ormic-launcher@github.com",
   "version-name": "0.1.2",
   "shell-version": [
@@ -10,5 +10,6 @@
     "49",
     "50"
   ],
-  "settings-schema": "org.gnome.shell.extensions.ormic-launcher"
+  "settings-schema": "org.gnome.shell.extensions.ormic-launcher",
+  "url": "https://github.com/oliwebbd/ormic-launcher"
 }
