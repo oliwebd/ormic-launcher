@@ -54,13 +54,9 @@ export const CategoryTab = GObject.registerClass({
 
         this.set_child(box);
 
-        this.connect('button-release-event', (actor, ev) => {
-            if (ev.get_button() === 1) {
-                dbg('CategoryTab', `clicked on ${categoryName}`);
-                this.emit('tab-selected');
-                return Clutter.EVENT_STOP;
-            }
-            return Clutter.EVENT_PROPAGATE;
+        this.connect('clicked', () => {
+            dbg('CategoryTab', `clicked on ${categoryName}`);
+            this.emit('tab-selected');
         });
     }
 

@@ -54,13 +54,9 @@ export const GridItem = GObject.registerClass(
             this.set_child(box);
 
             // ── Connect input events once ────────────────────────────────
-            this.connect('button-release-event', (_actor, ev) => {
-                if (ev.get_button() === 1) {
-                    dbg('GridItem', `clicked on ${this._result?.name}`);
-                    this._activateCb?.();
-                    return Clutter.EVENT_STOP;
-                }
-                return Clutter.EVENT_PROPAGATE;
+            this.connect('clicked', () => {
+                dbg('GridItem', `clicked on ${this._result?.name}`);
+                this._activateCb?.();
             });
 
             this.connect('notify::hover', () => {

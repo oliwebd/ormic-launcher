@@ -220,12 +220,8 @@ const LauncherDialog = GObject.registerClass(
                 reactive: true, track_hover: true, can_focus: false,
                 y_align: Clutter.ActorAlign.CENTER,
             });
-            closeBtn.connect('button-release-event', (actor, ev) => {
-                if (ev.get_button() === 1) {
-                    this._ext.hide();
-                    return Clutter.EVENT_STOP;
-                }
-                return Clutter.EVENT_PROPAGATE;
+            closeBtn.connect('clicked', () => {
+                this._ext.hide();
             });
             this._entryBox.add_child(closeBtn);
 
@@ -283,12 +279,8 @@ const LauncherDialog = GObject.registerClass(
                 style_class: 'ormic-header-btn edit-btn',
                 reactive: true, track_hover: true,
             });
-            this._editBtn.connect('button-release-event', (actor, ev) => {
-                if (ev.get_button() === 1) {
-                    this._startEditing();
-                    return Clutter.EVENT_STOP;
-                }
-                return Clutter.EVENT_PROPAGATE;
+            this._editBtn.connect('clicked', () => {
+                this._startEditing();
             });
             controlBox.add_child(this._editBtn);
 
@@ -297,12 +289,8 @@ const LauncherDialog = GObject.registerClass(
                 style_class: 'ormic-header-btn delete-btn',
                 reactive: true, track_hover: true,
             });
-            this._deleteBtn.connect('button-release-event', (actor, ev) => {
-                if (ev.get_button() === 1) {
-                    this._deleteActiveCategory();
-                    return Clutter.EVENT_STOP;
-                }
-                return Clutter.EVENT_PROPAGATE;
+            this._deleteBtn.connect('clicked', () => {
+                this._deleteActiveCategory();
             });
             controlBox.add_child(this._deleteBtn);
 
@@ -329,13 +317,9 @@ const LauncherDialog = GObject.registerClass(
                 child: new St.Icon({ icon_name: 'go-previous-symbolic', icon_size: 14 }),
                 reactive: true, track_hover: true, can_focus: false,
             });
-            this._prevPageBtn.connect('button-release-event', (actor, ev) => {
-                if (ev.get_button() === 1) {
-                    this._gridCtrl.prevPage();
-                    this.focus();
-                    return Clutter.EVENT_STOP;
-                }
-                return Clutter.EVENT_PROPAGATE;
+            this._prevPageBtn.connect('clicked', () => {
+                this._gridCtrl.prevPage();
+                this.focus();
             });
 
             this._pageDotsBox = new St.BoxLayout({
@@ -348,13 +332,9 @@ const LauncherDialog = GObject.registerClass(
                 child: new St.Icon({ icon_name: 'go-next-symbolic', icon_size: 14 }),
                 reactive: true, track_hover: true, can_focus: false,
             });
-            this._nextPageBtn.connect('button-release-event', (actor, ev) => {
-                if (ev.get_button() === 1) {
-                    this._gridCtrl.nextPage();
-                    this.focus();
-                    return Clutter.EVENT_STOP;
-                }
-                return Clutter.EVENT_PROPAGATE;
+            this._nextPageBtn.connect('clicked', () => {
+                this._gridCtrl.nextPage();
+                this.focus();
             });
 
             this._pageNavBox.add_child(this._prevPageBtn);
@@ -422,12 +402,8 @@ const LauncherDialog = GObject.registerClass(
                 label: _('Cancel'), style_class: 'ormic-editor-btn cancel-btn',
                 reactive: true, track_hover: true,
             });
-            cancelEdBtn.connect('button-release-event', (actor, ev) => {
-                if (ev.get_button() === 1) {
-                    this._stopEditing(false);
-                    return Clutter.EVENT_STOP;
-                }
-                return Clutter.EVENT_PROPAGATE;
+            cancelEdBtn.connect('clicked', () => {
+                this._stopEditing(false);
             });
             edBtnBox.add_child(cancelEdBtn);
 
@@ -435,12 +411,8 @@ const LauncherDialog = GObject.registerClass(
                 label: _('Done'), style_class: 'ormic-editor-btn save-btn',
                 reactive: true, track_hover: true,
             });
-            saveEdBtn.connect('button-release-event', (actor, ev) => {
-                if (ev.get_button() === 1) {
-                    this._stopEditing(true);
-                    return Clutter.EVENT_STOP;
-                }
-                return Clutter.EVENT_PROPAGATE;
+            saveEdBtn.connect('clicked', () => {
+                this._stopEditing(true);
             });
             edBtnBox.add_child(saveEdBtn);
 
@@ -512,12 +484,8 @@ const LauncherDialog = GObject.registerClass(
                 label: _('Cancel'), style_class: 'ormic-prompt-btn cancel-btn',
                 reactive: true, track_hover: true,
             });
-            pCancel.connect('button-release-event', (actor, ev) => {
-                if (ev.get_button() === 1) {
-                    this._hidePromptOverlay(false);
-                    return Clutter.EVENT_STOP;
-                }
-                return Clutter.EVENT_PROPAGATE;
+            pCancel.connect('clicked', () => {
+                this._hidePromptOverlay(false);
             });
             promptBtns.add_child(pCancel);
 
@@ -525,12 +493,8 @@ const LauncherDialog = GObject.registerClass(
                 label: _('Create'), style_class: 'ormic-prompt-btn create-btn',
                 reactive: true, track_hover: true,
             });
-            pCreate.connect('button-release-event', (actor, ev) => {
-                if (ev.get_button() === 1) {
-                    this._hidePromptOverlay(true);
-                    return Clutter.EVENT_STOP;
-                }
-                return Clutter.EVENT_PROPAGATE;
+            pCreate.connect('clicked', () => {
+                this._hidePromptOverlay(true);
             });
             promptBtns.add_child(pCreate);
 
@@ -854,11 +818,9 @@ const OrmicIndicator = GObject.registerClass(
         _init() {
             super._init(0.0, 'Ormic Launcher', true);
             this.add_child(new St.Icon({ icon_name: 'view-app-grid-symbolic', style_class: 'system-status-icon' }));
-            this.connect('button-press-event', (_, ev) => {
-                if ((typeof ev.get_button === 'function' ? ev.get_button() : 1) === 1) {
-                    this._ext.toggle(); return Clutter.EVENT_STOP;
-                }
-                return Clutter.EVENT_PROPAGATE;
+            this.connect('button-press-event', () => {
+                this._ext.toggle();
+                return Clutter.EVENT_STOP;
             });
         }
     },
@@ -962,10 +924,13 @@ export default class OrmicLauncherExtension extends Extension {
             if (!insideDialog) {
                 dbg('OverlayPress', 'Click outside dialog, hiding launcher');
                 this.hide();
-            } else {
-                this._setClickGuard();
+                return Clutter.EVENT_STOP;
             }
-            return Clutter.EVENT_STOP;
+            // Inside the dialog — propagate so St.Button children (tabs, grid
+            // items, result rows) receive the press and fire their 'clicked'
+            // signal normally.
+            this._setClickGuard();
+            return Clutter.EVENT_PROPAGATE;
         });
 
         this._overlayKeyId = this._overlay.connect('key-press-event', (_, ev) => {
@@ -1160,8 +1125,8 @@ export default class OrmicLauncherExtension extends Extension {
         this._dialog.set_position(dx - mon.x, dy - mon.y);
         this._dialog.set_width(dw);
         
-        // Use inline style to enforce maximum height while allowing it to shrink to fit content
-        this._dialog.style = `max-height: ${dh}px;`;
+        // Use inline style to enforce fixed height
+        this._dialog.style = `height: ${dh}px;`;
         
         this._dialog.min_width = dw;
         (this._dialog as any).max_width = dw;
@@ -1203,21 +1168,31 @@ export default class OrmicLauncherExtension extends Extension {
         this._visible = true;
         this._dialog.reset();
 
+        const wantsBlur = this._settings.get_string('background-style') === 'blur';
+
+        // ── Ensure blur state is fully synced before showing ─────────────
+        // Force-hide blur if not wanted, force-reset if wanted.
+        // This prevents stale blur from a previous broken hide() cycle.
+        if (this._blurWrapper) {
+            if (wantsBlur) {
+                this._blurWrapper.opacity = 0;
+                this._blurWrapper.translation_y = -20;
+                this._blurWrapper.show();
+            } else {
+                this._blurWrapper.hide();
+                this._blurWrapper.opacity = 255;
+                this._blurWrapper.translation_y = 0;
+            }
+        }
+
         // Show both chrome actors
         this._overlay.show();
-        if (this._settings.get_string('background-style') === 'blur') {
-            this._blurWrapper?.show();
-        }
 
         // Animate dialog + blur wrapper together so they move as one unit.
         // Even though they are separate chrome entries they share the same
         // position/size so visually they are one surface.
         this._dialog.opacity = 0;
         this._dialog.translation_y = -20;
-        if (this._blurWrapper) {
-            this._blurWrapper.opacity = 0;
-            this._blurWrapper.translation_y = -20;
-        }
 
         const grab = Main.pushModal(this._overlay, {
             actionMode: Shell.ActionMode.NORMAL | Shell.ActionMode.OVERVIEW | Shell.ActionMode.POPUP,
@@ -1233,7 +1208,7 @@ export default class OrmicLauncherExtension extends Extension {
 
         easeActor(this._overlay, { opacity: 255, duration: 150, mode: Clutter.AnimationMode.EASE_OUT_QUAD });
         easeActor(this._dialog, { opacity: 255, translation_y: 0, duration: 200, mode: Clutter.AnimationMode.EASE_OUT_EXPO });
-        if (this._blurWrapper)
+        if (this._blurWrapper && wantsBlur)
             easeActor(this._blurWrapper, { opacity: 255, translation_y: 0, duration: 200, mode: Clutter.AnimationMode.EASE_OUT_EXPO });
 
         timeoutOnce(10, () => this._dialog?.focus());
@@ -1264,6 +1239,33 @@ export default class OrmicLauncherExtension extends Extension {
         const dl = this._dialog;
         const bw = this._blurWrapper;
 
+        // ── CRITICAL: Immediate synchronous cleanup ──────────────────────
+        // Hide the blur wrapper IMMEDIATELY — do NOT rely solely on
+        // animation callbacks. On GNOME 50, easeAsync() rejections are
+        // silently swallowed which means onComplete never fires, leaving
+        // a ghost blur on screen.
+        if (bw && !(bw as any).is_finalized?.()) {
+            bw.hide();
+            bw.opacity = 255;
+            bw.translation_y = 0;
+        }
+
+        // Helper: guaranteed cleanup for ALL actors — belt-and-suspenders.
+        const ensureCleanup = () => {
+            if (ov && !(ov as any).is_finalized?.()) ov.hide();
+            if (bw && !(bw as any).is_finalized?.()) {
+                bw.hide();
+                bw.opacity = 255;
+                bw.translation_y = 0;
+            }
+            if (dl && !(dl as any).is_finalized?.()) {
+                dl.opacity = 255;
+                dl.translation_y = 0;
+            }
+        };
+
+        // Animate dialog and overlay out — purely visual, no functional
+        // dependency on these callbacks for blur visibility.
         easeActor(dl, {
             opacity: 0, translation_y: -14, duration: 120, mode: Clutter.AnimationMode.EASE_IN_QUAD,
             onComplete: () => {
@@ -1272,27 +1274,23 @@ export default class OrmicLauncherExtension extends Extension {
                     dl.translation_y = 0;
                 }
             },
-        });
+        }).catch(() => { ensureCleanup(); });
 
-        if (bw) {
-            easeActor(bw, { 
-                opacity: 0, translation_y: -14, duration: 120, mode: Clutter.AnimationMode.EASE_IN_QUAD,
-                onComplete: () => {
-                    if (bw && !(bw as any).is_finalized?.()) {
-                        bw.hide();
-                        bw.opacity = 255;
-                        bw.translation_y = 0;
-                    }
-                }
-            });
-        }
-
-        easeActor(ov, { 
+        easeActor(ov, {
             opacity: 0, duration: 120, mode: Clutter.AnimationMode.EASE_IN_QUAD,
             onComplete: () => {
                 if (ov && !(ov as any).is_finalized?.()) {
                     ov.hide();
                 }
+            }
+        }).catch(() => { ensureCleanup(); });
+
+        // ── Safety net: force cleanup after animation should have finished ──
+        // If anything somehow stays visible (animation dropped, GC timing,
+        // rapid toggle), this timeout guarantees no ghost blur.
+        timeoutOnce(250, () => {
+            if (!this._visible) {
+                ensureCleanup();
             }
         });
     }

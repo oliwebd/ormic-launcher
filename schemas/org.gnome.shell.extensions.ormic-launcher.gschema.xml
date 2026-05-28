@@ -48,12 +48,12 @@
     </key>
 
     <key name="show-search-bar" type="b">
-      <default>false</default>
+      <default>true</default>
       <summary>Show search bar by default</summary>
     </key>
 
     <key name="background-style" type="s">
-      <default>'blur'</default>
+      <default>'solid'</default>
       <summary>Background Style</summary>
       <description>Style of the dialog background (blur, transparent, or solid).</description>
     </key>

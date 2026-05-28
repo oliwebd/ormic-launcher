@@ -69,14 +69,10 @@ export const EditAppRow = GObject.registerClass({
 
         if (this._selected) this.add_style_class_name('selected');
 
-        this.connect('button-release-event', (actor, ev) => {
-            if (ev.get_button() === 1) {
-                dbg('EditAppRow', `clicked on ${result.name}`);
-                this.toggle();
-                this.emit('toggle');
-                return Clutter.EVENT_STOP;
-            }
-            return Clutter.EVENT_PROPAGATE;
+        this.connect('clicked', () => {
+            dbg('EditAppRow', `clicked on ${result.name}`);
+            this.toggle();
+            this.emit('toggle');
         });
     }
 

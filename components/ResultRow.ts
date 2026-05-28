@@ -96,23 +96,19 @@ export const ResultRow = GObject.registerClass({
             });
             this._favButton = favBtn;
             if (isFav()) favBtn.add_style_class_name('is-fav');
-            favBtn.connect('button-release-event', (actor, ev) => {
-                if (ev.get_button() === 1) {
-                    const favs = shellSettings.get_strv('favorite-apps') as string[];
-                    const idx = favs.indexOf(id);
-                    if (idx > -1) {
-                        favs.splice(idx, 1);
-                        favIco.icon_name = 'bookmark-new-symbolic';
-                        favBtn.remove_style_class_name('is-fav');
-                    } else {
-                        favs.push(id);
-                        favIco.icon_name = 'emblem-favorite-symbolic';
-                        favBtn.add_style_class_name('is-fav');
-                    }
-                    shellSettings.set_strv('favorite-apps', favs);
-                    return Clutter.EVENT_STOP;
+            favBtn.connect('clicked', () => {
+                const favs = shellSettings.get_strv('favorite-apps') as string[];
+                const idx = favs.indexOf(id);
+                if (idx > -1) {
+                    favs.splice(idx, 1);
+                    favIco.icon_name = 'bookmark-new-symbolic';
+                    favBtn.remove_style_class_name('is-fav');
+                } else {
+                    favs.push(id);
+                    favIco.icon_name = 'emblem-favorite-symbolic';
+                    favBtn.add_style_class_name('is-fav');
                 }
-                return Clutter.EVENT_PROPAGATE;
+                shellSettings.set_strv('favorite-apps', favs);
             });
             mainBox.add_child(favBtn);
         }
@@ -140,13 +136,9 @@ export const ResultRow = GObject.registerClass({
 
         this.set_child(mainBox);
 
-        this.connect('button-release-event', (actor, ev) => {
-            if (ev.get_button() === 1) {
-                dbg('ResultRow', `clicked on ${result.name}`);
-                this.emit('item-activated');
-                return Clutter.EVENT_STOP;
-            }
-            return Clutter.EVENT_PROPAGATE;
+        this.connect('clicked', () => {
+            dbg('ResultRow', `clicked on ${result.name}`);
+            this.emit('item-activated');
         });
 
         this.connect('notify::hover', () => {
