@@ -22,7 +22,6 @@ import {
     timeoutOnce,
     easeActor,
     createBlurEffect,
-    IS_50_PLUS
 } from './utils.js';
 
 import { AppProvider } from './providers/apps.js';
@@ -230,7 +229,7 @@ const LauncherDialog = GObject.registerClass(
                 style_class: 'ormic-scroll',
                 hscrollbar_policy: St.PolicyType.NEVER,
                 vscrollbar_policy: St.PolicyType.AUTOMATIC,
-                overlay_scrollbars: true, x_expand: true,
+                overlay_scrollbars: true, x_expand: true, y_expand: true,
             });
             this._rbox = new St.BoxLayout({
                 style_class: 'ormic-rbox', orientation: Clutter.Orientation.VERTICAL, x_expand: true,
@@ -1108,8 +1107,8 @@ export default class OrmicLauncherExtension extends Extension {
     _pos() {
         if (!this._overlay || !this._dialog) return;
         const mon = Main.layoutManager.primaryMonitor; if (!mon) return;
-        const dw = Math.min(1060, mon.width * 0.66);
-        const dh = Math.min(700, mon.height * 0.72);
+        const dw = Math.min(960, mon.width * 0.60);
+        const dh = Math.min(600, mon.height * 0.64);
         const dx = mon.x + Math.floor((mon.width - dw) / 2);
         const dy = mon.y + Math.floor(mon.height * 0.14);
 
@@ -1332,7 +1331,7 @@ export default class OrmicLauncherExtension extends Extension {
         if (!this._overlay) return;
         let colorName = this._getResolvedAccentColor();
 
-        if (!ACCENT_COLORS.hasOwnProperty(colorName)) {
+        if (!Object.prototype.hasOwnProperty.call(ACCENT_COLORS, colorName)) {
             colorName = 'yellow';
         }
 

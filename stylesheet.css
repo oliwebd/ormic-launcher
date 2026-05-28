@@ -86,7 +86,6 @@
 
 /* ── Search Results List View ────────────────────────────────────────────── */
 .ormic-scroll {
-  max-height: 400px;
 }
 
 .ormic-scroll StScrollBar {
@@ -454,7 +453,6 @@
 }
 
 .ormic-editor-scroll {
-  max-height: 300px;
 }
 
 .ormic-editor-apps {

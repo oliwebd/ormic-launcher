@@ -10,7 +10,7 @@ import Clutter from 'gi://Clutter';
 import * as Config from 'resource:///org/gnome/shell/misc/config.js';
 
 // Debug helper — set to true only during active development
-export const DEBUG = true;
+export const DEBUG = false;
 
 export function dbg(scope: string, msg: string, ...args: any[]) {
   if (!DEBUG) return;
