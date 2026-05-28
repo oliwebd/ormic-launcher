@@ -972,12 +972,8 @@ export default class OrmicLauncherExtension extends Extension {
             style_class: 'ormic-blur-wrapper',
             reactive: false,
             visible: false,
+            opacity: 0,
         });
-        try {
-            this._blurWrapper.add_effect_with_name('blur', createBlurEffect(14, 1.0));
-        } catch (e: any) {
-            console.error(`Ormic: blur wrapper error: ${e.message}`);
-        }
 
         // Register blur wrapper as its own chrome entry BELOW _overlay
         Main.layoutManager.addChrome(this._blurWrapper, {
@@ -1175,10 +1171,18 @@ export default class OrmicLauncherExtension extends Extension {
         // This prevents stale blur from a previous broken hide() cycle.
         if (this._blurWrapper) {
             if (wantsBlur) {
+                if (!this._blurWrapper.get_effect('blur')) {
+                    try {
+                        this._blurWrapper.add_effect_with_name('blur', createBlurEffect(14, 1.0));
+                    } catch (e: any) {
+                        console.error(`Ormic: blur effect error: ${e.message}`);
+                    }
+                }
                 this._blurWrapper.opacity = 0;
                 this._blurWrapper.translation_y = -20;
                 this._blurWrapper.show();
             } else {
+                this._blurWrapper.remove_effect_by_name('blur');
                 this._blurWrapper.hide();
                 this._blurWrapper.opacity = 255;
                 this._blurWrapper.translation_y = 0;
@@ -1340,24 +1344,40 @@ export default class OrmicLauncherExtension extends Extension {
 
     _syncBackground() {
         if (!this._dialog) return;
+        const style = this._settings.get_string('background-style') || 'solid';
 
-        const style = this._settings.get_string('background-style') || 'blur';
-        
-        // Update dialog CSS classes
-        const classes = ['ormic-bg-blur', 'ormic-bg-transparent-20', 'ormic-bg-transparent-30', 'ormic-bg-transparent-50', 'ormic-bg-solid'];
+        const classes = ['ormic-bg-blur', 'ormic-bg-transparent-20', 'ormic-bg-transparent-30',
+                         'ormic-bg-transparent-50', 'ormic-bg-solid'];
         classes.forEach(c => this._dialog!.remove_style_class_name(c));
         this._dialog.add_style_class_name(`ormic-bg-${style}`);
 
         if (!this._blurWrapper) return;
-        if (!this._visible) return; // Only sync immediately if visible. Otherwise show() handles it.
-        
+        if (!this._visible) {
+            // Proactively clean up even when hidden
+            if (style !== 'blur') {
+                this._blurWrapper.remove_effect_by_name('blur');
+            }
+            return;
+        }
+
         if (style === 'blur') {
+            if (!this._blurWrapper.get_effect('blur')) {
+                try {
+                    this._blurWrapper.add_effect_with_name('blur', createBlurEffect(14, 1.0));
+                } catch (e: any) {
+                    console.error(`Ormic: blur error: ${e.message}`);
+                }
+            }
             this._blurWrapper.show();
-            easeActor(this._blurWrapper, { opacity: 255, duration: 150, mode: Clutter.AnimationMode.EASE_OUT_QUAD });
+            easeActor(this._blurWrapper, { opacity: 255, duration: 150,
+                mode: Clutter.AnimationMode.EASE_OUT_QUAD });
         } else {
-            easeActor(this._blurWrapper, { opacity: 0, duration: 150, mode: Clutter.AnimationMode.EASE_IN_QUAD, onComplete: () => {
-                this._blurWrapper?.hide();
-            }});
+            // Remove effect first, THEN hide
+            this._blurWrapper.remove_effect_by_name('blur');
+            easeActor(this._blurWrapper, { opacity: 0, duration: 150,
+                mode: Clutter.AnimationMode.EASE_IN_QUAD,
+                onComplete: () => { this._blurWrapper?.hide(); }
+            });
         }
     }
 }
