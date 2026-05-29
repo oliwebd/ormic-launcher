@@ -450,7 +450,6 @@
 
 .ormic-edit-icon-bin {
   width: 36px;
-  /* height: 36px; */
   border-radius: 8px;
   background-color: rgba(255, 255, 255, 0.03);
   padding: 2px;
@@ -463,7 +462,6 @@
 
 .ormic-edit-checkbox {
   color: rgba(255, 255, 255, 0.25);
-  /* icon-size: 16px; */
 }
 
 .ormic-edit-row.selected .ormic-edit-checkbox {
@@ -481,7 +479,7 @@
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 20px;
   padding: 32px;
-  /* spacing: 24px; */
+  spacing: 24px;
   min-width: 360px;
 }
 
