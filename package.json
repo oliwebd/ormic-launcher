@@ -5,7 +5,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "build": "tsc && prettier --write \"dist/**/*.js\"",
+    "build": "tsc && prettier --write 'dist/**/*.js' && node scripts/format-dist.mjs",
     "local-install": "make install",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
