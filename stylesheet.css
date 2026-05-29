@@ -429,8 +429,6 @@
   border-color: #fccb7b;
 }
 
-.ormic-editor-scroll {}
-
 .ormic-editor-apps {
   padding: 4px 0;
 }
@@ -772,7 +770,6 @@
 
 .ormic-accent-blue .ormic-editor-entry {
   caret-color: #3B82F6;
-  /* selection-background-color: rgba(59, 130, 246, 0.25); */
 }
 
 .ormic-accent-blue .ormic-editor-entry:focus {
