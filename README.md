@@ -8,7 +8,6 @@ A modular, floating application launcher for GNOME Shell **45 – 50**, inspired
 
 | Version | Distro | Status |
 |---|---|---|
-| GNOME 45 | Fedora 39, Ubuntu 23.10 | ✅ Supported |
 | GNOME 46 | Fedora 40, Ubuntu 24.04 LTS | ✅ Supported |
 | GNOME 47 | Fedora 41 | ✅ Supported |
 | GNOME 48 | Fedora 42, Ubuntu 25.04 | ✅ Supported |
