@@ -1,6 +1,6 @@
 # Ormic Launcher — GNOME Shell Extension
 
-A modular, floating application launcher for GNOME Shell **45 – 50**, inspired by the premium aesthetics and pluggable provider architecture of the COSMIC/Pop!_OS Launcher. Re-engineered in pure TypeScript and standard GJS (GNOME JavaScript), it features a fully adaptive, glassmorphic layout, custom application grouping, and responsive mouse and keyboard event handling.
+A floating apps launcher for GNOME Shell **46 – 50**, inspired by the premium aesthetics and pluggable provider architecture of the COSMIC/Pop!_OS Launcher. Re-engineered in pure TypeScript and standard GJS (GNOME JavaScript), it features a fully adaptive, glassmorphic layout, custom application grouping, and responsive mouse and keyboard event handling.
 
 ---
 
