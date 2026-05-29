@@ -188,7 +188,7 @@ export class GridController {
      * Detach all live items back into the pool and clear the grid rows.
      * Uses the flat _currentItems array — no widget tree traversal needed.
      */
-    private _harvestItems(): void {
+    harvestItems(): void {
         for (const item of this._currentItems) {
             item.get_parent()?.remove_child(item);
             this._itemPool.push(item);
@@ -259,7 +259,7 @@ export class GridController {
         const apps = this._getFilteredApps();
 
         // Harvest items and bump gen before any async work
-        this._harvestItems();
+        this.harvestItems();
         const gen = this._renderGen;
 
         s.gridSelIdx = -1;
@@ -450,6 +450,8 @@ export class GridController {
 
         this.cancelRenderJob();
         this.cancelBgRenderJob();
+
+        this.harvestItems();
 
         s.categoryGridBoxes.get(s.activeCategory)?.destroy();
         s.categoryGridBoxes.delete(s.activeCategory);

@@ -753,6 +753,8 @@ const LauncherDialog = GObject.registerClass(
                 dbg('Performance', `SLOW PATH: cache rebuild. allAppsCacheDirty=${this._allAppsCacheDirty}, gridBoxes=${this._categoryGridBoxes.size}`);
                 this._allAppsCacheDirty = true;
 
+                this._gridCtrl.harvestItems();
+
                 if (this._categoryGridBoxes) {
                     this._categoryGridBoxes.forEach(box => box.destroy());
                     this._categoryGridBoxes.clear();
