@@ -866,6 +866,7 @@ export default class OrmicLauncherExtension extends Extension {
     _theme: St.Theme | null = null;
     _dialogSizeId: number | null = null;
     _dialogAllocId: number | null = null;
+    _blurResizeTimer: number | null = null;
 
     enable() {
         dbg('Extension', 'enable() called');
@@ -1045,6 +1046,11 @@ export default class OrmicLauncherExtension extends Extension {
             this._clickGuardTimer = null;
         }
 
+        if (this._blurResizeTimer != null) {
+            GLib.source_remove(this._blurResizeTimer);
+            this._blurResizeTimer = null;
+        }
+
         for (const p of this.providers) {
             p?.destroy();
         }
@@ -1092,10 +1098,22 @@ export default class OrmicLauncherExtension extends Extension {
             this._dialogAllocId = null;
         }
 
-        this._dialogAllocId = this._dialog.connect('notify::height', () => {
-            if (this._blurWrapper && this._dialog) {
-                this._blurWrapper.set_size(this._dialog.width, this._dialog.height);
+        this._dialogAllocId = this._dialog.connect('notify::allocation', () => {
+            if (!this._blurWrapper || !this._dialog) return;
+            const newW = this._dialog.width;
+            const newH = this._dialog.height;
+            if (newW < 10 || newH < 10) return; // skip during init
+            if (this._blurResizeTimer != null) {
+                GLib.source_remove(this._blurResizeTimer);
+                this._blurResizeTimer = null;
             }
+            this._blurResizeTimer = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 50, () => {
+                this._blurResizeTimer = null;
+                if (this._blurWrapper && this._dialog) {
+                    this._blurWrapper.set_size(this._dialog.width, this._dialog.height);
+                }
+                return GLib.SOURCE_REMOVE;
+            });
         });
     }
 
