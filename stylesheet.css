@@ -9,9 +9,6 @@
 /* ── Blur wrapper — non-interactive sibling behind the dialog ────────────── */
 .ormic-blur-wrapper {
   border-radius: 14px;
-  /* Minimal non-transparent fill so the BACKGROUND-mode blur shader
-     recognises this actor as a paintable surface worth sampling through.
-     Fully transparent → compositor may skip the blur pipeline entirely. */
   background-color: rgba(0, 0, 0, 0.004);
 }
 
@@ -20,18 +17,15 @@
   border: 1px solid rgba(255, 255, 255, 0.13);
   border-radius: 14px;
   padding: 0;
-  /* spacing: 0; */
 }
 
 /* ── Search row ──────────────────────────────────────────────────────────── */
 .ormic-search-row {
   padding: 14px 14px 10px 14px;
-  /* spacing: 14px; */
 }
 
 .ormic-search-icon {
   color: rgba(255, 255, 255, 0.38);
-  /* icon-size: 18px; */
   margin-top: 1px;
 }
 
@@ -45,8 +39,6 @@
   font-weight: 300;
   caret-color: #FAB84B;
   padding: 0;
-  /* height: 32px; */
-  /* selection-background-color: rgba(250, 184, 75, 0.25); */
 }
 
 .ormic-entry:focus {
@@ -80,13 +72,11 @@
 
 /* ── Separators ──────────────────────────────────────────────────────────── */
 .ormic-sep {
-  /* height: 1px; */
   background-color: rgba(255, 255, 255, 0.065);
 }
 
 /* ── Search Results List View ────────────────────────────────────────────── */
-.ormic-scroll {
-}
+.ormic-scroll {}
 
 .ormic-scroll StScrollBar {
   opacity: 0;
@@ -98,7 +88,6 @@
 
 .ormic-rbox {
   padding: 4px 0;
-  /* spacing: 0; */
 }
 
 .ormic-result {
@@ -131,7 +120,6 @@
 /* ── Icon bins ───────────────────────────────────────────────────────────── */
 .ormic-icon-bin {
   width: 42px;
-  /* height: 42px; */
   border-radius: 9px;
   background-color: rgba(255, 255, 255, 0.04);
   margin: 4px 14px 4px 10px;
@@ -140,12 +128,10 @@
 
 .ormic-icon-sym {
   color: rgba(255, 255, 255, 0.70);
-  /* icon-size: 38px; */
 }
 
 /* ── Text column ─────────────────────────────────────────────────────────── */
 .ormic-text-col {
-  /* spacing: 2px; */
   padding: 0;
 }
 
@@ -171,13 +157,12 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 999px;
   padding: 3px 9px 3px 7px;
-  /* spacing: 5px; */
+  spacing: 5px;
   margin-right: 12px;
 }
 
 .ormic-cat-icon {
   color: rgba(255, 255, 255, 0.30);
-  /* icon-size: 11px; */
 }
 
 .ormic-cat-label {
@@ -265,7 +250,6 @@
 
 .ormic-grid-box {
   padding: 14px 26px 18px 18px;
-  /* spacing: 14px; */
 }
 
 .ormic-grid-empty {
@@ -335,7 +319,6 @@
 /* ── Category Tabs ───────────────────────────────────────────────────────── */
 .ormic-tabs-box {
   padding: 6px 12px;
-  /* spacing: 4px; */
 }
 
 .ormic-category-tab-box {
@@ -347,8 +330,6 @@
   border-radius: 999px;
   background-color: transparent;
   border: 1px solid transparent;
-  /* No transition — instant state changes prevent multi-frame partial
-     redraws that trigger blur re-sampling glitches in the compositor. */
 }
 
 .ormic-category-tab:hover {
@@ -391,11 +372,9 @@
 /* ── Group Editor ────────────────────────────────────────────────────────── */
 .ormic-editor-box {
   padding: 14px 20px;
-  /* spacing: 12px; */
 }
 
 .ormic-editor-header {
-  /* spacing: 12px; */
   padding-bottom: 10px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
@@ -414,8 +393,6 @@
   padding: 6px 12px;
   font-size: 14px;
   caret-color: #FAB84B;
-  /* height: 28px; */
-  /* selection-background-color: rgba(250, 184, 75, 0.25); */
 }
 
 .ormic-editor-entry:focus {
@@ -452,11 +429,9 @@
   border-color: #fccb7b;
 }
 
-.ormic-editor-scroll {
-}
+.ormic-editor-scroll {}
 
 .ormic-editor-apps {
-  /* spacing: 4px; */
   padding: 4px 0;
 }
 
@@ -529,8 +504,6 @@
   padding: 12px 16px;
   font-size: 15px;
   caret-color: #FAB84B;
-  /* height: 36px; */
-  /* selection-background-color: rgba(250, 184, 75, 0.25); */
 }
 
 .ormic-prompt-entry:focus {
@@ -539,7 +512,6 @@
 }
 
 .ormic-prompt-btns {
-  /* spacing: 12px; */
   margin-top: 8px;
 }
 
@@ -725,7 +697,6 @@
 
 .ormic-accent-yellow .ormic-prompt-entry {
   caret-color: #FAB84B;
-  /* selection-background-color: rgba(250, 184, 75, 0.25); */
 }
 
 .ormic-accent-yellow .ormic-prompt-entry:focus {
@@ -755,7 +726,6 @@
 /* ── Blue ──────────────────────────────────────────────────────────────── */
 .ormic-accent-blue .ormic-entry {
   caret-color: #3B82F6;
-  /* selection-background-color: rgba(59, 130, 246, 0.25); */
 }
 
 .ormic-accent-blue .ormic-result.selected {
@@ -830,7 +800,6 @@
 
 .ormic-accent-blue .ormic-prompt-entry {
   caret-color: #3B82F6;
-  /* selection-background-color: rgba(59, 130, 246, 0.25); */
 }
 
 .ormic-accent-blue .ormic-prompt-entry:focus {
@@ -860,7 +829,6 @@
 /* ── Purple ──────────────────────────────────────────────────────────────── */
 .ormic-accent-purple .ormic-entry {
   caret-color: #8B5CF6;
-  /* selection-background-color: rgba(139, 92, 246, 0.25); */
 }
 
 .ormic-accent-purple .ormic-result.selected {
@@ -1040,7 +1008,6 @@
 
 .ormic-accent-red .ormic-prompt-entry {
   caret-color: #EF4444;
-  /* selection-background-color: rgba(239, 68, 68, 0.25); */
 }
 
 .ormic-accent-red .ormic-prompt-entry:focus {
@@ -1070,7 +1037,6 @@
 /* ── Green ──────────────────────────────────────────────────────────────── */
 .ormic-accent-green .ormic-entry {
   caret-color: #10B981;
-  /* selection-background-color: rgba(16, 185, 129, 0.25); */
 }
 
 .ormic-accent-green .ormic-result.selected {
@@ -1117,7 +1083,6 @@
 
 .ormic-accent-green .ormic-editor-entry {
   caret-color: #10B981;
-  /* selection-background-color: rgba(16, 185, 129, 0.25); */
 }
 
 .ormic-accent-green .ormic-editor-entry:focus {
@@ -1145,7 +1110,6 @@
 
 .ormic-accent-green .ormic-prompt-entry {
   caret-color: #10B981;
-  /* selection-background-color: rgba(16, 185, 129, 0.25); */
 }
 
 .ormic-accent-green .ormic-prompt-entry:focus {
@@ -1175,7 +1139,6 @@
 /* ── Pink ──────────────────────────────────────────────────────────────── */
 .ormic-accent-pink .ormic-entry {
   caret-color: #EC4899;
-  /* selection-background-color: rgba(236, 72, 153, 0.25); */
 }
 
 .ormic-accent-pink .ormic-result.selected {
@@ -1222,7 +1185,6 @@
 
 .ormic-accent-pink .ormic-editor-entry {
   caret-color: #EC4899;
-  /* selection-background-color: rgba(236, 72, 153, 0.25); */
 }
 
 .ormic-accent-pink .ormic-editor-entry:focus {
@@ -1250,7 +1212,6 @@
 
 .ormic-accent-pink .ormic-prompt-entry {
   caret-color: #EC4899;
-  /* selection-background-color: rgba(236, 72, 153, 0.25); */
 }
 
 .ormic-accent-pink .ormic-prompt-entry:focus {
@@ -1280,7 +1241,6 @@
 /* ── Teal ──────────────────────────────────────────────────────────────── */
 .ormic-accent-teal .ormic-entry {
   caret-color: #14B8A6;
-  /* selection-background-color: rgba(20, 184, 166, 0.25); */
 }
 
 .ormic-accent-teal .ormic-result.selected {
@@ -1327,7 +1287,6 @@
 
 .ormic-accent-teal .ormic-editor-entry {
   caret-color: #14B8A6;
-  /* selection-background-color: rgba(20, 184, 166, 0.25); */
 }
 
 .ormic-accent-teal .ormic-editor-entry:focus {
@@ -1355,7 +1314,6 @@
 
 .ormic-accent-teal .ormic-prompt-entry {
   caret-color: #14B8A6;
-  /* selection-background-color: rgba(20, 184, 166, 0.25); */
 }
 
 .ormic-accent-teal .ormic-prompt-entry:focus {
@@ -1385,7 +1343,6 @@
 /* ── Orange ──────────────────────────────────────────────────────────────── */
 .ormic-accent-orange .ormic-entry {
   caret-color: #F97316;
-  /* selection-background-color: rgba(249, 115, 22, 0.25); */
 }
 
 .ormic-accent-orange .ormic-result.selected {
@@ -1432,7 +1389,6 @@
 
 .ormic-accent-orange .ormic-editor-entry {
   caret-color: #F97316;
-  /* selection-background-color: rgba(249, 115, 22, 0.25); */
 }
 
 .ormic-accent-orange .ormic-editor-entry:focus {
@@ -1460,7 +1416,6 @@
 
 .ormic-accent-orange .ormic-prompt-entry {
   caret-color: #F97316;
-  /* selection-background-color: rgba(249, 115, 22, 0.25); */
 }
 
 .ormic-accent-orange .ormic-prompt-entry:focus {
@@ -1490,7 +1445,6 @@
 /* ── Slate ──────────────────────────────────────────────────────────────── */
 .ormic-accent-slate .ormic-entry {
   caret-color: #64748B;
-  /* selection-background-color: rgba(100, 116, 139, 0.25); */
 }
 
 .ormic-accent-slate .ormic-result.selected {
@@ -1537,7 +1491,6 @@
 
 .ormic-accent-slate .ormic-editor-entry {
   caret-color: #64748B;
-  /* selection-background-color: rgba(100, 116, 139, 0.25); */
 }
 
 .ormic-accent-slate .ormic-editor-entry:focus {
@@ -1565,7 +1518,6 @@
 
 .ormic-accent-slate .ormic-prompt-entry {
   caret-color: #64748B;
-  /* selection-background-color: rgba(100, 116, 139, 0.25); */
 }
 
 .ormic-accent-slate .ormic-prompt-entry:focus {
@@ -1595,7 +1547,6 @@
 /* ── Brown ──────────────────────────────────────────────────────────────── */
 .ormic-accent-brown .ormic-entry {
   caret-color: #A16207;
-  /* selection-background-color: rgba(161, 98, 7, 0.25); */
 }
 
 .ormic-accent-brown .ormic-result.selected {
@@ -1607,15 +1558,19 @@
 .ormic-bg-blur {
   background-color: rgba(14, 14, 20, 0.48);
 }
+
 .ormic-bg-transparent-20 {
   background-color: rgba(14, 14, 20, 0.20);
 }
+
 .ormic-bg-transparent-30 {
   background-color: rgba(14, 14, 20, 0.30);
 }
+
 .ormic-bg-transparent-50 {
   background-color: rgba(14, 14, 20, 0.50);
 }
+
 .ormic-bg-solid {
   background-color: rgb(36, 36, 36);
 }
@@ -1660,7 +1615,6 @@
 
 .ormic-accent-brown .ormic-editor-entry {
   caret-color: #A16207;
-  /* selection-background-color: rgba(161, 98, 7, 0.25); */
 }
 
 .ormic-accent-brown .ormic-editor-entry:focus {
@@ -1688,7 +1642,6 @@
 
 .ormic-accent-brown .ormic-prompt-entry {
   caret-color: #A16207;
-  /* selection-background-color: rgba(161, 98, 7, 0.25); */
 }
 
 .ormic-accent-brown .ormic-prompt-entry:focus {
