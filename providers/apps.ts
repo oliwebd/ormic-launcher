@@ -90,7 +90,7 @@ export class AppProvider {
                 }
             }
         } catch (e: any) {
-            log(`Ormic Launcher: Error rebuilding GMenu tree: ${e.message}`);
+            console.error(`Ormic Launcher: Error rebuilding GMenu tree: ${e.message}`);
         }
     }
 

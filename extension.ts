@@ -450,7 +450,7 @@ const LauncherDialog = GObject.registerClass(
             try {
                 promptCard.add_effect_with_name('blur', createBlurEffect(36, 1.0));
             } catch (e: any) {
-                log(`Ormic Launcher: prompt card blur error: ${e.message}`);
+                console.error(`Ormic Launcher: prompt card blur error: ${e.message}`);
             }
 
             this._promptOverlay.connect('button-press-event', (_, ev) => {
@@ -680,9 +680,7 @@ const LauncherDialog = GObject.registerClass(
                 this._tid = null;
             }
             if (this._categoryGridBoxes) {
-                this._categoryGridBoxes.forEach(box => {
-                    try { box.destroy(); } catch (_) { }
-                });
+                this._categoryGridBoxes.forEach(box => box?.destroy());
                 this._categoryGridBoxes.clear();
             }
         }
@@ -727,14 +725,8 @@ const LauncherDialog = GObject.registerClass(
         }
 
         reset() {
-            if (this._providers) {
-                for (const p of this._providers) {
-                    try {
-                        if (typeof p.onOpen === 'function') p.onOpen();
-                    } catch (e: any) {
-                        log(`Ormic Launcher: Error calling onOpen on provider: ${e.message}`);
-                    }
-                }
+            for (const p of this._providers) {
+                p?.onOpen?.();
             }
 
             this._cancelRenderJob();
@@ -779,9 +771,7 @@ const LauncherDialog = GObject.registerClass(
                     this._renderTabsOnly();
                 } else {
                     tabs.forEach(tab => {
-                        if (typeof tab.setSelected === 'function') {
-                            tab.setSelected(tab.categoryName === this._activeCategory);
-                        }
+                        tab.setSelected(tab.categoryName === this._activeCategory);
                     });
                     this._headerTitleLabel.text = this._activeCategory;
                     this._editBtn.hide();
@@ -903,7 +893,7 @@ export default class OrmicLauncherExtension extends Extension {
         }
 
         this._overlayCapturedId = this._overlay.connect('captured-event', (_, ev: any) => {
-            const t = typeof ev.type === 'function' ? ev.type() : ev.type;
+            const t = ev.type();
             if (t === Clutter.EventType.BUTTON_PRESS) {
                 this._setClickGuard();
             }
@@ -1068,11 +1058,7 @@ export default class OrmicLauncherExtension extends Extension {
         }
         if (this._dialog) {
             this._dialog.remove_all_transitions();
-            try {
-                this._dialog.cleanup();
-            } catch (e: any) {
-                dbg('Extension', `Error running dialog cleanup: ${e.message}`);
-            }
+            this._dialog.cleanup();
             this._dialog.destroy();
         }
 
@@ -1085,9 +1071,7 @@ export default class OrmicLauncherExtension extends Extension {
         }
 
         for (const p of this.providers) {
-            if (typeof p.destroy === 'function') {
-                try { p.destroy(); } catch (_) { }
-            }
+            p?.destroy?.();
         }
         this.providers = [];
         this._settings = null as any;

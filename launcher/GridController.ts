@@ -238,8 +238,7 @@ export class GridController {
         this.cancelBgRenderJob();
 
         (s.tabsBox.get_children() as CategoryTab[]).forEach(tab => {
-            if (typeof tab.setSelected === 'function')
-                tab.setSelected(tab.categoryName === categoryName);
+            tab.setSelected(tab.categoryName === categoryName);
         });
 
         this._syncHeaderButtons();
@@ -390,8 +389,7 @@ export class GridController {
         if (newKey === this._tabCacheKey && s.tabsBox.get_n_children() > 0) {
             dbg('Grid', `renderTabsOnly — fast path (key="${newKey}")`);
             (s.tabsBox.get_children() as CategoryTab[]).forEach(tab => {
-                if (typeof tab.setSelected === 'function')
-                    tab.setSelected(tab.categoryName === s.activeCategory);
+                tab.setSelected(tab.categoryName === s.activeCategory);
             });
             this._syncHeaderButtons();
             return;
@@ -453,8 +451,8 @@ export class GridController {
         this.cancelRenderJob();
         this.cancelBgRenderJob();
 
-        const oldBox = s.categoryGridBoxes.get(s.activeCategory);
-        if (oldBox) { oldBox.destroy(); s.categoryGridBoxes.delete(s.activeCategory); }
+        s.categoryGridBoxes.get(s.activeCategory)?.destroy();
+        s.categoryGridBoxes.delete(s.activeCategory);
 
         this._tabCacheKey = '';
         this._filteredCategory = '';
@@ -510,7 +508,7 @@ export class GridController {
         try {
             this._s.ext._settings.set_string('custom-groups', JSON.stringify(groups));
         } catch (e: any) {
-            log(`Ormic Launcher: Error saving custom groups: ${e.message}`);
+            console.error(`Ormic Launcher: Error saving custom groups: ${e.message}`);
         }
     }
 
@@ -523,13 +521,13 @@ export class GridController {
         this._renderGen++;
 
         this._currentItems = [];
-        this._itemPool.forEach(item => { try { item.destroy(); } catch (_) { } });
+        this._itemPool.forEach(item => item?.destroy());
         this._itemPool = [];
 
         const s = this._s;
         if (s.tid != null) { GLib.source_remove(s.tid as number); s.tid = null; }
         if (s.categoryGridBoxes) {
-            s.categoryGridBoxes.forEach(box => { try { box.destroy(); } catch (_) { } });
+            s.categoryGridBoxes.forEach(box => box?.destroy());
             s.categoryGridBoxes.clear();
         }
     }

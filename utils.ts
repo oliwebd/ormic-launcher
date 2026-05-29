@@ -15,23 +15,17 @@ export const DEBUG = false;
 export function dbg(scope: string, msg: string, ...args: any[]) {
   if (!DEBUG) return;
   const extra = args.length ? ' ' + args.map(a => JSON.stringify(a)).join(' ') : '';
-  log(`[Ormic:${scope}] ${msg}${extra}`);
+  console.log(`[Ormic:${scope}] ${msg}${extra}`);
 }
 
 export const SHELL_MAJOR = parseInt((Config as any).PACKAGE_VERSION.split('.')[0], 10);
 export const IS_50_PLUS = SHELL_MAJOR >= 50;
 
 export function createAppIcon(app: any, size: number): any {
-  if (app && typeof app.get_app_info === 'function') {
-    const info = app.get_app_info();
-    if (info && typeof info.get_icon === 'function') {
-      const gicon = info.get_icon();
-      if (gicon) return new St.Icon({ gicon, icon_size: size });
-    }
-  }
-  if (app && typeof app.create_icon_texture === 'function')
-    return app.create_icon_texture(size);
-  return null;
+  const info = app?.get_app_info?.();
+  const gicon = info?.get_icon?.();
+  if (gicon) return new St.Icon({ gicon, icon_size: size });
+  return app?.create_icon_texture?.(size) ?? null;
 }
 
 /**
@@ -134,55 +128,41 @@ export function easeActor(actor: Clutter.Actor, params: any): Promise<void> {
  * Scroll a St.ScrollView so that `actor` is visible.
  */
 export function scrollToActor(scrollView: St.ScrollView, actor: Clutter.Actor) {
-  try {
-    if (typeof (scrollView as any).ensure_actor_visible === 'function') {
-      (scrollView as any).ensure_actor_visible(actor);
-      return;
-    }
-  } catch (_e) { }
+  if (typeof (scrollView as any).ensure_actor_visible === 'function') {
+    (scrollView as any).ensure_actor_visible(actor);
+    return;
+  }
 
-  try {
-    const adj = scrollView.vadjustment;
-    if (!adj) return;
-    const [, ay] = actor.get_transformed_position();
-    const [, svy] = scrollView.get_transformed_position();
-    const relY = ay - svy + adj.value;
-    const viewHeight = scrollView.height;
-    const actorHeight = actor.height;
-    if (relY < adj.value)
-      adj.set_value(relY - 8);
-    else if (relY + actorHeight > adj.value + viewHeight)
-      adj.set_value(relY + actorHeight - viewHeight + 8);
-  } catch (_e) { }
+  const adj = scrollView.vadjustment;
+  if (!adj) return;
+  const [, ay] = actor.get_transformed_position();
+  const [, svy] = scrollView.get_transformed_position();
+  const relY = ay - svy + adj.value;
+  const viewHeight = scrollView.height;
+  const actorHeight = actor.height;
+  if (relY < adj.value)
+    adj.set_value(relY - 8);
+  else if (relY + actorHeight > adj.value + viewHeight)
+    adj.set_value(relY + actorHeight - viewHeight + 8);
 }
 
 /**
  * List all normal, visible windows.
  */
 export function listAllWindows(): any[] {
-  try {
-    const display = global.display as any;
-    if (typeof display.list_all_windows === 'function') {
-      return (display.list_all_windows() as any[]).filter(
-        (w: any) =>
-          w.get_window_type?.() === Meta.WindowType.NORMAL &&
-          !w.is_skip_taskbar?.(),
-      );
-    }
-  } catch (_e) { }
-  return (global.get_window_actors() as any[])
-    .map((a: any) => a.meta_window)
-    .filter((w: any) => w && !w.is_skip_taskbar?.());
+  const display = global.display as any;
+  return (display.list_all_windows() as any[]).filter(
+    (w: any) =>
+      w.get_window_type?.() === Meta.WindowType.NORMAL &&
+      !w.is_skip_taskbar?.(),
+  );
 }
 
 /**
  * Resolve the Shell.App that owns a MetaWindow.
  */
 export function appForWindow(win: any): any {
-  try {
-    const tracker = Shell.WindowTracker.get_default();
-    if (typeof tracker?.get_window_app === 'function')
-      return tracker.get_window_app(win);
-  } catch (_e) { }
-  return Shell.AppSystem.get_default().lookup_app(win.get_wm_class?.() ?? '');
+  const tracker = Shell.WindowTracker.get_default();
+  return tracker.get_window_app(win)
+    ?? Shell.AppSystem.get_default().lookup_app(win.get_wm_class?.() ?? '');
 }
