@@ -831,14 +831,21 @@ const ACCENT_COLORS = {
     orange: { accent: '#F97316', rgb: '249, 115, 22', hover: '#FB923C', active: '#EA580C' },
     slate: { accent: '#64748B', rgb: '100, 116, 139', hover: '#94A3B8', active: '#475569' },
     brown: { accent: '#A16207', rgb: '161, 98, 7', hover: '#CA8A04', active: '#854D0E' },
-};
+    // GNOME 47+ system accent — 'mixed' means the desktop uses a blended/custom
+    // color that we cannot reliably sample; map it to our closest neutral.
+    mixed: { accent: '#64748B', rgb: '100, 116, 139', hover: '#94A3B8', active: '#475569' },
+} as const;
+
+type AccentColorKey = keyof typeof ACCENT_COLORS;
+const ACCENT_COLOR_KEYS = new Set<string>(Object.keys(ACCENT_COLORS));
+const ACCENT_CLASS_PREFIX = 'ormic-accent-';
 
 export default class OrmicLauncherExtension extends Extension {
     providers!: any[];
     _visible!: boolean;
     _grab: any = null;
     _clickGuard = false;
-    _clickGuardTimer: number | null | undefined = null;
+    _clickGuardTimer: number | null = null;
     _settings!: Gio.Settings;
     _interfaceSettings: Gio.Settings | null = null;
     _overlay!: St.Widget | null;
@@ -936,28 +943,7 @@ export default class OrmicLauncherExtension extends Extension {
         this._dialog.setup(this);
         this._overlay.add_child(this._dialog);
 
-        // ── Blur wrapper — separate chrome layer ──────────────────────────
-        //
-        // This follows the same pattern GNOME Shell uses for the overview and
-        // lock screen: the blur actor and the interactive content actor are
-        // registered as *independent* chrome entries so they live in entirely
-        // separate scene-graph branches.
-        //
-        // Why this matters:
-        //   Shell.BlurEffect (BACKGROUND mode) re-samples whatever is painted
-        //   behind its actor on every repaint of that actor or any ancestor.
-        //   When blur and dialog share a parent (_overlay), a GridItem or
-        //   CategoryTab hover-state change repaints the dialog → marks _overlay
-        //   dirty → compositor re-composites all children including _blurWrapper
-        //   → blur re-samples at an incomplete frame → visible glitch.
-        //
-        //   With two independent chrome entries there is NO shared ancestor
-        //   inside the Shell UI layer. A repaint anywhere inside _overlay/_dialog
-        //   cannot reach or invalidate _blurWrapper. The glitch becomes
-        //   architecturally impossible on all supported GNOME versions (45–50).
-        //
-        // Z-ordering: addChrome (lower) registers _blurWrapper first so it
-        // paints behind; addTopChrome (higher) registers _overlay on top.
+        // Blur wrapper — separate chrome layer 
         this._blurWrapper = new St.Widget({
             name: 'ormic-blur-wrapper',
             style_class: 'ormic-blur-wrapper',
@@ -966,7 +952,7 @@ export default class OrmicLauncherExtension extends Extension {
             opacity: 0,
         });
 
-        // Register blur wrapper as its own chrome entry BELOW _overlay
+        // Register blur wrapper as its own chrome entry
         Main.layoutManager.addChrome(this._blurWrapper, {
             affectsStruts: false,
             trackFullscreen: true,
@@ -1020,23 +1006,21 @@ export default class OrmicLauncherExtension extends Extension {
             this._interfaceSettings.disconnect(this._sysAccentId);
             this._sysAccentId = null;
         }
-        if (this._bgSettingId) {
-            this._settings.disconnect(this._bgSettingId);
-            this._bgSettingId = null;
-        }
+        if (this._bgSettingId) { this._settings.disconnect(this._bgSettingId); this._bgSettingId = null; }
         this._interfaceSettings = null;
         if (this._keyId) { global.stage.disconnect(this._keyId); this._keyId = null; }
         if (this._monId) { Main.layoutManager.disconnect(this._monId); this._monId = null; }
         this._indicator?.destroy(); this._indicator = null;
         Main.wm.removeKeybinding('toggle-ormic-launcher');
 
-        // Disconnect allocation tracker before dialog is destroyed
-        if (this._dialog && this._dialogAllocId) {
-            this._dialog.disconnect(this._dialogAllocId);
-            this._dialogAllocId = null;
+        if (this._dialog) {
+            if (this._dialogAllocId) { this._dialog.disconnect(this._dialogAllocId); this._dialogAllocId = null; }
+            if (this._dialogSizeId) { this._dialog.disconnect(this._dialogSizeId); this._dialogSizeId = null; }
+            this._dialog.remove_all_transitions();
+            this._dialog.cleanup();
+            this._dialog.destroy();
         }
 
-        // Destroy blur wrapper — remove from its own chrome entry first
         if (this._blurWrapper) {
             this._blurWrapper.remove_all_transitions();
             Main.layoutManager.removeChrome(this._blurWrapper);
@@ -1044,7 +1028,6 @@ export default class OrmicLauncherExtension extends Extension {
             this._blurWrapper = null;
         }
 
-        // Destroy overlay chrome entry
         if (this._overlay) {
             if (this._overlayCapturedId) this._overlay.disconnect(this._overlayCapturedId);
             if (this._overlayPressId) this._overlay.disconnect(this._overlayPressId);
@@ -1052,16 +1035,6 @@ export default class OrmicLauncherExtension extends Extension {
             this._overlay.remove_all_transitions();
             Main.layoutManager.removeChrome(this._overlay);
             this._overlay.destroy();
-        }
-
-        if (this._dialog && this._dialogSizeId) {
-            this._dialog.disconnect(this._dialogSizeId);
-            this._dialogSizeId = null;
-        }
-        if (this._dialog) {
-            this._dialog.remove_all_transitions();
-            this._dialog.cleanup();
-            this._dialog.destroy();
         }
 
         this._overlay = null;
@@ -1092,44 +1065,38 @@ export default class OrmicLauncherExtension extends Extension {
 
     _pos() {
         if (!this._overlay || !this._dialog) return;
-        const mon = Main.layoutManager.primaryMonitor; if (!mon) return;
+        const mon = Main.layoutManager.primaryMonitor;
+        if (!mon) return;
+
         const dw = Math.min(960, mon.width * 0.60);
         const dh = Math.min(600, mon.height * 0.64);
         const dx = mon.x + Math.floor((mon.width - dw) / 2);
         const dy = mon.y + Math.floor(mon.height * 0.14);
 
-        // _overlay covers the full monitor for click-outside-to-close detection
         this._overlay.set_position(mon.x, mon.y);
         this._overlay.set_size(mon.width, mon.height);
 
-        // _dialog is positioned relative to _overlay (its parent)
         this._dialog.set_position(dx - mon.x, dy - mon.y);
         this._dialog.set_width(dw);
-        
-        // Use inline style to enforce fixed height
         this._dialog.style = `height: ${dh}px;`;
-        
         this._dialog.min_width = dw;
         (this._dialog as any).max_width = dw;
 
-        // _blurWrapper is a top-level chrome actor — position in stage coords
         if (this._blurWrapper) {
             this._blurWrapper.set_position(dx, dy);
             this._blurWrapper.set_size(dw, this._dialog.height || dh);
         }
 
-        if (this._dialog && this._dialogAllocId) {
+        if (this._dialogAllocId) {
             this._dialog.disconnect(this._dialogAllocId);
             this._dialogAllocId = null;
         }
 
-        if (this._dialog) {
-            this._dialogAllocId = this._dialog.connect('notify::height', () => {
-                if (this._blurWrapper && this._dialog) {
-                    this._blurWrapper.set_size(this._dialog.width, this._dialog.height);
-                }
-            });
-        }
+        this._dialogAllocId = this._dialog.connect('notify::height', () => {
+            if (this._blurWrapper && this._dialog) {
+                this._blurWrapper.set_size(this._dialog.width, this._dialog.height);
+            }
+        });
     }
 
     toggle() {
@@ -1151,17 +1118,10 @@ export default class OrmicLauncherExtension extends Extension {
 
         const wantsBlur = this._settings.get_string('background-style') === 'blur';
 
-        // ── Ensure blur state is fully synced before showing ─────────────
-        // Force-hide blur if not wanted, force-reset if wanted.
-        // This prevents stale blur from a previous broken hide() cycle.
         if (this._blurWrapper) {
             if (wantsBlur) {
                 if (!this._blurWrapper.get_effect('blur')) {
-                    try {
-                        this._blurWrapper.add_effect_with_name('blur', createBlurEffect(14, 1.0));
-                    } catch (e: any) {
-                        console.error(`Ormic: blur effect error: ${e.message}`);
-                    }
+                    this._blurWrapper.add_effect_with_name('blur', createBlurEffect(14, 1.0));
                 }
                 this._blurWrapper.opacity = 0;
                 this._blurWrapper.translation_y = -20;
@@ -1174,12 +1134,7 @@ export default class OrmicLauncherExtension extends Extension {
             }
         }
 
-        // Show both chrome actors
         this._overlay.show();
-
-        // Animate dialog + blur wrapper together so they move as one unit.
-        // Even though they are separate chrome entries they share the same
-        // position/size so visually they are one surface.
         this._dialog.opacity = 0;
         this._dialog.translation_y = -20;
 
@@ -1219,68 +1174,28 @@ export default class OrmicLauncherExtension extends Extension {
             this._clickGuardTimer = null;
         }
         if (this._grab) {
-            try { Main.popModal(this._grab); }
-            catch (e: any) { dbg('Launcher', `popModal failed: ${e.message}`); }
+            Main.popModal(this._grab);
             this._grab = null;
         }
 
-        const ov = this._overlay;
-        const dl = this._dialog;
-        const bw = this._blurWrapper;
-
-        // ── CRITICAL: Immediate synchronous cleanup ──────────────────────
-        // Hide the blur wrapper IMMEDIATELY — do NOT rely solely on
-        // animation callbacks. On GNOME 50, easeAsync() rejections are
-        // silently swallowed which means onComplete never fires, leaving
-        // a ghost blur on screen.
-        if (bw && !(bw as any).is_finalized?.()) {
-            bw.hide();
-            bw.opacity = 255;
-            bw.translation_y = 0;
+        // Hide blur immediately
+        if (this._blurWrapper) {
+            this._blurWrapper.hide();
+            this._blurWrapper.opacity = 255;
+            this._blurWrapper.translation_y = 0;
         }
 
-        // Helper: guaranteed cleanup for ALL actors — belt-and-suspenders.
-        const ensureCleanup = () => {
-            if (ov && !(ov as any).is_finalized?.()) ov.hide();
-            if (bw && !(bw as any).is_finalized?.()) {
-                bw.hide();
-                bw.opacity = 255;
-                bw.translation_y = 0;
-            }
-            if (dl && !(dl as any).is_finalized?.()) {
-                dl.opacity = 255;
-                dl.translation_y = 0;
-            }
-        };
-
-        // Animate dialog and overlay out — purely visual, no functional
-        // dependency on these callbacks for blur visibility.
-        easeActor(dl, {
+        easeActor(this._dialog, {
             opacity: 0, translation_y: -14, duration: 120, mode: Clutter.AnimationMode.EASE_IN_QUAD,
             onComplete: () => {
-                if (dl && !(dl as any).is_finalized?.()) {
-                    dl.opacity = 255;
-                    dl.translation_y = 0;
-                }
+                this._dialog!.opacity = 255;
+                this._dialog!.translation_y = 0;
             },
-        }).catch(() => { ensureCleanup(); });
+        });
 
-        easeActor(ov, {
+        easeActor(this._overlay, {
             opacity: 0, duration: 120, mode: Clutter.AnimationMode.EASE_IN_QUAD,
-            onComplete: () => {
-                if (ov && !(ov as any).is_finalized?.()) {
-                    ov.hide();
-                }
-            }
-        }).catch(() => { ensureCleanup(); });
-
-        // ── Safety net: force cleanup after animation should have finished ──
-        // If anything somehow stays visible (animation dropped, GC timing,
-        // rapid toggle), this timeout guarantees no ghost blur.
-        timeoutOnce(250, () => {
-            if (!this._visible) {
-                ensureCleanup();
-            }
+            onComplete: () => { this._overlay?.hide(); },
         });
     }
 
@@ -1297,71 +1212,79 @@ export default class OrmicLauncherExtension extends Extension {
     }
 
     _getResolvedAccentColor(): string {
-        let colorName = this._settings.get_string('accent-color') || 'gnome';
-        if (colorName === 'gnome') {
-            try {
-                const iface = this._interfaceSettings;
-                if (iface && iface.settings_schema.has_key('accent-color')) {
-                    colorName = iface.get_string('accent-color') || 'yellow';
-                } else {
-                    colorName = 'yellow';
-                }
-            } catch (_) {
-                colorName = 'yellow';
-            }
+        const userChoice = this._settings.get_string('accent-color');
+        if (userChoice && userChoice !== 'gnome') {
+            return userChoice;
         }
-        return colorName;
+
+        const iface = this._interfaceSettings;
+        if (iface && iface.settings_schema.has_key('accent-color')) {
+            const sysColor = iface.get_string('accent-color');
+            if (sysColor) return sysColor;
+        }
+
+        return 'yellow';
     }
+
+    private _currentAccentClass: string | null = null;
 
     _updateAccentColor() {
         if (!this._overlay) return;
+
         let colorName = this._getResolvedAccentColor();
 
-        if (!Object.prototype.hasOwnProperty.call(ACCENT_COLORS, colorName)) {
+        // Clamp to a key we actually have CSS variables for.
+        if (!ACCENT_COLOR_KEYS.has(colorName)) {
             colorName = 'yellow';
         }
 
-        Object.keys(ACCENT_COLORS).forEach(color => {
-            this._overlay!.remove_style_class_name(`ormic-accent-${color}`);
-        });
-        this._overlay.add_style_class_name(`ormic-accent-${colorName}`);
+        const newClass = `${ACCENT_CLASS_PREFIX}${colorName}`;
+        if (newClass === this._currentAccentClass) return;
+
+        if (this._currentAccentClass) {
+            this._overlay.remove_style_class_name(this._currentAccentClass);
+        }
+        this._overlay.add_style_class_name(newClass);
+        this._currentAccentClass = newClass;
     }
 
     _syncBackground() {
         if (!this._dialog) return;
-        const style = this._settings.get_string('background-style') || 'solid';
 
-        const classes = ['ormic-bg-blur', 'ormic-bg-transparent-20', 'ormic-bg-transparent-30',
-                         'ormic-bg-transparent-50', 'ormic-bg-solid'];
-        classes.forEach(c => this._dialog!.remove_style_class_name(c));
+        const style = this._settings.get_string('background-style');
+        const wantsBlur = style === 'blur';
+
+        const BG_CLASSES = [
+            'ormic-bg-blur', 'ormic-bg-transparent-20', 'ormic-bg-transparent-30',
+            'ormic-bg-transparent-50', 'ormic-bg-solid',
+        ];
+        BG_CLASSES.forEach(c => this._dialog!.remove_style_class_name(c));
         this._dialog.add_style_class_name(`ormic-bg-${style}`);
 
         if (!this._blurWrapper) return;
+
         if (!this._visible) {
-            // Proactively clean up even when hidden
-            if (style !== 'blur') {
+            if (!wantsBlur) {
                 this._blurWrapper.remove_effect_by_name('blur');
             }
             return;
         }
 
-        if (style === 'blur') {
+        if (wantsBlur) {
             if (!this._blurWrapper.get_effect('blur')) {
-                try {
-                    this._blurWrapper.add_effect_with_name('blur', createBlurEffect(14, 1.0));
-                } catch (e: any) {
-                    console.error(`Ormic: blur error: ${e.message}`);
-                }
+                this._blurWrapper.add_effect_with_name('blur', createBlurEffect(14, 1.0));
             }
             this._blurWrapper.show();
-            easeActor(this._blurWrapper, { opacity: 255, duration: 150,
-                mode: Clutter.AnimationMode.EASE_OUT_QUAD });
+            easeActor(this._blurWrapper, {
+                opacity: 255, duration: 150,
+                mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+            });
         } else {
-            // Remove effect first, THEN hide
             this._blurWrapper.remove_effect_by_name('blur');
-            easeActor(this._blurWrapper, { opacity: 0, duration: 150,
+            easeActor(this._blurWrapper, {
+                opacity: 0, duration: 150,
                 mode: Clutter.AnimationMode.EASE_IN_QUAD,
-                onComplete: () => { this._blurWrapper?.hide(); }
+                onComplete: () => { this._blurWrapper?.hide(); },
             });
         }
     }
