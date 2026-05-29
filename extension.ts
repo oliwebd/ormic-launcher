@@ -1073,7 +1073,7 @@ export default class OrmicLauncherExtension extends Extension {
         }
 
         for (const p of this.providers) {
-            p?.destroy?.();
+            p?.destroy();
         }
         this.providers = [];
         this._settings = null as any;
