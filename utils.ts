@@ -20,6 +20,24 @@ export function dbg(scope: string, msg: string, ...args: any[]) {
 
 export const SHELL_MAJOR = parseInt((Config as any).PACKAGE_VERSION.split('.')[0], 10);
 export const IS_50_PLUS = SHELL_MAJOR >= 50;
+export const IS_48_PLUS = SHELL_MAJOR >= 48;
+
+/**
+ * Cross-version helper for St.BoxLayout direction.
+ *
+ * GNOME 46/47 — only supports `vertical: true/false`; the `orientation`
+ *               property does not exist on St.BoxLayout.
+ * GNOME 48+   — `vertical` is deprecated; use `orientation: Clutter.Orientation.*`.
+ *
+ * Spread the result into the constructor params object:
+ *   new St.BoxLayout({ ...boxLayoutParams(true), style_class: '...' })
+ */
+export function boxLayoutParams(vertical: boolean): object {
+  if (IS_48_PLUS) {
+    return { orientation: vertical ? Clutter.Orientation.VERTICAL : Clutter.Orientation.HORIZONTAL };
+  }
+  return { vertical };
+}
 
 export function createAppIcon(app: any, size: number): any {
   const info = app?.get_app_info?.();

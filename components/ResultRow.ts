@@ -9,7 +9,7 @@ import Pango from 'gi://Pango';
 
 import { gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
 import { SearchResult } from '../types.js';
-import { dbg } from '../utils.js';
+import { dbg, boxLayoutParams } from '../utils.js';
 
 export const ResultRow = GObject.registerClass({
     Signals: { 'item-activated': {}, 'item-hovered': {} },
@@ -62,7 +62,7 @@ export const ResultRow = GObject.registerClass({
 
         const textCol = new St.BoxLayout({
             style_class: 'ormic-text-col',
-            vertical: true, x_expand: true,
+            ...boxLayoutParams(true), x_expand: true,
             y_align: Clutter.ActorAlign.CENTER,
         });
         const nameLabel = new St.Label({

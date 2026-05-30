@@ -7,7 +7,7 @@ import GObject from 'gi://GObject';
 import Pango from 'gi://Pango';
 
 import { SearchResult } from '../types.js';
-import { dbg } from '../utils.js';
+import { dbg, boxLayoutParams } from '../utils.js';
 
 /**
  * GridItem is designed for pooled reuse.
@@ -35,7 +35,7 @@ export const GridItem = GObject.registerClass(
 
             // ── Build widget tree once ───────────────────────────────────
             const box = new St.BoxLayout({
-                vertical: true,
+                ...boxLayoutParams(true),
                 style_class: 'ormic-grid-item-box',
                 x_expand: true, y_expand: true,
             });
