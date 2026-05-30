@@ -8,7 +8,7 @@ A floating apps launcher for GNOME Shell **46 – 50**, inspired by the premium 
 Run the following command in your terminal to instantly download and install this release:
 
 ```bash
-curl -L -o /tmp/ormic.zip https://github.com/oliwebd/ormic-launcher/releases/download/v0.1.7/ormic-launcher@github.com.zip && gnome-extensions install /tmp/ormic.zip --force && rm /tmp/ormic.zip
+curl -L -o /tmp/ormic.zip https://github.com/oliwebd/ormic-launcher/releases/download/v0.1.8/ormic-launcher@github.com.zip && gnome-extensions install /tmp/ormic.zip --force && rm /tmp/ormic.zip
 ```
 
 *Note: After installing, you may need to restart GNOME Shell (Alt+F2 -> `r` -> Enter on X11, or log out and log back in on Wayland) and ensure the extension is enabled via the `gnome-extensions enable ormic-launcher@github.com` command or the Extension Manager app.*
