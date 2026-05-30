@@ -1,6 +1,6 @@
 {
   "name": "ormic-launcher",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Ormic Launcher GNOME Extension in TypeScript",
   "type": "module",
   "private": true,

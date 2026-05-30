@@ -98,7 +98,7 @@
 }
 
 .ormic-rbox {
-  padding: 4px 14px;
+  padding: 4px 20px 4px 14px;
   spacing: 4px;
 }
 
@@ -455,7 +455,7 @@
 }
 
 .ormic-editor-apps {
-  padding: 4px 0;
+  padding: 4px 20px 4px 0;
 }
 
 .ormic-edit-row {
@@ -603,6 +603,7 @@
 .ormic-grid-scroll StScrollBar,
 .ormic-editor-scroll StScrollBar {
   padding: 0 2px;
+  margin-right: 8px;
   width: 8px;
 }
 
