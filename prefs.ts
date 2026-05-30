@@ -127,16 +127,17 @@ export default class OrmicLauncherPrefs extends ExtensionPreferences {
             model: new Gtk.StringList({
                 strings: [
                     _('Blur (Glassmorphic)'),
-                    _('Transparent (20%)'),
-                    _('Transparent (30%)'),
-                    _('Transparent (50%)'),
+                    _('Transparent'),
                     _('Solid / GNOME Default'),
                 ],
             }),
         });
-        const bgStyles = ['blur', 'transparent-20', 'transparent-30', 'transparent-50', 'solid'];
+        const bgStyles = ['blur', 'transparent', 'solid'];
         const refreshBg = () => {
-            const val = s.get_string('background-style') || 'blur';
+            let val = s.get_string('background-style') || 'blur';
+            if (val.startsWith('transparent')) {
+                val = 'transparent';
+            }
             const idx = bgStyles.indexOf(val);
             if (idx !== -1) bgRow.set_selected(idx);
         };

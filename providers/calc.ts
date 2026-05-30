@@ -8,9 +8,10 @@ import { SearchResult } from '../types.js';
 
 export class CalcProvider {
     id = 'calc'; priority = 5;
-    private _start = /^[\d.(]/;
-    private _kw = /\b(sin|cos|tan|sqrt|log|ln|exp|pi)\b/gi;
-    private _safe = /^[0-9\s+\-*/.,%^()e]+$/i;
+    private _kw   = /\b(sin|cos|tan|sqrt|log|ln|exp|pi)\b/gi;
+    // Starts with a digit, '.', '(', or a recognised math function name
+    private _start = /^[\d.(]|^(sin|cos|tan|sqrt|log|ln|exp|pi)\b/i;
+    private _safe  = /^[0-9\s+\-*/.,%^()e]+$/i;
 
     private valid(q: string) {
         return this._start.test(q) && this._safe.test(q.replace(this._kw, '0'));
@@ -26,7 +27,9 @@ export class CalcProvider {
                 .replace(/\btan\b/g, 'Math.tan').replace(/\bsqrt\b/g, 'Math.sqrt')
                 .replace(/\blog\b/g, 'Math.log10').replace(/\bln\b/g, 'Math.log')
                 .replace(/\bexp\b/g, 'Math.exp').replace(/\bpi\b/gi, 'Math.PI')
-                .replace(/(?<![A-Za-z])e(?![A-Za-z])/g, 'Math.E');
+                // Replace bare 'e' (Euler's number) but NOT the 'e' in
+                // scientific notation (e.g. 1e3, 2.5e-4).
+                .replace(/(?<![A-Za-z0-9])e(?![A-Za-z0-9])/g, 'Math.E');
              
             const v = new Function(`"use strict"; return (${s})`)();
             if (typeof v !== 'number' || !isFinite(v)) return [];

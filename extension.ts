@@ -1022,7 +1022,7 @@ export default class OrmicLauncherExtension extends Extension {
         }
 
         for (const p of this.providers) {
-            p?.destroy();
+            p?.destroy?.();
         }
         this.providers = [];
         this._settings = null as any;
@@ -1044,8 +1044,8 @@ export default class OrmicLauncherExtension extends Extension {
         const mon = Main.layoutManager.primaryMonitor;
         if (!mon) return;
 
-        const dw = 852;
-        const dh = 598;
+        const dw = 960;
+        const dh = 640;
         const dx = mon.x + Math.floor((mon.width - dw) / 2);
         const dy = mon.y + Math.floor(mon.height * 0.14);
 
@@ -1053,10 +1053,15 @@ export default class OrmicLauncherExtension extends Extension {
         this._overlay.set_size(mon.width, mon.height);
 
         this._dialog.set_position(dx - mon.x, dy - mon.y);
-        this._dialog.set_width(dw);
+        this._dialog.set_size(dw, dh);
         this._dialog.style = '';
         this._dialog.min_width = dw;
         (this._dialog as any).max_width = dw;
+        this._dialog.min_height = dh;
+        (this._dialog as any).max_height = dh;
+        // Clip all children (grid, scrollbars, etc.) to the fixed dialog bounds
+        // so nothing paints outside the dialog card.
+        this._dialog.set_clip_to_allocation(true);
     }
 
     toggle() {
@@ -1191,12 +1196,14 @@ export default class OrmicLauncherExtension extends Extension {
     _syncBackground() {
         if (!this._dialog) return;
 
-        const style = this._settings.get_string('background-style');
+        let style = this._settings.get_string('background-style') || 'solid';
+        if (style.startsWith('transparent')) {
+            style = 'transparent';
+        }
         const wantsBlur = style === 'blur';
 
         const BG_CLASSES = [
-            'ormic-bg-blur', 'ormic-bg-transparent-20', 'ormic-bg-transparent-30',
-            'ormic-bg-transparent-50', 'ormic-bg-solid',
+            'ormic-bg-blur', 'ormic-bg-transparent', 'ormic-bg-solid',
         ];
         BG_CLASSES.forEach(c => this._dialog!.remove_style_class_name(c));
         this._dialog.add_style_class_name(`ormic-bg-${style}`);

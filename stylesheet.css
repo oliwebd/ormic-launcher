@@ -17,6 +17,12 @@
   border: 1px solid rgba(255, 255, 255, 0.13);
   border-radius: 14px;
   padding: 0;
+  width: 960px;
+  height: 640px;
+  min-width: 960px;
+  min-height: 640px;
+  max-width: 960px;
+  max-height: 640px;
 }
 
 /* ── Search row ──────────────────────────────────────────────────────────── */
@@ -79,7 +85,7 @@
 /* ── Search Results List View ────────────────────────────────────────────── */
 
 .ormic-scroll {
-  height: 440px;
+  height: 474px;
 }
 
 .ormic-scroll StScrollBar {
@@ -243,7 +249,7 @@
 }
 
 .ormic-grid-scroll {
-  height: 440px;
+  height: 474px;
 }
 
 .ormic-grid-scroll StScrollBar {
@@ -285,12 +291,11 @@
 
 .ormic-grid-item:hover {
   background-color: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.08);
 }
 
 .ormic-grid-item.selected {
-  background-color: rgba(255, 255, 255, 0.06);
-  border-color: rgba(250, 184, 75, 0.32);
+  background-color: rgba(255, 255, 255, 0.075);
+  border: 1px solid transparent;
 }
 
 .ormic-grid-icon-bin {
@@ -615,7 +620,7 @@
 }
 
 .ormic-editor-scroll {
-  height: 440px;
+  height: 474px;
 }
 
 .ormic-editor-scroll StScrollBar {
@@ -1570,16 +1575,8 @@
   background-color: rgba(14, 14, 20, 0.48);
 }
 
-.ormic-bg-transparent-20 {
-  background-color: rgba(14, 14, 20, 0.20);
-}
-
-.ormic-bg-transparent-30 {
+.ormic-bg-transparent {
   background-color: rgba(14, 14, 20, 0.30);
-}
-
-.ormic-bg-transparent-50 {
-  background-color: rgba(14, 14, 20, 0.50);
 }
 
 .ormic-bg-solid {
