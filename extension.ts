@@ -78,7 +78,7 @@ const LauncherDialog = GObject.registerClass(
             if (!box) {
                 box = new St.BoxLayout({
                     style_class: 'ormic-grid-box',
-                    orientation: Clutter.Orientation.VERTICAL,
+                    vertical: true,
                     x_expand: true,
                     x_align: Clutter.ActorAlign.CENTER,
                 });
@@ -129,7 +129,7 @@ const LauncherDialog = GObject.registerClass(
             // overview / lockscreen pattern: two scene-graph-independent
             // branches so hover/repaint events in this dialog tree can never
             // reach or invalidate the blur actor.
-            super._init({ style_class: 'ormic-dialog', orientation: Clutter.Orientation.VERTICAL, reactive: true });
+            super._init({ style_class: 'ormic-dialog', vertical: true, reactive: true });
         }
 
         setup(ext: OrmicLauncherExtension) {
@@ -232,7 +232,7 @@ const LauncherDialog = GObject.registerClass(
                 overlay_scrollbars: true, x_expand: true, y_expand: true,
             });
             this._rbox = new St.BoxLayout({
-                style_class: 'ormic-rbox', orientation: Clutter.Orientation.VERTICAL, x_expand: true,
+                style_class: 'ormic-rbox', vertical: true, x_expand: true,
             });
             this._scroll.set_child(this._rbox);
             this._scroll.hide();
@@ -345,7 +345,6 @@ const LauncherDialog = GObject.registerClass(
             // ── Top Header Tabs Container ─────────────────────────────────
             this._tabsBox = new St.BoxLayout({
                 style_class: 'ormic-tabs-box',
-                orientation: Clutter.Orientation.HORIZONTAL,
                 x_expand: true,
                 x_align: Clutter.ActorAlign.FILL,
                 reactive: true,
@@ -380,7 +379,7 @@ const LauncherDialog = GObject.registerClass(
 
             // ── Group Editor Screen ───────────────────────────────────────
             this._editorBox = new St.BoxLayout({
-                style_class: 'ormic-editor-box', orientation: Clutter.Orientation.VERTICAL, x_expand: true, y_expand: true,
+                style_class: 'ormic-editor-box', vertical: true, x_expand: true, y_expand: true,
             });
             this._editorBox.hide();
 
@@ -426,7 +425,7 @@ const LauncherDialog = GObject.registerClass(
                 overlay_scrollbars: true, x_expand: true, y_expand: true,
             });
             this._editorAppsContainer = new St.BoxLayout({
-                style_class: 'ormic-editor-apps', orientation: Clutter.Orientation.VERTICAL, x_expand: true,
+                style_class: 'ormic-editor-apps', vertical: true, x_expand: true,
             });
             this._editorScroll.set_child(this._editorAppsContainer);
             this._editorBox.add_child(this._editorScroll);
@@ -434,7 +433,7 @@ const LauncherDialog = GObject.registerClass(
             // ── Prompt Modal Overlay ──────────────────────────────────────
             this._promptOverlay = new St.BoxLayout({
                 style_class: 'ormic-prompt-overlay',
-                orientation: Clutter.Orientation.VERTICAL,
+                vertical: true,
                 x_expand: true, y_expand: true,
                 x_align: Clutter.ActorAlign.CENTER,
                 y_align: Clutter.ActorAlign.CENTER,
@@ -444,7 +443,7 @@ const LauncherDialog = GObject.registerClass(
 
             const promptCard = new St.BoxLayout({
                 style_class: 'ormic-prompt-card',
-                orientation: Clutter.Orientation.VERTICAL,
+                vertical: true,
                 x_expand: true,
                 reactive: true,
             });
@@ -506,12 +505,6 @@ const LauncherDialog = GObject.registerClass(
             this.add_child(this._entryBox);
             this.add_child(new St.Widget({ name: 'ormic-sep-tabs', style_class: 'ormic-sep', x_expand: true }));
 
-            this._tabsBox.orientation = Clutter.Orientation.HORIZONTAL;
-            this._tabsBox.x_expand = true;
-            this._tabsBox.y_expand = false;
-            this._tabsBox.x_align = Clutter.ActorAlign.FILL;
-            this._tabsBox.y_align = Clutter.ActorAlign.START;
-
             const tabsScroll = new St.ScrollView({
                 style_class: 'ormic-tabs-scroll',
                 hscrollbar_policy: St.PolicyType.NEVER,
@@ -529,7 +522,7 @@ const LauncherDialog = GObject.registerClass(
 
             const rightPanel = new St.BoxLayout({
                 style_class: 'ormic-right-panel',
-                orientation: Clutter.Orientation.VERTICAL,
+                vertical: true,
                 x_expand: true, y_expand: true,
             });
             rightPanel.add_child(this._scroll);

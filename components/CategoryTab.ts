@@ -31,7 +31,6 @@ export const CategoryTab = GObject.registerClass({
         this._iconName = iconName;
 
         const box = new St.BoxLayout({
-            orientation: Clutter.Orientation.HORIZONTAL,
             style_class: 'ormic-category-tab-box',
             x_expand: true,
             y_align: Clutter.ActorAlign.CENTER,

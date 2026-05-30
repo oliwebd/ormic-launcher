@@ -27,7 +27,7 @@
 
 /* ── Search row ──────────────────────────────────────────────────────────── */
 .ormic-search-row {
-  padding: 14px 14px 10px 14px;
+  padding: 14px 14px 10px 20px;
 }
 
 .ormic-search-icon {
@@ -297,13 +297,9 @@
   spacing: 4px;
 }
 
-.ormic-grid-item:hover {
-  background-color: rgba(255, 255, 255, 0.06);
-}
-
 .ormic-grid-item.selected {
-  background-color: rgba(255, 255, 255, 0.075);
-  border: 1px solid transparent;
+  background-color: rgba(255, 255, 255, 0.10);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .ormic-grid-icon-bin {
@@ -343,7 +339,7 @@
 
 /* ── Category Tabs ───────────────────────────────────────────────────────── */
 .ormic-tabs-box {
-  padding: 6px 12px;
+  padding: 6px 12px 6px 18px;
   spacing: 6px;
 }
 
@@ -425,6 +421,10 @@
   background-color: rgba(255, 255, 255, 0.06);
 }
 
+.ormic-editor-btn-box {
+  spacing: 8px;
+}
+
 .ormic-editor-btn {
   padding: 6px 16px;
   border-radius: 8px;
@@ -464,6 +464,10 @@
   background-color: transparent;
   border: 1px solid transparent;
   min-height: 48px;
+}
+
+.ormic-edit-row-box {
+  spacing: 10px;
 }
 
 .ormic-edit-row:hover {
@@ -600,24 +604,21 @@
 
 /* ── Scrollbars ──────────────────────────────────────────────────────────── */
 .ormic-scroll StScrollBar,
-.ormic-grid-scroll StScrollBar,
-.ormic-editor-scroll StScrollBar {
+.ormic-grid-scroll StScrollBar {
   padding: 0 2px;
   margin-right: 8px;
   width: 8px;
 }
 
 .ormic-scroll StScrollBar StBin#trough,
-.ormic-grid-scroll StScrollBar StBin#trough,
-.ormic-editor-scroll StScrollBar StBin#trough {
+.ormic-grid-scroll StScrollBar StBin#trough {
   background-color: rgba(255, 255, 255, 0.04);
   width: 5px;
   border-radius: 3px;
 }
 
 .ormic-scroll StScrollBar StButton#vhandle,
-.ormic-grid-scroll StScrollBar StButton#vhandle,
-.ormic-editor-scroll StScrollBar StButton#vhandle {
+.ormic-grid-scroll StScrollBar StButton#vhandle {
   background-color: rgba(255, 255, 255, 0.22);
   border-radius: 3px;
   border: none;
@@ -625,8 +626,7 @@
 }
 
 .ormic-scroll StScrollBar StButton#vhandle:hover,
-.ormic-grid-scroll StScrollBar StButton#vhandle:hover,
-.ormic-editor-scroll StScrollBar StButton#vhandle:hover {
+.ormic-grid-scroll StScrollBar StButton#vhandle:hover {
   background-color: rgba(255, 255, 255, 0.38);
 }
 
@@ -636,11 +636,31 @@
 }
 
 .ormic-editor-scroll StScrollBar {
+  padding: 0 2px;
+  margin-right: 8px;
+  width: 8px;
   opacity: 0;
 }
 
 .ormic-editor-scroll:hover StScrollBar {
   opacity: 1;
+}
+
+.ormic-editor-scroll StScrollBar StBin#trough {
+  background-color: rgba(255, 255, 255, 0.04);
+  width: 5px;
+  border-radius: 3px;
+}
+
+.ormic-editor-scroll StScrollBar StButton#vhandle {
+  background-color: rgba(255, 255, 255, 0.22);
+  border-radius: 3px;
+  border: none;
+  min-height: 28px;
+}
+
+.ormic-editor-scroll StScrollBar StButton#vhandle:hover {
+  background-color: rgba(255, 255, 255, 0.38);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════

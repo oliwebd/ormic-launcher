@@ -35,7 +35,7 @@ export const GridItem = GObject.registerClass(
 
             // ── Build widget tree once ───────────────────────────────────
             const box = new St.BoxLayout({
-                orientation: Clutter.Orientation.VERTICAL,
+                vertical: true,
                 style_class: 'ormic-grid-item-box',
                 x_expand: true, y_expand: true,
             });
