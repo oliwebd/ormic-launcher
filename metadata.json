@@ -2,7 +2,7 @@
   "name": "Ormic Launcher",
   "description": "A floating app launcher / app grid for GNOME Shell. This extension provides a fully adaptive layout that seamlessly integrates into your desktop environment, offering highly responsive mouse and keyboard event handling for quick navigation.\n\nNOTE: This extension accesses the system clipboard locally to evaluate math equations and inputs in the calculator utility. No clipboard data is ever saved, shared, or transmitted to any third party.\n\nKey features include:\n* Smooth, adaptive glassmorphic user interface\n* Customizable application grouping for better organization\n* Quick search capabilities to launch applications instantly",
   "uuid": "ormic-launcher@github.com",
-  "version-name": "0.1.7",
+  "version-name": "0.1.8",
   "shell-version": [
     "46",
     "47",
