@@ -74,6 +74,9 @@ export const GridItem = GObject.registerClass(
             this._activateCb = onActivate;
             this._hoverCb = onHover;
 
+            // Ensure pooled item doesn't retain old selection state
+            this.setSelected(false);
+
             // Update icon — reuse the existing St.Icon node when possible
             let iconWidget: any = null;
             if (result.createIcon) {

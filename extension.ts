@@ -849,7 +849,6 @@ export default class OrmicLauncherExtension extends Extension {
     _settings!: Gio.Settings;
     _interfaceSettings: Gio.Settings | null = null;
     _overlay!: St.Widget | null;
-    _blurWrapper: St.Widget | null = null;
     _dialog!: LauncherDialog | null;
     _indicator!: OrmicIndicator | null;
     _monId!: number | null;
@@ -942,21 +941,6 @@ export default class OrmicLauncherExtension extends Extension {
         this._dialog.setup(this);
         this._overlay.add_child(this._dialog);
 
-        // Blur wrapper — separate chrome layer
-        this._blurWrapper = new St.Widget({
-            name: 'ormic-blur-wrapper',
-            style_class: 'ormic-blur-wrapper',
-            reactive: false,
-            visible: false,
-            opacity: 0,
-        });
-
-        // Register blur wrapper as its own chrome entry
-        Main.layoutManager.addChrome(this._blurWrapper, {
-            affectsStruts: false,
-            trackFullscreen: true,
-        });
-
         this._updateAccentColor();
 
         // Register _overlay AFTER blur wrapper so it sits on top
@@ -1014,16 +998,10 @@ export default class OrmicLauncherExtension extends Extension {
 
         if (this._dialog) {
             if (this._dialogSizeId) { this._dialog.disconnect(this._dialogSizeId); this._dialogSizeId = null; }
+            this._dialog.remove_effect_by_name('blur');
             this._dialog.remove_all_transitions();
             this._dialog.cleanup();
             this._dialog.destroy();
-        }
-
-        if (this._blurWrapper) {
-            this._blurWrapper.remove_all_transitions();
-            Main.layoutManager.removeChrome(this._blurWrapper);
-            this._blurWrapper.destroy();
-            this._blurWrapper = null;
         }
 
         if (this._overlay) {
@@ -1066,8 +1044,8 @@ export default class OrmicLauncherExtension extends Extension {
         const mon = Main.layoutManager.primaryMonitor;
         if (!mon) return;
 
-        const dw = Math.min(960, mon.width * 0.60);
-        const dh = Math.min(600, mon.height * 0.64);
+        const dw = 852;
+        const dh = 598;
         const dx = mon.x + Math.floor((mon.width - dw) / 2);
         const dy = mon.y + Math.floor(mon.height * 0.14);
 
@@ -1076,18 +1054,9 @@ export default class OrmicLauncherExtension extends Extension {
 
         this._dialog.set_position(dx - mon.x, dy - mon.y);
         this._dialog.set_width(dw);
-        this._dialog.style = `height: ${dh}px;`;
+        this._dialog.style = '';
         this._dialog.min_width = dw;
         (this._dialog as any).max_width = dw;
-
-        if (this._blurWrapper) {
-            this._blurWrapper.set_position(dx, dy);
-            // Use the computed dw/dh directly — the dialog has a fixed size and
-            // will never legitimately resize after _pos() runs. Listening to
-            // notify::allocation / notify::height just lets CSS hover/active
-            // state changes trigger _blurWrapper resamples, causing flicker.
-            this._blurWrapper.set_size(dw, dh);
-        }
     }
 
     toggle() {
@@ -1102,27 +1071,18 @@ export default class OrmicLauncherExtension extends Extension {
 
         this._overlay.remove_all_transitions();
         this._dialog.remove_all_transitions();
-        this._blurWrapper?.remove_all_transitions();
 
         this._visible = true;
         this._dialog.reset();
 
         const wantsBlur = this._settings.get_string('background-style') === 'blur';
 
-        if (this._blurWrapper) {
-            if (wantsBlur) {
-                if (!this._blurWrapper.get_effect('blur')) {
-                    this._blurWrapper.add_effect_with_name('blur', createBlurEffect(14, 1.0));
-                }
-                this._blurWrapper.opacity = 0;
-                this._blurWrapper.translation_y = -20;
-                this._blurWrapper.show();
-            } else {
-                this._blurWrapper.remove_effect_by_name('blur');
-                this._blurWrapper.hide();
-                this._blurWrapper.opacity = 255;
-                this._blurWrapper.translation_y = 0;
+        if (wantsBlur) {
+            if (!this._dialog.get_effect('blur')) {
+                this._dialog.add_effect_with_name('blur', createBlurEffect(14, 1.0));
             }
+        } else {
+            this._dialog.remove_effect_by_name('blur');
         }
 
         this._overlay.show();
@@ -1136,15 +1096,12 @@ export default class OrmicLauncherExtension extends Extension {
             this._visible = false;
             this._grab = null;
             this._overlay.hide();
-            this._blurWrapper?.hide();
             return;
         }
         this._grab = grab;
 
         easeActor(this._overlay, { opacity: 255, duration: 150, mode: Clutter.AnimationMode.EASE_OUT_QUAD });
         easeActor(this._dialog, { opacity: 255, translation_y: 0, duration: 200, mode: Clutter.AnimationMode.EASE_OUT_EXPO });
-        if (this._blurWrapper && wantsBlur)
-            easeActor(this._blurWrapper, { opacity: 255, translation_y: 0, duration: 200, mode: Clutter.AnimationMode.EASE_OUT_EXPO });
 
         timeoutOnce(10, () => this._dialog?.focus());
     }
@@ -1156,7 +1113,6 @@ export default class OrmicLauncherExtension extends Extension {
 
         this._overlay.remove_all_transitions();
         this._dialog.remove_all_transitions();
-        this._blurWrapper?.remove_all_transitions();
 
         this._visible = false;
         this._clickGuard = false;
@@ -1167,13 +1123,6 @@ export default class OrmicLauncherExtension extends Extension {
         if (this._grab) {
             Main.popModal(this._grab);
             this._grab = null;
-        }
-
-        // Hide blur immediately
-        if (this._blurWrapper) {
-            this._blurWrapper.hide();
-            this._blurWrapper.opacity = 255;
-            this._blurWrapper.translation_y = 0;
         }
 
         easeActor(this._dialog, {
@@ -1252,31 +1201,19 @@ export default class OrmicLauncherExtension extends Extension {
         BG_CLASSES.forEach(c => this._dialog!.remove_style_class_name(c));
         this._dialog.add_style_class_name(`ormic-bg-${style}`);
 
-        if (!this._blurWrapper) return;
-
         if (!this._visible) {
             if (!wantsBlur) {
-                this._blurWrapper.remove_effect_by_name('blur');
+                this._dialog.remove_effect_by_name('blur');
             }
             return;
         }
 
         if (wantsBlur) {
-            if (!this._blurWrapper.get_effect('blur')) {
-                this._blurWrapper.add_effect_with_name('blur', createBlurEffect(14, 1.0));
+            if (!this._dialog.get_effect('blur')) {
+                this._dialog.add_effect_with_name('blur', createBlurEffect(14, 1.0));
             }
-            this._blurWrapper.show();
-            easeActor(this._blurWrapper, {
-                opacity: 255, duration: 150,
-                mode: Clutter.AnimationMode.EASE_OUT_QUAD,
-            });
         } else {
-            this._blurWrapper.remove_effect_by_name('blur');
-            easeActor(this._blurWrapper, {
-                opacity: 0, duration: 150,
-                mode: Clutter.AnimationMode.EASE_IN_QUAD,
-                onComplete: () => { this._blurWrapper?.hide(); },
-            });
+            this._dialog.remove_effect_by_name('blur');
         }
     }
 }

@@ -72,11 +72,15 @@
 
 /* ── Separators ──────────────────────────────────────────────────────────── */
 .ormic-sep {
+  height: 1px;
   background-color: rgba(255, 255, 255, 0.065);
 }
 
 /* ── Search Results List View ────────────────────────────────────────────── */
-.ormic-scroll {}
+
+.ormic-scroll {
+  height: 440px;
+}
 
 .ormic-scroll StScrollBar {
   opacity: 0;
@@ -238,7 +242,10 @@
   color: #ef4444;
 }
 
-/* ── Grid Container ──────────────────────────────────────────────────────── */
+.ormic-grid-scroll {
+  height: 440px;
+}
+
 .ormic-grid-scroll StScrollBar {
   opacity: 0;
 }
@@ -249,6 +256,11 @@
 
 .ormic-grid-box {
   padding: 14px 26px 18px 18px;
+  spacing: 2px;
+}
+
+.ormic-grid-row {
+  spacing: 2px;
 }
 
 .ormic-grid-empty {
@@ -260,13 +272,15 @@
 
 /* ── Grid Card Item ──────────────────────────────────────────────────────── */
 .ormic-grid-item {
-  padding: 8px 4px 6px 4px;
-  border-radius: 16px;
-  background-color: transparent;
+  padding: 4px;
+  border-radius: 12px;
   border: 1px solid transparent;
   width: 88px;
-  /* height: 88px; */
-  /* height: 88px; */
+  height: 80px;
+}
+
+.ormic-grid-item-box {
+  spacing: 4px;
 }
 
 .ormic-grid-item:hover {
@@ -281,7 +295,6 @@
 
 .ormic-grid-icon-bin {
   width: 48px;
-  /* height: 48px; */
   border-radius: 10px;
   padding: 3px;
   margin-bottom: 2px;
@@ -318,6 +331,7 @@
 /* ── Category Tabs ───────────────────────────────────────────────────────── */
 .ormic-tabs-box {
   padding: 6px 12px;
+  spacing: 6px;
 }
 
 .ormic-category-tab-box {
@@ -598,6 +612,10 @@
 .ormic-grid-scroll StScrollBar StButton#vhandle:hover,
 .ormic-editor-scroll StScrollBar StButton#vhandle:hover {
   background-color: rgba(255, 255, 255, 0.38);
+}
+
+.ormic-editor-scroll {
+  height: 440px;
 }
 
 .ormic-editor-scroll StScrollBar {
