@@ -98,14 +98,15 @@
 }
 
 .ormic-rbox {
-  padding: 4px 0;
+  padding: 4px 14px;
+  spacing: 4px;
 }
 
 .ormic-result {
-  padding: 0;
-  border-radius: 0;
+  padding: 0 12px 0 0;
+  border-radius: 8px;
   background-color: transparent;
-  min-height: 60px;
+  min-height: 56px;
 }
 
 .ormic-result:hover {
@@ -120,8 +121,8 @@
 .ormic-accent-bar {
   width: 3px;
   background-color: transparent;
-  border-radius: 0 2px 2px 0;
-  border-radius: 0 2px 2px 0;
+  border-radius: 3px;
+  margin: 8px 0 8px 5px;
 }
 
 .ormic-result.selected .ormic-accent-bar {
@@ -133,7 +134,7 @@
   width: 42px;
   border-radius: 9px;
   background-color: rgba(255, 255, 255, 0.04);
-  margin: 4px 14px 4px 10px;
+  margin: 4px 14px 4px 8px;
   padding: 2px;
 }
 
@@ -227,6 +228,10 @@
 .ormic-header {
   padding: 4px 12px;
   min-height: 0;
+}
+
+.ormic-header-control {
+  spacing: 6px;
 }
 
 .ormic-header-btn {

@@ -838,7 +838,6 @@ const ACCENT_COLORS = {
     mixed: { accent: '#64748B', rgb: '100, 116, 139', hover: '#94A3B8', active: '#475569' },
 } as const;
 
-type AccentColorKey = keyof typeof ACCENT_COLORS;
 const ACCENT_COLOR_KEYS = new Set<string>(Object.keys(ACCENT_COLORS));
 const ACCENT_CLASS_PREFIX = 'ormic-accent-';
 
