@@ -865,8 +865,6 @@ export default class OrmicLauncherExtension extends Extension {
     _dynamicCssFile: Gio.File | null = null;
     _theme: St.Theme | null = null;
     _dialogSizeId: number | null = null;
-    _dialogAllocId: number | null = null;
-    _blurResizeTimer: number | null = null;
 
     enable() {
         dbg('Extension', 'enable() called');
@@ -944,7 +942,7 @@ export default class OrmicLauncherExtension extends Extension {
         this._dialog.setup(this);
         this._overlay.add_child(this._dialog);
 
-        // Blur wrapper — separate chrome layer 
+        // Blur wrapper — separate chrome layer
         this._blurWrapper = new St.Widget({
             name: 'ormic-blur-wrapper',
             style_class: 'ormic-blur-wrapper',
@@ -1015,7 +1013,6 @@ export default class OrmicLauncherExtension extends Extension {
         Main.wm.removeKeybinding('toggle-ormic-launcher');
 
         if (this._dialog) {
-            if (this._dialogAllocId) { this._dialog.disconnect(this._dialogAllocId); this._dialogAllocId = null; }
             if (this._dialogSizeId) { this._dialog.disconnect(this._dialogSizeId); this._dialogSizeId = null; }
             this._dialog.remove_all_transitions();
             this._dialog.cleanup();
@@ -1044,11 +1041,6 @@ export default class OrmicLauncherExtension extends Extension {
         if (this._clickGuardTimer != null) {
             GLib.source_remove(this._clickGuardTimer);
             this._clickGuardTimer = null;
-        }
-
-        if (this._blurResizeTimer != null) {
-            GLib.source_remove(this._blurResizeTimer);
-            this._blurResizeTimer = null;
         }
 
         for (const p of this.providers) {
@@ -1090,31 +1082,12 @@ export default class OrmicLauncherExtension extends Extension {
 
         if (this._blurWrapper) {
             this._blurWrapper.set_position(dx, dy);
-            this._blurWrapper.set_size(dw, this._dialog.height || dh);
+            // Use the computed dw/dh directly — the dialog has a fixed size and
+            // will never legitimately resize after _pos() runs. Listening to
+            // notify::allocation / notify::height just lets CSS hover/active
+            // state changes trigger _blurWrapper resamples, causing flicker.
+            this._blurWrapper.set_size(dw, dh);
         }
-
-        if (this._dialogAllocId) {
-            this._dialog.disconnect(this._dialogAllocId);
-            this._dialogAllocId = null;
-        }
-
-        this._dialogAllocId = this._dialog.connect('notify::allocation', () => {
-            if (!this._blurWrapper || !this._dialog) return;
-            const newW = this._dialog.width;
-            const newH = this._dialog.height;
-            if (newW < 10 || newH < 10) return; // skip during init
-            if (this._blurResizeTimer != null) {
-                GLib.source_remove(this._blurResizeTimer);
-                this._blurResizeTimer = null;
-            }
-            this._blurResizeTimer = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 50, () => {
-                this._blurResizeTimer = null;
-                if (this._blurWrapper && this._dialog) {
-                    this._blurWrapper.set_size(this._dialog.width, this._dialog.height);
-                }
-                return GLib.SOURCE_REMOVE;
-            });
-        });
     }
 
     toggle() {
