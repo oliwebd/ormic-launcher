@@ -255,6 +255,7 @@ const LauncherDialog = GObject.registerClass(
             this._headerBox = new St.BoxLayout({
                 style_class: 'ormic-header',
                 x_expand: true,
+                y_expand: false,
                 x_align: Clutter.ActorAlign.END,
                 y_align: Clutter.ActorAlign.CENTER,
             });
@@ -479,6 +480,7 @@ const LauncherDialog = GObject.registerClass(
                 style_class: 'ormic-prompt-btns',
                 x_align: Clutter.ActorAlign.END,
             });
+            (promptBtns as any).spacing = 8;
             const pCancel = new St.Button({
                 label: _('Cancel'), style_class: 'ormic-prompt-btn cancel-btn',
                 reactive: true, track_hover: true,
