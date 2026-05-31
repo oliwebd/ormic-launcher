@@ -1,3 +1,4 @@
+/* global process, console */
 import { readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 
@@ -38,6 +39,9 @@ function generateAccentBlock(name, c) {
 .ormic-accent-${name} .ormic-prompt-btn.create-btn:hover { background-color: ${c.hover}; border-color: ${c.hover}; }
 .ormic-accent-${name} .ormic-prompt-btn.create-btn:active { background-color: ${c.active}; border-color: ${c.active}; }
 .ormic-accent-${name} .ormic-tip-key { color: rgba(${c.rgb}, 0.80); background-color: rgba(${c.rgb}, 0.09); }
+.ormic-accent-${name} .ormic-category-tab.active { background-color: rgba(${c.rgb}, 0.10); border-color: rgba(${c.rgb}, 0.22); }
+.ormic-accent-${name} .ormic-category-tab.active .ormic-category-tab-label { color: ${c.accent}; }
+.ormic-accent-${name} .ormic-category-tab.active .ormic-category-tab-icon { color: ${c.accent}; }
 `.trimStart();
 }
 
