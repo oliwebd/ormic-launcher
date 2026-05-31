@@ -286,9 +286,8 @@
 
 /* ── Grid Card Item ──────────────────────────────────────────────────────── */
 .ormic-grid-item {
-  padding: 4px;
+  padding: 5px;
   border-radius: 12px;
-  border: 1px solid transparent;
   width: 88px;
   height: 80px;
 }
@@ -299,7 +298,6 @@
 
 .ormic-grid-item.selected {
   background-color: rgba(255, 255, 255, 0.10);
-  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .ormic-grid-icon-bin {
@@ -354,25 +352,17 @@
   border: 1px solid transparent;
 }
 
-.ormic-category-tab:hover {
+.ormic-category-tab.active {
   background-color: rgba(255, 255, 255, 0.075);
   border-color: rgba(255, 255, 255, 0.10);
-}
-
-.ormic-category-tab.active {
-  border-color: rgba(250, 184, 75, 0.85);
 }
 
 .ormic-category-tab-icon {
   color: rgba(255, 255, 255, 0.45);
 }
 
-.ormic-category-tab:hover .ormic-category-tab-icon {
-  color: rgba(255, 255, 255, 0.85);
-}
-
 .ormic-category-tab.active .ormic-category-tab-icon {
-  color: rgba(255, 255, 255, 0.95);
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .ormic-category-tab-label {
@@ -381,7 +371,7 @@
   color: rgba(255, 255, 255, 0.60);
 }
 
-.ormic-category-tab:hover .ormic-category-tab-label {
+.ormic-category-tab.active .ormic-category-tab-label {
   color: rgba(255, 255, 255, 0.95);
 }
 
@@ -678,7 +668,6 @@
 .ormic-accent-yellow .ormic-fav-btn.is-fav:hover { background-color: rgba(250, 184, 75, 0.12); }
 .ormic-accent-yellow .ormic-kbd-badge { color: rgba(250, 184, 75, 0.72); background-color: rgba(250, 184, 75, 0.07); border: 1px solid rgba(250, 184, 75, 0.18); }
 .ormic-accent-yellow .ormic-result.selected .ormic-kbd-badge { border-color: #FAB84B; }
-.ormic-accent-yellow .ormic-grid-item.selected { border-color: rgba(250, 184, 75, 0.32); }
 .ormic-accent-yellow .ormic-category-tab.active { border-color: rgba(250, 184, 75, 0.85); }
 .ormic-accent-yellow .ormic-editor-entry { caret-color: #FAB84B; }
 .ormic-accent-yellow .ormic-editor-entry:focus { border-color: #FAB84B; }
@@ -703,7 +692,6 @@
 .ormic-accent-blue .ormic-fav-btn.is-fav:hover { background-color: rgba(59, 130, 246, 0.12); }
 .ormic-accent-blue .ormic-kbd-badge { color: rgba(59, 130, 246, 0.72); background-color: rgba(59, 130, 246, 0.07); border: 1px solid rgba(59, 130, 246, 0.18); }
 .ormic-accent-blue .ormic-result.selected .ormic-kbd-badge { border-color: #3B82F6; }
-.ormic-accent-blue .ormic-grid-item.selected { border-color: rgba(59, 130, 246, 0.32); }
 .ormic-accent-blue .ormic-category-tab.active { border-color: rgba(59, 130, 246, 0.85); }
 .ormic-accent-blue .ormic-editor-entry { caret-color: #3B82F6; }
 .ormic-accent-blue .ormic-editor-entry:focus { border-color: #3B82F6; }
@@ -728,7 +716,6 @@
 .ormic-accent-purple .ormic-fav-btn.is-fav:hover { background-color: rgba(139, 92, 246, 0.12); }
 .ormic-accent-purple .ormic-kbd-badge { color: rgba(139, 92, 246, 0.72); background-color: rgba(139, 92, 246, 0.07); border: 1px solid rgba(139, 92, 246, 0.18); }
 .ormic-accent-purple .ormic-result.selected .ormic-kbd-badge { border-color: #8B5CF6; }
-.ormic-accent-purple .ormic-grid-item.selected { border-color: rgba(139, 92, 246, 0.32); }
 .ormic-accent-purple .ormic-category-tab.active { border-color: rgba(139, 92, 246, 0.85); }
 .ormic-accent-purple .ormic-editor-entry { caret-color: #8B5CF6; }
 .ormic-accent-purple .ormic-editor-entry:focus { border-color: #8B5CF6; }
@@ -753,7 +740,6 @@
 .ormic-accent-red .ormic-fav-btn.is-fav:hover { background-color: rgba(239, 68, 68, 0.12); }
 .ormic-accent-red .ormic-kbd-badge { color: rgba(239, 68, 68, 0.72); background-color: rgba(239, 68, 68, 0.07); border: 1px solid rgba(239, 68, 68, 0.18); }
 .ormic-accent-red .ormic-result.selected .ormic-kbd-badge { border-color: #EF4444; }
-.ormic-accent-red .ormic-grid-item.selected { border-color: rgba(239, 68, 68, 0.32); }
 .ormic-accent-red .ormic-category-tab.active { border-color: rgba(239, 68, 68, 0.85); }
 .ormic-accent-red .ormic-editor-entry { caret-color: #EF4444; }
 .ormic-accent-red .ormic-editor-entry:focus { border-color: #EF4444; }
@@ -778,7 +764,6 @@
 .ormic-accent-green .ormic-fav-btn.is-fav:hover { background-color: rgba(16, 185, 129, 0.12); }
 .ormic-accent-green .ormic-kbd-badge { color: rgba(16, 185, 129, 0.72); background-color: rgba(16, 185, 129, 0.07); border: 1px solid rgba(16, 185, 129, 0.18); }
 .ormic-accent-green .ormic-result.selected .ormic-kbd-badge { border-color: #10B981; }
-.ormic-accent-green .ormic-grid-item.selected { border-color: rgba(16, 185, 129, 0.32); }
 .ormic-accent-green .ormic-category-tab.active { border-color: rgba(16, 185, 129, 0.85); }
 .ormic-accent-green .ormic-editor-entry { caret-color: #10B981; }
 .ormic-accent-green .ormic-editor-entry:focus { border-color: #10B981; }
@@ -803,7 +788,6 @@
 .ormic-accent-pink .ormic-fav-btn.is-fav:hover { background-color: rgba(236, 72, 153, 0.12); }
 .ormic-accent-pink .ormic-kbd-badge { color: rgba(236, 72, 153, 0.72); background-color: rgba(236, 72, 153, 0.07); border: 1px solid rgba(236, 72, 153, 0.18); }
 .ormic-accent-pink .ormic-result.selected .ormic-kbd-badge { border-color: #EC4899; }
-.ormic-accent-pink .ormic-grid-item.selected { border-color: rgba(236, 72, 153, 0.32); }
 .ormic-accent-pink .ormic-category-tab.active { border-color: rgba(236, 72, 153, 0.85); }
 .ormic-accent-pink .ormic-editor-entry { caret-color: #EC4899; }
 .ormic-accent-pink .ormic-editor-entry:focus { border-color: #EC4899; }
@@ -828,7 +812,6 @@
 .ormic-accent-teal .ormic-fav-btn.is-fav:hover { background-color: rgba(20, 184, 166, 0.12); }
 .ormic-accent-teal .ormic-kbd-badge { color: rgba(20, 184, 166, 0.72); background-color: rgba(20, 184, 166, 0.07); border: 1px solid rgba(20, 184, 166, 0.18); }
 .ormic-accent-teal .ormic-result.selected .ormic-kbd-badge { border-color: #14B8A6; }
-.ormic-accent-teal .ormic-grid-item.selected { border-color: rgba(20, 184, 166, 0.32); }
 .ormic-accent-teal .ormic-category-tab.active { border-color: rgba(20, 184, 166, 0.85); }
 .ormic-accent-teal .ormic-editor-entry { caret-color: #14B8A6; }
 .ormic-accent-teal .ormic-editor-entry:focus { border-color: #14B8A6; }
@@ -853,7 +836,6 @@
 .ormic-accent-orange .ormic-fav-btn.is-fav:hover { background-color: rgba(249, 115, 22, 0.12); }
 .ormic-accent-orange .ormic-kbd-badge { color: rgba(249, 115, 22, 0.72); background-color: rgba(249, 115, 22, 0.07); border: 1px solid rgba(249, 115, 22, 0.18); }
 .ormic-accent-orange .ormic-result.selected .ormic-kbd-badge { border-color: #F97316; }
-.ormic-accent-orange .ormic-grid-item.selected { border-color: rgba(249, 115, 22, 0.32); }
 .ormic-accent-orange .ormic-category-tab.active { border-color: rgba(249, 115, 22, 0.85); }
 .ormic-accent-orange .ormic-editor-entry { caret-color: #F97316; }
 .ormic-accent-orange .ormic-editor-entry:focus { border-color: #F97316; }
@@ -878,7 +860,6 @@
 .ormic-accent-slate .ormic-fav-btn.is-fav:hover { background-color: rgba(100, 116, 139, 0.12); }
 .ormic-accent-slate .ormic-kbd-badge { color: rgba(100, 116, 139, 0.72); background-color: rgba(100, 116, 139, 0.07); border: 1px solid rgba(100, 116, 139, 0.18); }
 .ormic-accent-slate .ormic-result.selected .ormic-kbd-badge { border-color: #64748B; }
-.ormic-accent-slate .ormic-grid-item.selected { border-color: rgba(100, 116, 139, 0.32); }
 .ormic-accent-slate .ormic-category-tab.active { border-color: rgba(100, 116, 139, 0.85); }
 .ormic-accent-slate .ormic-editor-entry { caret-color: #64748B; }
 .ormic-accent-slate .ormic-editor-entry:focus { border-color: #64748B; }
@@ -903,7 +884,6 @@
 .ormic-accent-brown .ormic-fav-btn.is-fav:hover { background-color: rgba(161, 98, 7, 0.12); }
 .ormic-accent-brown .ormic-kbd-badge { color: rgba(161, 98, 7, 0.72); background-color: rgba(161, 98, 7, 0.07); border: 1px solid rgba(161, 98, 7, 0.18); }
 .ormic-accent-brown .ormic-result.selected .ormic-kbd-badge { border-color: #A16207; }
-.ormic-accent-brown .ormic-grid-item.selected { border-color: rgba(161, 98, 7, 0.32); }
 .ormic-accent-brown .ormic-category-tab.active { border-color: rgba(161, 98, 7, 0.85); }
 .ormic-accent-brown .ormic-editor-entry { caret-color: #A16207; }
 .ormic-accent-brown .ormic-editor-entry:focus { border-color: #A16207; }
@@ -928,7 +908,6 @@
 .ormic-accent-mixed .ormic-fav-btn.is-fav:hover { background-color: rgba(100, 116, 139, 0.12); }
 .ormic-accent-mixed .ormic-kbd-badge { color: rgba(100, 116, 139, 0.72); background-color: rgba(100, 116, 139, 0.07); border: 1px solid rgba(100, 116, 139, 0.18); }
 .ormic-accent-mixed .ormic-result.selected .ormic-kbd-badge { border-color: #64748B; }
-.ormic-accent-mixed .ormic-grid-item.selected { border-color: rgba(100, 116, 139, 0.32); }
 .ormic-accent-mixed .ormic-category-tab.active { border-color: rgba(100, 116, 139, 0.85); }
 .ormic-accent-mixed .ormic-editor-entry { caret-color: #64748B; }
 .ormic-accent-mixed .ormic-editor-entry:focus { border-color: #64748B; }

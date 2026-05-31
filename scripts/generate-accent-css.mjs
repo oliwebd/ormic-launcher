@@ -26,8 +26,6 @@ function generateAccentBlock(name, c) {
 .ormic-accent-${name} .ormic-fav-btn.is-fav:hover { background-color: rgba(${c.rgb}, 0.12); }
 .ormic-accent-${name} .ormic-kbd-badge { color: rgba(${c.rgb}, 0.72); background-color: rgba(${c.rgb}, 0.07); border: 1px solid rgba(${c.rgb}, 0.18); }
 .ormic-accent-${name} .ormic-result.selected .ormic-kbd-badge { border-color: ${c.accent}; }
-.ormic-accent-${name} .ormic-grid-item.selected { border-color: rgba(${c.rgb}, 0.32); }
-.ormic-accent-${name} .ormic-category-tab.active { border-color: rgba(${c.rgb}, 0.85); }
 .ormic-accent-${name} .ormic-editor-entry { caret-color: ${c.accent}; }
 .ormic-accent-${name} .ormic-editor-entry:focus { border-color: ${c.accent}; }
 .ormic-accent-${name} .ormic-editor-btn.save-btn { background-color: ${c.accent}; border: 1px solid ${c.accent}; }
