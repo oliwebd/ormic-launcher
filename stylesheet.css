@@ -668,1042 +668,277 @@
    Each .ormic-accent-{color} class on the overlay triggers these rules.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-/* ── Yellow ──────────────────────────────────────────────────────────────── */
-.ormic-accent-yellow .ormic-entry {
-  caret-color: #FAB84B;
-  /* selection-background-color: rgba(250, 184, 75, 0.25); */
-}
-
-.ormic-accent-yellow .ormic-result.selected {
-  background-color: rgba(250, 184, 75, 0.09);
-}
-
-.ormic-accent-yellow .ormic-result.selected .ormic-accent-bar {
-  background-color: #FAB84B;
-}
-
-.ormic-accent-yellow .ormic-result.selected .ormic-name {
-  color: #FAB84B;
-}
-
-.ormic-accent-yellow .ormic-fav-btn:hover {
-  color: #FAB84B;
-}
-
-.ormic-accent-yellow .ormic-fav-btn.is-fav {
-  color: #FAB84B;
-}
-
-.ormic-accent-yellow .ormic-fav-btn.is-fav:hover {
-  background-color: rgba(250, 184, 75, 0.12);
-}
-
-.ormic-accent-yellow .ormic-kbd-badge {
-  color: rgba(250, 184, 75, 0.72);
-  background-color: rgba(250, 184, 75, 0.07);
-  border: 1px solid rgba(250, 184, 75, 0.18);
-}
-
-.ormic-accent-yellow .ormic-result.selected .ormic-kbd-badge {
-  border-color: #FAB84B;
-}
-
-.ormic-accent-yellow .ormic-grid-item.selected {
-  border-color: rgba(250, 184, 75, 0.32);
-}
-
-.ormic-accent-yellow .ormic-category-tab.active {
-  border-color: rgba(250, 184, 75, 0.85);
-}
-
-.ormic-accent-yellow .ormic-editor-entry {
-  caret-color: #FAB84B;
-  /* selection-background-color: rgba(250, 184, 75, 0.25); */
-}
-
-.ormic-accent-yellow .ormic-editor-entry:focus {
-  border-color: #FAB84B;
-}
-
-.ormic-accent-yellow .ormic-editor-btn.save-btn {
-  background-color: #FAB84B;
-  border: 1px solid #FAB84B;
-}
-
-.ormic-accent-yellow .ormic-editor-btn.save-btn:hover {
-  background-color: #fccb7b;
-  border-color: #fccb7b;
-}
-
-.ormic-accent-yellow .ormic-edit-row.selected {
-  background-color: rgba(250, 184, 75, 0.06);
-  border-color: rgba(250, 184, 75, 0.14);
-}
-
-.ormic-accent-yellow .ormic-edit-row.selected .ormic-edit-checkbox {
-  color: #FAB84B;
-}
-
-.ormic-accent-yellow .ormic-prompt-entry {
-  caret-color: #FAB84B;
-}
-
-.ormic-accent-yellow .ormic-prompt-entry:focus {
-  border-color: #FAB84B;
-}
-
-.ormic-accent-yellow .ormic-prompt-btn.create-btn {
-  background-color: #FAB84B;
-  border: 1px solid #FAB84B;
-}
-
-.ormic-accent-yellow .ormic-prompt-btn.create-btn:hover {
-  background-color: #fccb7b;
-  border-color: #fccb7b;
-}
-
-.ormic-accent-yellow .ormic-prompt-btn.create-btn:active {
-  background-color: #e5a43b;
-  border-color: #e5a43b;
-}
-
-.ormic-accent-yellow .ormic-tip-key {
-  color: rgba(250, 184, 75, 0.80);
-  background-color: rgba(250, 184, 75, 0.09);
-}
-
-/* ── Blue ──────────────────────────────────────────────────────────────── */
-.ormic-accent-blue .ormic-entry {
-  caret-color: #3B82F6;
-}
-
-.ormic-accent-blue .ormic-result.selected {
-  background-color: rgba(59, 130, 246, 0.09);
-}
-
-.ormic-accent-blue .ormic-result.selected .ormic-accent-bar {
-  background-color: #3B82F6;
-}
-
-.ormic-accent-blue .ormic-result.selected .ormic-name {
-  color: #3B82F6;
-}
-
-.ormic-accent-blue .ormic-fav-btn:hover {
-  color: #3B82F6;
-}
-
-.ormic-accent-blue .ormic-fav-btn.is-fav {
-  color: #3B82F6;
-}
-
-.ormic-accent-blue .ormic-fav-btn.is-fav:hover {
-  background-color: rgba(59, 130, 246, 0.12);
-}
-
-.ormic-accent-blue .ormic-kbd-badge {
-  color: rgba(59, 130, 246, 0.72);
-  background-color: rgba(59, 130, 246, 0.07);
-  border: 1px solid rgba(59, 130, 246, 0.18);
-}
-
-.ormic-accent-blue .ormic-result.selected .ormic-kbd-badge {
-  border-color: #3B82F6;
-}
-
-.ormic-accent-blue .ormic-grid-item.selected {
-  border-color: rgba(59, 130, 246, 0.32);
-}
-
-.ormic-accent-blue .ormic-category-tab.active {
-  border-color: rgba(59, 130, 246, 0.85);
-}
-
-.ormic-accent-blue .ormic-editor-entry {
-  caret-color: #3B82F6;
-}
-
-.ormic-accent-blue .ormic-editor-entry:focus {
-  border-color: #3B82F6;
-}
-
-.ormic-accent-blue .ormic-editor-btn.save-btn {
-  background-color: #3B82F6;
-  border: 1px solid #3B82F6;
-}
-
-.ormic-accent-blue .ormic-editor-btn.save-btn:hover {
-  background-color: #60A5FA;
-  border-color: #60A5FA;
-}
-
-.ormic-accent-blue .ormic-edit-row.selected {
-  background-color: rgba(59, 130, 246, 0.06);
-  border-color: rgba(59, 130, 246, 0.14);
-}
-
-.ormic-accent-blue .ormic-edit-row.selected .ormic-edit-checkbox {
-  color: #3B82F6;
-}
-
-.ormic-accent-blue .ormic-prompt-entry {
-  caret-color: #3B82F6;
-}
-
-.ormic-accent-blue .ormic-prompt-entry:focus {
-  border-color: #3B82F6;
-}
-
-.ormic-accent-blue .ormic-prompt-btn.create-btn {
-  background-color: #3B82F6;
-  border: 1px solid #3B82F6;
-}
-
-.ormic-accent-blue .ormic-prompt-btn.create-btn:hover {
-  background-color: #60A5FA;
-  border-color: #60A5FA;
-}
-
-.ormic-accent-blue .ormic-prompt-btn.create-btn:active {
-  background-color: #2563EB;
-  border-color: #2563EB;
-}
-
-.ormic-accent-blue .ormic-tip-key {
-  color: rgba(59, 130, 246, 0.80);
-  background-color: rgba(59, 130, 246, 0.09);
-}
-
-/* ── Purple ──────────────────────────────────────────────────────────────── */
-.ormic-accent-purple .ormic-entry {
-  caret-color: #8B5CF6;
-}
-
-.ormic-accent-purple .ormic-result.selected {
-  background-color: rgba(139, 92, 246, 0.09);
-}
-
-.ormic-accent-purple .ormic-result.selected .ormic-accent-bar {
-  background-color: #8B5CF6;
-}
-
-.ormic-accent-purple .ormic-result.selected .ormic-name {
-  color: #8B5CF6;
-}
-
-.ormic-accent-purple .ormic-fav-btn:hover {
-  color: #8B5CF6;
-}
-
-.ormic-accent-purple .ormic-fav-btn.is-fav {
-  color: #8B5CF6;
-}
-
-.ormic-accent-purple .ormic-fav-btn.is-fav:hover {
-  background-color: rgba(139, 92, 246, 0.12);
-}
-
-.ormic-accent-purple .ormic-kbd-badge {
-  color: rgba(139, 92, 246, 0.72);
-  background-color: rgba(139, 92, 246, 0.07);
-  border: 1px solid rgba(139, 92, 246, 0.18);
-}
-
-.ormic-accent-purple .ormic-result.selected .ormic-kbd-badge {
-  border-color: #8B5CF6;
-}
-
-.ormic-accent-purple .ormic-grid-item.selected {
-  border-color: rgba(139, 92, 246, 0.32);
-}
-
-.ormic-accent-purple .ormic-category-tab.active {
-  border-color: rgba(139, 92, 246, 0.85);
-}
-
-.ormic-accent-purple .ormic-editor-entry {
-  caret-color: #8B5CF6;
-  /* selection-background-color: rgba(139, 92, 246, 0.25); */
-}
-
-.ormic-accent-purple .ormic-editor-entry:focus {
-  border-color: #8B5CF6;
-}
-
-.ormic-accent-purple .ormic-editor-btn.save-btn {
-  background-color: #8B5CF6;
-  border: 1px solid #8B5CF6;
-}
-
-.ormic-accent-purple .ormic-editor-btn.save-btn:hover {
-  background-color: #A78BFA;
-  border-color: #A78BFA;
-}
-
-.ormic-accent-purple .ormic-edit-row.selected {
-  background-color: rgba(139, 92, 246, 0.06);
-  border-color: rgba(139, 92, 246, 0.14);
-}
-
-.ormic-accent-purple .ormic-edit-row.selected .ormic-edit-checkbox {
-  color: #8B5CF6;
-}
-
-.ormic-accent-purple .ormic-prompt-entry {
-  caret-color: #8B5CF6;
-  /* selection-background-color: rgba(139, 92, 246, 0.25); */
-}
-
-.ormic-accent-purple .ormic-prompt-entry:focus {
-  border-color: #8B5CF6;
-}
-
-.ormic-accent-purple .ormic-prompt-btn.create-btn {
-  background-color: #8B5CF6;
-  border: 1px solid #8B5CF6;
-}
-
-.ormic-accent-purple .ormic-prompt-btn.create-btn:hover {
-  background-color: #A78BFA;
-  border-color: #A78BFA;
-}
-
-.ormic-accent-purple .ormic-prompt-btn.create-btn:active {
-  background-color: #7C3AED;
-  border-color: #7C3AED;
-}
-
-.ormic-accent-purple .ormic-tip-key {
-  color: rgba(139, 92, 246, 0.80);
-  background-color: rgba(139, 92, 246, 0.09);
-}
-
-/* ── Red ──────────────────────────────────────────────────────────────── */
-.ormic-accent-red .ormic-entry {
-  caret-color: #EF4444;
-  /* selection-background-color: rgba(239, 68, 68, 0.25); */
-}
-
-.ormic-accent-red .ormic-result.selected {
-  background-color: rgba(239, 68, 68, 0.09);
-}
-
-.ormic-accent-red .ormic-result.selected .ormic-accent-bar {
-  background-color: #EF4444;
-}
-
-.ormic-accent-red .ormic-result.selected .ormic-name {
-  color: #EF4444;
-}
-
-.ormic-accent-red .ormic-fav-btn:hover {
-  color: #EF4444;
-}
-
-.ormic-accent-red .ormic-fav-btn.is-fav {
-  color: #EF4444;
-}
-
-.ormic-accent-red .ormic-fav-btn.is-fav:hover {
-  background-color: rgba(239, 68, 68, 0.12);
-}
-
-.ormic-accent-red .ormic-kbd-badge {
-  color: rgba(239, 68, 68, 0.72);
-  background-color: rgba(239, 68, 68, 0.07);
-  border: 1px solid rgba(239, 68, 68, 0.18);
-}
-
-.ormic-accent-red .ormic-result.selected .ormic-kbd-badge {
-  border-color: #EF4444;
-}
-
-.ormic-accent-red .ormic-grid-item.selected {
-  border-color: rgba(239, 68, 68, 0.32);
-}
-
-.ormic-accent-red .ormic-category-tab.active {
-  border-color: rgba(239, 68, 68, 0.85);
-}
-
-.ormic-accent-red .ormic-editor-entry {
-  caret-color: #EF4444;
-  /* selection-background-color: rgba(239, 68, 68, 0.25); */
-}
-
-.ormic-accent-red .ormic-editor-entry:focus {
-  border-color: #EF4444;
-}
-
-.ormic-accent-red .ormic-editor-btn.save-btn {
-  background-color: #EF4444;
-  border: 1px solid #EF4444;
-}
-
-.ormic-accent-red .ormic-editor-btn.save-btn:hover {
-  background-color: #F87171;
-  border-color: #F87171;
-}
-
-.ormic-accent-red .ormic-edit-row.selected {
-  background-color: rgba(239, 68, 68, 0.06);
-  border-color: rgba(239, 68, 68, 0.14);
-}
-
-.ormic-accent-red .ormic-edit-row.selected .ormic-edit-checkbox {
-  color: #EF4444;
-}
-
-.ormic-accent-red .ormic-prompt-entry {
-  caret-color: #EF4444;
-}
-
-.ormic-accent-red .ormic-prompt-entry:focus {
-  border-color: #EF4444;
-}
-
-.ormic-accent-red .ormic-prompt-btn.create-btn {
-  background-color: #EF4444;
-  border: 1px solid #EF4444;
-}
-
-.ormic-accent-red .ormic-prompt-btn.create-btn:hover {
-  background-color: #F87171;
-  border-color: #F87171;
-}
-
-.ormic-accent-red .ormic-prompt-btn.create-btn:active {
-  background-color: #DC2626;
-  border-color: #DC2626;
-}
-
-.ormic-accent-red .ormic-tip-key {
-  color: rgba(239, 68, 68, 0.80);
-  background-color: rgba(239, 68, 68, 0.09);
-}
-
-/* ── Green ──────────────────────────────────────────────────────────────── */
-.ormic-accent-green .ormic-entry {
-  caret-color: #10B981;
-}
-
-.ormic-accent-green .ormic-result.selected {
-  background-color: rgba(16, 185, 129, 0.09);
-}
-
-.ormic-accent-green .ormic-result.selected .ormic-accent-bar {
-  background-color: #10B981;
-}
-
-.ormic-accent-green .ormic-result.selected .ormic-name {
-  color: #10B981;
-}
-
-.ormic-accent-green .ormic-fav-btn:hover {
-  color: #10B981;
-}
-
-.ormic-accent-green .ormic-fav-btn.is-fav {
-  color: #10B981;
-}
-
-.ormic-accent-green .ormic-fav-btn.is-fav:hover {
-  background-color: rgba(16, 185, 129, 0.12);
-}
-
-.ormic-accent-green .ormic-kbd-badge {
-  color: rgba(16, 185, 129, 0.72);
-  background-color: rgba(16, 185, 129, 0.07);
-  border: 1px solid rgba(16, 185, 129, 0.18);
-}
-
-.ormic-accent-green .ormic-result.selected .ormic-kbd-badge {
-  border-color: #10B981;
-}
-
-.ormic-accent-green .ormic-grid-item.selected {
-  border-color: rgba(16, 185, 129, 0.32);
-}
-
-.ormic-accent-green .ormic-category-tab.active {
-  border-color: rgba(16, 185, 129, 0.85);
-}
-
-.ormic-accent-green .ormic-editor-entry {
-  caret-color: #10B981;
-}
-
-.ormic-accent-green .ormic-editor-entry:focus {
-  border-color: #10B981;
-}
-
-.ormic-accent-green .ormic-editor-btn.save-btn {
-  background-color: #10B981;
-  border: 1px solid #10B981;
-}
-
-.ormic-accent-green .ormic-editor-btn.save-btn:hover {
-  background-color: #34D399;
-  border-color: #34D399;
-}
-
-.ormic-accent-green .ormic-edit-row.selected {
-  background-color: rgba(16, 185, 129, 0.06);
-  border-color: rgba(16, 185, 129, 0.14);
-}
-
-.ormic-accent-green .ormic-edit-row.selected .ormic-edit-checkbox {
-  color: #10B981;
-}
-
-.ormic-accent-green .ormic-prompt-entry {
-  caret-color: #10B981;
-}
-
-.ormic-accent-green .ormic-prompt-entry:focus {
-  border-color: #10B981;
-}
-
-.ormic-accent-green .ormic-prompt-btn.create-btn {
-  background-color: #10B981;
-  border: 1px solid #10B981;
-}
-
-.ormic-accent-green .ormic-prompt-btn.create-btn:hover {
-  background-color: #34D399;
-  border-color: #34D399;
-}
-
-.ormic-accent-green .ormic-prompt-btn.create-btn:active {
-  background-color: #059669;
-  border-color: #059669;
-}
-
-.ormic-accent-green .ormic-tip-key {
-  color: rgba(16, 185, 129, 0.80);
-  background-color: rgba(16, 185, 129, 0.09);
-}
-
-/* ── Pink ──────────────────────────────────────────────────────────────── */
-.ormic-accent-pink .ormic-entry {
-  caret-color: #EC4899;
-}
-
-.ormic-accent-pink .ormic-result.selected {
-  background-color: rgba(236, 72, 153, 0.09);
-}
-
-.ormic-accent-pink .ormic-result.selected .ormic-accent-bar {
-  background-color: #EC4899;
-}
-
-.ormic-accent-pink .ormic-result.selected .ormic-name {
-  color: #EC4899;
-}
-
-.ormic-accent-pink .ormic-fav-btn:hover {
-  color: #EC4899;
-}
-
-.ormic-accent-pink .ormic-fav-btn.is-fav {
-  color: #EC4899;
-}
-
-.ormic-accent-pink .ormic-fav-btn.is-fav:hover {
-  background-color: rgba(236, 72, 153, 0.12);
-}
-
-.ormic-accent-pink .ormic-kbd-badge {
-  color: rgba(236, 72, 153, 0.72);
-  background-color: rgba(236, 72, 153, 0.07);
-  border: 1px solid rgba(236, 72, 153, 0.18);
-}
-
-.ormic-accent-pink .ormic-result.selected .ormic-kbd-badge {
-  border-color: #EC4899;
-}
-
-.ormic-accent-pink .ormic-grid-item.selected {
-  border-color: rgba(236, 72, 153, 0.32);
-}
-
-.ormic-accent-pink .ormic-category-tab.active {
-  border-color: rgba(236, 72, 153, 0.85);
-}
-
-.ormic-accent-pink .ormic-editor-entry {
-  caret-color: #EC4899;
-}
-
-.ormic-accent-pink .ormic-editor-entry:focus {
-  border-color: #EC4899;
-}
-
-.ormic-accent-pink .ormic-editor-btn.save-btn {
-  background-color: #EC4899;
-  border: 1px solid #EC4899;
-}
-
-.ormic-accent-pink .ormic-editor-btn.save-btn:hover {
-  background-color: #F472B6;
-  border-color: #F472B6;
-}
-
-.ormic-accent-pink .ormic-edit-row.selected {
-  background-color: rgba(236, 72, 153, 0.06);
-  border-color: rgba(236, 72, 153, 0.14);
-}
-
-.ormic-accent-pink .ormic-edit-row.selected .ormic-edit-checkbox {
-  color: #EC4899;
-}
-
-.ormic-accent-pink .ormic-prompt-entry {
-  caret-color: #EC4899;
-}
-
-.ormic-accent-pink .ormic-prompt-entry:focus {
-  border-color: #EC4899;
-}
-
-.ormic-accent-pink .ormic-prompt-btn.create-btn {
-  background-color: #EC4899;
-  border: 1px solid #EC4899;
-}
-
-.ormic-accent-pink .ormic-prompt-btn.create-btn:hover {
-  background-color: #F472B6;
-  border-color: #F472B6;
-}
-
-.ormic-accent-pink .ormic-prompt-btn.create-btn:active {
-  background-color: #DB2777;
-  border-color: #DB2777;
-}
-
-.ormic-accent-pink .ormic-tip-key {
-  color: rgba(236, 72, 153, 0.80);
-  background-color: rgba(236, 72, 153, 0.09);
-}
-
-/* ── Teal ──────────────────────────────────────────────────────────────── */
-.ormic-accent-teal .ormic-entry {
-  caret-color: #14B8A6;
-}
-
-.ormic-accent-teal .ormic-result.selected {
-  background-color: rgba(20, 184, 166, 0.09);
-}
-
-.ormic-accent-teal .ormic-result.selected .ormic-accent-bar {
-  background-color: #14B8A6;
-}
-
-.ormic-accent-teal .ormic-result.selected .ormic-name {
-  color: #14B8A6;
-}
-
-.ormic-accent-teal .ormic-fav-btn:hover {
-  color: #14B8A6;
-}
-
-.ormic-accent-teal .ormic-fav-btn.is-fav {
-  color: #14B8A6;
-}
-
-.ormic-accent-teal .ormic-fav-btn.is-fav:hover {
-  background-color: rgba(20, 184, 166, 0.12);
-}
-
-.ormic-accent-teal .ormic-kbd-badge {
-  color: rgba(20, 184, 166, 0.72);
-  background-color: rgba(20, 184, 166, 0.07);
-  border: 1px solid rgba(20, 184, 166, 0.18);
-}
-
-.ormic-accent-teal .ormic-result.selected .ormic-kbd-badge {
-  border-color: #14B8A6;
-}
-
-.ormic-accent-teal .ormic-grid-item.selected {
-  border-color: rgba(20, 184, 166, 0.32);
-}
-
-.ormic-accent-teal .ormic-category-tab.active {
-  border-color: rgba(20, 184, 166, 0.85);
-}
-
-.ormic-accent-teal .ormic-editor-entry {
-  caret-color: #14B8A6;
-}
-
-.ormic-accent-teal .ormic-editor-entry:focus {
-  border-color: #14B8A6;
-}
-
-.ormic-accent-teal .ormic-editor-btn.save-btn {
-  background-color: #14B8A6;
-  border: 1px solid #14B8A6;
-}
-
-.ormic-accent-teal .ormic-editor-btn.save-btn:hover {
-  background-color: #2DD4BF;
-  border-color: #2DD4BF;
-}
-
-.ormic-accent-teal .ormic-edit-row.selected {
-  background-color: rgba(20, 184, 166, 0.06);
-  border-color: rgba(20, 184, 166, 0.14);
-}
-
-.ormic-accent-teal .ormic-edit-row.selected .ormic-edit-checkbox {
-  color: #14B8A6;
-}
-
-.ormic-accent-teal .ormic-prompt-entry {
-  caret-color: #14B8A6;
-}
-
-.ormic-accent-teal .ormic-prompt-entry:focus {
-  border-color: #14B8A6;
-}
-
-.ormic-accent-teal .ormic-prompt-btn.create-btn {
-  background-color: #14B8A6;
-  border: 1px solid #14B8A6;
-}
-
-.ormic-accent-teal .ormic-prompt-btn.create-btn:hover {
-  background-color: #2DD4BF;
-  border-color: #2DD4BF;
-}
-
-.ormic-accent-teal .ormic-prompt-btn.create-btn:active {
-  background-color: #0D9488;
-  border-color: #0D9488;
-}
-
-.ormic-accent-teal .ormic-tip-key {
-  color: rgba(20, 184, 166, 0.80);
-  background-color: rgba(20, 184, 166, 0.09);
-}
-
-/* ── Orange ──────────────────────────────────────────────────────────────── */
-.ormic-accent-orange .ormic-entry {
-  caret-color: #F97316;
-}
-
-.ormic-accent-orange .ormic-result.selected {
-  background-color: rgba(249, 115, 22, 0.09);
-}
-
-.ormic-accent-orange .ormic-result.selected .ormic-accent-bar {
-  background-color: #F97316;
-}
-
-.ormic-accent-orange .ormic-result.selected .ormic-name {
-  color: #F97316;
-}
-
-.ormic-accent-orange .ormic-fav-btn:hover {
-  color: #F97316;
-}
-
-.ormic-accent-orange .ormic-fav-btn.is-fav {
-  color: #F97316;
-}
-
-.ormic-accent-orange .ormic-fav-btn.is-fav:hover {
-  background-color: rgba(249, 115, 22, 0.12);
-}
-
-.ormic-accent-orange .ormic-kbd-badge {
-  color: rgba(249, 115, 22, 0.72);
-  background-color: rgba(249, 115, 22, 0.07);
-  border: 1px solid rgba(249, 115, 22, 0.18);
-}
-
-.ormic-accent-orange .ormic-result.selected .ormic-kbd-badge {
-  border-color: #F97316;
-}
-
-.ormic-accent-orange .ormic-grid-item.selected {
-  border-color: rgba(249, 115, 22, 0.32);
-}
-
-.ormic-accent-orange .ormic-category-tab.active {
-  border-color: rgba(249, 115, 22, 0.85);
-}
-
-.ormic-accent-orange .ormic-editor-entry {
-  caret-color: #F97316;
-}
-
-.ormic-accent-orange .ormic-editor-entry:focus {
-  border-color: #F97316;
-}
-
-.ormic-accent-orange .ormic-editor-btn.save-btn {
-  background-color: #F97316;
-  border: 1px solid #F97316;
-}
-
-.ormic-accent-orange .ormic-editor-btn.save-btn:hover {
-  background-color: #FB923C;
-  border-color: #FB923C;
-}
-
-.ormic-accent-orange .ormic-edit-row.selected {
-  background-color: rgba(249, 115, 22, 0.06);
-  border-color: rgba(249, 115, 22, 0.14);
-}
-
-.ormic-accent-orange .ormic-edit-row.selected .ormic-edit-checkbox {
-  color: #F97316;
-}
-
-.ormic-accent-orange .ormic-prompt-entry {
-  caret-color: #F97316;
-}
-
-.ormic-accent-orange .ormic-prompt-entry:focus {
-  border-color: #F97316;
-}
-
-.ormic-accent-orange .ormic-prompt-btn.create-btn {
-  background-color: #F97316;
-  border: 1px solid #F97316;
-}
-
-.ormic-accent-orange .ormic-prompt-btn.create-btn:hover {
-  background-color: #FB923C;
-  border-color: #FB923C;
-}
-
-.ormic-accent-orange .ormic-prompt-btn.create-btn:active {
-  background-color: #EA580C;
-  border-color: #EA580C;
-}
-
-.ormic-accent-orange .ormic-tip-key {
-  color: rgba(249, 115, 22, 0.80);
-  background-color: rgba(249, 115, 22, 0.09);
-}
-
-/* ── Slate ──────────────────────────────────────────────────────────────── */
-.ormic-accent-slate .ormic-entry {
-  caret-color: #64748B;
-}
-
-.ormic-accent-slate .ormic-result.selected {
-  background-color: rgba(100, 116, 139, 0.09);
-}
-
-.ormic-accent-slate .ormic-result.selected .ormic-accent-bar {
-  background-color: #64748B;
-}
-
-.ormic-accent-slate .ormic-result.selected .ormic-name {
-  color: #64748B;
-}
-
-.ormic-accent-slate .ormic-fav-btn:hover {
-  color: #64748B;
-}
-
-.ormic-accent-slate .ormic-fav-btn.is-fav {
-  color: #64748B;
-}
-
-.ormic-accent-slate .ormic-fav-btn.is-fav:hover {
-  background-color: rgba(100, 116, 139, 0.12);
-}
-
-.ormic-accent-slate .ormic-kbd-badge {
-  color: rgba(100, 116, 139, 0.72);
-  background-color: rgba(100, 116, 139, 0.07);
-  border: 1px solid rgba(100, 116, 139, 0.18);
-}
-
-.ormic-accent-slate .ormic-result.selected .ormic-kbd-badge {
-  border-color: #64748B;
-}
-
-.ormic-accent-slate .ormic-grid-item.selected {
-  border-color: rgba(100, 116, 139, 0.32);
-}
-
-.ormic-accent-slate .ormic-category-tab.active {
-  border-color: rgba(100, 116, 139, 0.85);
-}
-
-.ormic-accent-slate .ormic-editor-entry {
-  caret-color: #64748B;
-}
-
-.ormic-accent-slate .ormic-editor-entry:focus {
-  border-color: #64748B;
-}
-
-.ormic-accent-slate .ormic-editor-btn.save-btn {
-  background-color: #64748B;
-  border: 1px solid #64748B;
-}
-
-.ormic-accent-slate .ormic-editor-btn.save-btn:hover {
-  background-color: #94A3B8;
-  border-color: #94A3B8;
-}
-
-.ormic-accent-slate .ormic-edit-row.selected {
-  background-color: rgba(100, 116, 139, 0.06);
-  border-color: rgba(100, 116, 139, 0.14);
-}
-
-.ormic-accent-slate .ormic-edit-row.selected .ormic-edit-checkbox {
-  color: #64748B;
-}
-
-.ormic-accent-slate .ormic-prompt-entry {
-  caret-color: #64748B;
-}
-
-.ormic-accent-slate .ormic-prompt-entry:focus {
-  border-color: #64748B;
-}
-
-.ormic-accent-slate .ormic-prompt-btn.create-btn {
-  background-color: #64748B;
-  border: 1px solid #64748B;
-}
-
-.ormic-accent-slate .ormic-prompt-btn.create-btn:hover {
-  background-color: #94A3B8;
-  border-color: #94A3B8;
-}
-
-.ormic-accent-slate .ormic-prompt-btn.create-btn:active {
-  background-color: #475569;
-  border-color: #475569;
-}
-
-.ormic-accent-slate .ormic-tip-key {
-  color: rgba(100, 116, 139, 0.80);
-  background-color: rgba(100, 116, 139, 0.09);
-}
-
-/* ── Brown ──────────────────────────────────────────────────────────────── */
-.ormic-accent-brown .ormic-entry {
-  caret-color: #A16207;
-}
-
-.ormic-accent-brown .ormic-result.selected {
-  background-color: rgba(161, 98, 7, 0.09);
-}
-
-
-/* ── Background Style Modifiers ──────────────────────────────────────────── */
-.ormic-bg-blur {
-  background-color: rgba(14, 14, 20, 0.48);
-}
-
-.ormic-bg-transparent {
-  background-color: rgba(14, 14, 20, 0.30);
-}
-
-.ormic-bg-solid {
-  background-color: rgb(36, 36, 36);
-}
-
-.ormic-accent-brown .ormic-result.selected .ormic-accent-bar {
-  background-color: #A16207;
-}
-
-.ormic-accent-brown .ormic-result.selected .ormic-name {
-  color: #A16207;
-}
-
-.ormic-accent-brown .ormic-fav-btn:hover {
-  color: #A16207;
-}
-
-.ormic-accent-brown .ormic-fav-btn.is-fav {
-  color: #A16207;
-}
-
-.ormic-accent-brown .ormic-fav-btn.is-fav:hover {
-  background-color: rgba(161, 98, 7, 0.12);
-}
-
-.ormic-accent-brown .ormic-kbd-badge {
-  color: rgba(161, 98, 7, 0.72);
-  background-color: rgba(161, 98, 7, 0.07);
-  border: 1px solid rgba(161, 98, 7, 0.18);
-}
-
-.ormic-accent-brown .ormic-result.selected .ormic-kbd-badge {
-  border-color: #A16207;
-}
-
-.ormic-accent-brown .ormic-grid-item.selected {
-  border-color: rgba(161, 98, 7, 0.32);
-}
-
-.ormic-accent-brown .ormic-category-tab.active {
-  border-color: rgba(161, 98, 7, 0.85);
-}
-
-.ormic-accent-brown .ormic-editor-entry {
-  caret-color: #A16207;
-}
-
-.ormic-accent-brown .ormic-editor-entry:focus {
-  border-color: #A16207;
-}
-
-.ormic-accent-brown .ormic-editor-btn.save-btn {
-  background-color: #A16207;
-  border: 1px solid #A16207;
-}
-
-.ormic-accent-brown .ormic-editor-btn.save-btn:hover {
-  background-color: #CA8A04;
-  border-color: #CA8A04;
-}
-
-.ormic-accent-brown .ormic-edit-row.selected {
-  background-color: rgba(161, 98, 7, 0.06);
-  border-color: rgba(161, 98, 7, 0.14);
-}
-
-.ormic-accent-brown .ormic-edit-row.selected .ormic-edit-checkbox {
-  color: #A16207;
-}
-
-.ormic-accent-brown .ormic-prompt-entry {
-  caret-color: #A16207;
-}
-
-.ormic-accent-brown .ormic-prompt-entry:focus {
-  border-color: #A16207;
-}
-
-.ormic-accent-brown .ormic-prompt-btn.create-btn {
-  background-color: #A16207;
-  border: 1px solid #A16207;
-}
-
-.ormic-accent-brown .ormic-prompt-btn.create-btn:hover {
-  background-color: #CA8A04;
-  border-color: #CA8A04;
-}
-
-.ormic-accent-brown .ormic-prompt-btn.create-btn:active {
-  background-color: #854D0E;
-  border-color: #854D0E;
-}
-
-.ormic-accent-brown .ormic-tip-key {
-  color: rgba(161, 98, 7, 0.80);
-  background-color: rgba(161, 98, 7, 0.09);
-}
+/* ── Yellow ────────────────────────────────────────────────────── */
+.ormic-accent-yellow .ormic-entry { caret-color: #FAB84B; }
+.ormic-accent-yellow .ormic-result.selected { background-color: rgba(250, 184, 75, 0.09); }
+.ormic-accent-yellow .ormic-result.selected .ormic-accent-bar { background-color: #FAB84B; }
+.ormic-accent-yellow .ormic-result.selected .ormic-name { color: #FAB84B; }
+.ormic-accent-yellow .ormic-fav-btn:hover { color: #FAB84B; }
+.ormic-accent-yellow .ormic-fav-btn.is-fav { color: #FAB84B; }
+.ormic-accent-yellow .ormic-fav-btn.is-fav:hover { background-color: rgba(250, 184, 75, 0.12); }
+.ormic-accent-yellow .ormic-kbd-badge { color: rgba(250, 184, 75, 0.72); background-color: rgba(250, 184, 75, 0.07); border: 1px solid rgba(250, 184, 75, 0.18); }
+.ormic-accent-yellow .ormic-result.selected .ormic-kbd-badge { border-color: #FAB84B; }
+.ormic-accent-yellow .ormic-grid-item.selected { border-color: rgba(250, 184, 75, 0.32); }
+.ormic-accent-yellow .ormic-category-tab.active { border-color: rgba(250, 184, 75, 0.85); }
+.ormic-accent-yellow .ormic-editor-entry { caret-color: #FAB84B; }
+.ormic-accent-yellow .ormic-editor-entry:focus { border-color: #FAB84B; }
+.ormic-accent-yellow .ormic-editor-btn.save-btn { background-color: #FAB84B; border: 1px solid #FAB84B; }
+.ormic-accent-yellow .ormic-editor-btn.save-btn:hover { background-color: #fccb7b; border-color: #fccb7b; }
+.ormic-accent-yellow .ormic-edit-row.selected { background-color: rgba(250, 184, 75, 0.06); border-color: rgba(250, 184, 75, 0.14); }
+.ormic-accent-yellow .ormic-edit-row.selected .ormic-edit-checkbox { color: #FAB84B; }
+.ormic-accent-yellow .ormic-prompt-entry { caret-color: #FAB84B; }
+.ormic-accent-yellow .ormic-prompt-entry:focus { border-color: #FAB84B; }
+.ormic-accent-yellow .ormic-prompt-btn.create-btn { background-color: #FAB84B; border: 1px solid #FAB84B; }
+.ormic-accent-yellow .ormic-prompt-btn.create-btn:hover { background-color: #fccb7b; border-color: #fccb7b; }
+.ormic-accent-yellow .ormic-prompt-btn.create-btn:active { background-color: #e5a43b; border-color: #e5a43b; }
+.ormic-accent-yellow .ormic-tip-key { color: rgba(250, 184, 75, 0.80); background-color: rgba(250, 184, 75, 0.09); }
+
+/* ── Blue ──────────────────────────────────────────────────────── */
+.ormic-accent-blue .ormic-entry { caret-color: #3B82F6; }
+.ormic-accent-blue .ormic-result.selected { background-color: rgba(59, 130, 246, 0.09); }
+.ormic-accent-blue .ormic-result.selected .ormic-accent-bar { background-color: #3B82F6; }
+.ormic-accent-blue .ormic-result.selected .ormic-name { color: #3B82F6; }
+.ormic-accent-blue .ormic-fav-btn:hover { color: #3B82F6; }
+.ormic-accent-blue .ormic-fav-btn.is-fav { color: #3B82F6; }
+.ormic-accent-blue .ormic-fav-btn.is-fav:hover { background-color: rgba(59, 130, 246, 0.12); }
+.ormic-accent-blue .ormic-kbd-badge { color: rgba(59, 130, 246, 0.72); background-color: rgba(59, 130, 246, 0.07); border: 1px solid rgba(59, 130, 246, 0.18); }
+.ormic-accent-blue .ormic-result.selected .ormic-kbd-badge { border-color: #3B82F6; }
+.ormic-accent-blue .ormic-grid-item.selected { border-color: rgba(59, 130, 246, 0.32); }
+.ormic-accent-blue .ormic-category-tab.active { border-color: rgba(59, 130, 246, 0.85); }
+.ormic-accent-blue .ormic-editor-entry { caret-color: #3B82F6; }
+.ormic-accent-blue .ormic-editor-entry:focus { border-color: #3B82F6; }
+.ormic-accent-blue .ormic-editor-btn.save-btn { background-color: #3B82F6; border: 1px solid #3B82F6; }
+.ormic-accent-blue .ormic-editor-btn.save-btn:hover { background-color: #60A5FA; border-color: #60A5FA; }
+.ormic-accent-blue .ormic-edit-row.selected { background-color: rgba(59, 130, 246, 0.06); border-color: rgba(59, 130, 246, 0.14); }
+.ormic-accent-blue .ormic-edit-row.selected .ormic-edit-checkbox { color: #3B82F6; }
+.ormic-accent-blue .ormic-prompt-entry { caret-color: #3B82F6; }
+.ormic-accent-blue .ormic-prompt-entry:focus { border-color: #3B82F6; }
+.ormic-accent-blue .ormic-prompt-btn.create-btn { background-color: #3B82F6; border: 1px solid #3B82F6; }
+.ormic-accent-blue .ormic-prompt-btn.create-btn:hover { background-color: #60A5FA; border-color: #60A5FA; }
+.ormic-accent-blue .ormic-prompt-btn.create-btn:active { background-color: #2563EB; border-color: #2563EB; }
+.ormic-accent-blue .ormic-tip-key { color: rgba(59, 130, 246, 0.80); background-color: rgba(59, 130, 246, 0.09); }
+
+/* ── Purple ────────────────────────────────────────────────────── */
+.ormic-accent-purple .ormic-entry { caret-color: #8B5CF6; }
+.ormic-accent-purple .ormic-result.selected { background-color: rgba(139, 92, 246, 0.09); }
+.ormic-accent-purple .ormic-result.selected .ormic-accent-bar { background-color: #8B5CF6; }
+.ormic-accent-purple .ormic-result.selected .ormic-name { color: #8B5CF6; }
+.ormic-accent-purple .ormic-fav-btn:hover { color: #8B5CF6; }
+.ormic-accent-purple .ormic-fav-btn.is-fav { color: #8B5CF6; }
+.ormic-accent-purple .ormic-fav-btn.is-fav:hover { background-color: rgba(139, 92, 246, 0.12); }
+.ormic-accent-purple .ormic-kbd-badge { color: rgba(139, 92, 246, 0.72); background-color: rgba(139, 92, 246, 0.07); border: 1px solid rgba(139, 92, 246, 0.18); }
+.ormic-accent-purple .ormic-result.selected .ormic-kbd-badge { border-color: #8B5CF6; }
+.ormic-accent-purple .ormic-grid-item.selected { border-color: rgba(139, 92, 246, 0.32); }
+.ormic-accent-purple .ormic-category-tab.active { border-color: rgba(139, 92, 246, 0.85); }
+.ormic-accent-purple .ormic-editor-entry { caret-color: #8B5CF6; }
+.ormic-accent-purple .ormic-editor-entry:focus { border-color: #8B5CF6; }
+.ormic-accent-purple .ormic-editor-btn.save-btn { background-color: #8B5CF6; border: 1px solid #8B5CF6; }
+.ormic-accent-purple .ormic-editor-btn.save-btn:hover { background-color: #A78BFA; border-color: #A78BFA; }
+.ormic-accent-purple .ormic-edit-row.selected { background-color: rgba(139, 92, 246, 0.06); border-color: rgba(139, 92, 246, 0.14); }
+.ormic-accent-purple .ormic-edit-row.selected .ormic-edit-checkbox { color: #8B5CF6; }
+.ormic-accent-purple .ormic-prompt-entry { caret-color: #8B5CF6; }
+.ormic-accent-purple .ormic-prompt-entry:focus { border-color: #8B5CF6; }
+.ormic-accent-purple .ormic-prompt-btn.create-btn { background-color: #8B5CF6; border: 1px solid #8B5CF6; }
+.ormic-accent-purple .ormic-prompt-btn.create-btn:hover { background-color: #A78BFA; border-color: #A78BFA; }
+.ormic-accent-purple .ormic-prompt-btn.create-btn:active { background-color: #7C3AED; border-color: #7C3AED; }
+.ormic-accent-purple .ormic-tip-key { color: rgba(139, 92, 246, 0.80); background-color: rgba(139, 92, 246, 0.09); }
+
+/* ── Red ───────────────────────────────────────────────────────── */
+.ormic-accent-red .ormic-entry { caret-color: #EF4444; }
+.ormic-accent-red .ormic-result.selected { background-color: rgba(239, 68, 68, 0.09); }
+.ormic-accent-red .ormic-result.selected .ormic-accent-bar { background-color: #EF4444; }
+.ormic-accent-red .ormic-result.selected .ormic-name { color: #EF4444; }
+.ormic-accent-red .ormic-fav-btn:hover { color: #EF4444; }
+.ormic-accent-red .ormic-fav-btn.is-fav { color: #EF4444; }
+.ormic-accent-red .ormic-fav-btn.is-fav:hover { background-color: rgba(239, 68, 68, 0.12); }
+.ormic-accent-red .ormic-kbd-badge { color: rgba(239, 68, 68, 0.72); background-color: rgba(239, 68, 68, 0.07); border: 1px solid rgba(239, 68, 68, 0.18); }
+.ormic-accent-red .ormic-result.selected .ormic-kbd-badge { border-color: #EF4444; }
+.ormic-accent-red .ormic-grid-item.selected { border-color: rgba(239, 68, 68, 0.32); }
+.ormic-accent-red .ormic-category-tab.active { border-color: rgba(239, 68, 68, 0.85); }
+.ormic-accent-red .ormic-editor-entry { caret-color: #EF4444; }
+.ormic-accent-red .ormic-editor-entry:focus { border-color: #EF4444; }
+.ormic-accent-red .ormic-editor-btn.save-btn { background-color: #EF4444; border: 1px solid #EF4444; }
+.ormic-accent-red .ormic-editor-btn.save-btn:hover { background-color: #F87171; border-color: #F87171; }
+.ormic-accent-red .ormic-edit-row.selected { background-color: rgba(239, 68, 68, 0.06); border-color: rgba(239, 68, 68, 0.14); }
+.ormic-accent-red .ormic-edit-row.selected .ormic-edit-checkbox { color: #EF4444; }
+.ormic-accent-red .ormic-prompt-entry { caret-color: #EF4444; }
+.ormic-accent-red .ormic-prompt-entry:focus { border-color: #EF4444; }
+.ormic-accent-red .ormic-prompt-btn.create-btn { background-color: #EF4444; border: 1px solid #EF4444; }
+.ormic-accent-red .ormic-prompt-btn.create-btn:hover { background-color: #F87171; border-color: #F87171; }
+.ormic-accent-red .ormic-prompt-btn.create-btn:active { background-color: #DC2626; border-color: #DC2626; }
+.ormic-accent-red .ormic-tip-key { color: rgba(239, 68, 68, 0.80); background-color: rgba(239, 68, 68, 0.09); }
+
+/* ── Green ─────────────────────────────────────────────────────── */
+.ormic-accent-green .ormic-entry { caret-color: #10B981; }
+.ormic-accent-green .ormic-result.selected { background-color: rgba(16, 185, 129, 0.09); }
+.ormic-accent-green .ormic-result.selected .ormic-accent-bar { background-color: #10B981; }
+.ormic-accent-green .ormic-result.selected .ormic-name { color: #10B981; }
+.ormic-accent-green .ormic-fav-btn:hover { color: #10B981; }
+.ormic-accent-green .ormic-fav-btn.is-fav { color: #10B981; }
+.ormic-accent-green .ormic-fav-btn.is-fav:hover { background-color: rgba(16, 185, 129, 0.12); }
+.ormic-accent-green .ormic-kbd-badge { color: rgba(16, 185, 129, 0.72); background-color: rgba(16, 185, 129, 0.07); border: 1px solid rgba(16, 185, 129, 0.18); }
+.ormic-accent-green .ormic-result.selected .ormic-kbd-badge { border-color: #10B981; }
+.ormic-accent-green .ormic-grid-item.selected { border-color: rgba(16, 185, 129, 0.32); }
+.ormic-accent-green .ormic-category-tab.active { border-color: rgba(16, 185, 129, 0.85); }
+.ormic-accent-green .ormic-editor-entry { caret-color: #10B981; }
+.ormic-accent-green .ormic-editor-entry:focus { border-color: #10B981; }
+.ormic-accent-green .ormic-editor-btn.save-btn { background-color: #10B981; border: 1px solid #10B981; }
+.ormic-accent-green .ormic-editor-btn.save-btn:hover { background-color: #34D399; border-color: #34D399; }
+.ormic-accent-green .ormic-edit-row.selected { background-color: rgba(16, 185, 129, 0.06); border-color: rgba(16, 185, 129, 0.14); }
+.ormic-accent-green .ormic-edit-row.selected .ormic-edit-checkbox { color: #10B981; }
+.ormic-accent-green .ormic-prompt-entry { caret-color: #10B981; }
+.ormic-accent-green .ormic-prompt-entry:focus { border-color: #10B981; }
+.ormic-accent-green .ormic-prompt-btn.create-btn { background-color: #10B981; border: 1px solid #10B981; }
+.ormic-accent-green .ormic-prompt-btn.create-btn:hover { background-color: #34D399; border-color: #34D399; }
+.ormic-accent-green .ormic-prompt-btn.create-btn:active { background-color: #059669; border-color: #059669; }
+.ormic-accent-green .ormic-tip-key { color: rgba(16, 185, 129, 0.80); background-color: rgba(16, 185, 129, 0.09); }
+
+/* ── Pink ──────────────────────────────────────────────────────── */
+.ormic-accent-pink .ormic-entry { caret-color: #EC4899; }
+.ormic-accent-pink .ormic-result.selected { background-color: rgba(236, 72, 153, 0.09); }
+.ormic-accent-pink .ormic-result.selected .ormic-accent-bar { background-color: #EC4899; }
+.ormic-accent-pink .ormic-result.selected .ormic-name { color: #EC4899; }
+.ormic-accent-pink .ormic-fav-btn:hover { color: #EC4899; }
+.ormic-accent-pink .ormic-fav-btn.is-fav { color: #EC4899; }
+.ormic-accent-pink .ormic-fav-btn.is-fav:hover { background-color: rgba(236, 72, 153, 0.12); }
+.ormic-accent-pink .ormic-kbd-badge { color: rgba(236, 72, 153, 0.72); background-color: rgba(236, 72, 153, 0.07); border: 1px solid rgba(236, 72, 153, 0.18); }
+.ormic-accent-pink .ormic-result.selected .ormic-kbd-badge { border-color: #EC4899; }
+.ormic-accent-pink .ormic-grid-item.selected { border-color: rgba(236, 72, 153, 0.32); }
+.ormic-accent-pink .ormic-category-tab.active { border-color: rgba(236, 72, 153, 0.85); }
+.ormic-accent-pink .ormic-editor-entry { caret-color: #EC4899; }
+.ormic-accent-pink .ormic-editor-entry:focus { border-color: #EC4899; }
+.ormic-accent-pink .ormic-editor-btn.save-btn { background-color: #EC4899; border: 1px solid #EC4899; }
+.ormic-accent-pink .ormic-editor-btn.save-btn:hover { background-color: #F472B6; border-color: #F472B6; }
+.ormic-accent-pink .ormic-edit-row.selected { background-color: rgba(236, 72, 153, 0.06); border-color: rgba(236, 72, 153, 0.14); }
+.ormic-accent-pink .ormic-edit-row.selected .ormic-edit-checkbox { color: #EC4899; }
+.ormic-accent-pink .ormic-prompt-entry { caret-color: #EC4899; }
+.ormic-accent-pink .ormic-prompt-entry:focus { border-color: #EC4899; }
+.ormic-accent-pink .ormic-prompt-btn.create-btn { background-color: #EC4899; border: 1px solid #EC4899; }
+.ormic-accent-pink .ormic-prompt-btn.create-btn:hover { background-color: #F472B6; border-color: #F472B6; }
+.ormic-accent-pink .ormic-prompt-btn.create-btn:active { background-color: #DB2777; border-color: #DB2777; }
+.ormic-accent-pink .ormic-tip-key { color: rgba(236, 72, 153, 0.80); background-color: rgba(236, 72, 153, 0.09); }
+
+/* ── Teal ──────────────────────────────────────────────────────── */
+.ormic-accent-teal .ormic-entry { caret-color: #14B8A6; }
+.ormic-accent-teal .ormic-result.selected { background-color: rgba(20, 184, 166, 0.09); }
+.ormic-accent-teal .ormic-result.selected .ormic-accent-bar { background-color: #14B8A6; }
+.ormic-accent-teal .ormic-result.selected .ormic-name { color: #14B8A6; }
+.ormic-accent-teal .ormic-fav-btn:hover { color: #14B8A6; }
+.ormic-accent-teal .ormic-fav-btn.is-fav { color: #14B8A6; }
+.ormic-accent-teal .ormic-fav-btn.is-fav:hover { background-color: rgba(20, 184, 166, 0.12); }
+.ormic-accent-teal .ormic-kbd-badge { color: rgba(20, 184, 166, 0.72); background-color: rgba(20, 184, 166, 0.07); border: 1px solid rgba(20, 184, 166, 0.18); }
+.ormic-accent-teal .ormic-result.selected .ormic-kbd-badge { border-color: #14B8A6; }
+.ormic-accent-teal .ormic-grid-item.selected { border-color: rgba(20, 184, 166, 0.32); }
+.ormic-accent-teal .ormic-category-tab.active { border-color: rgba(20, 184, 166, 0.85); }
+.ormic-accent-teal .ormic-editor-entry { caret-color: #14B8A6; }
+.ormic-accent-teal .ormic-editor-entry:focus { border-color: #14B8A6; }
+.ormic-accent-teal .ormic-editor-btn.save-btn { background-color: #14B8A6; border: 1px solid #14B8A6; }
+.ormic-accent-teal .ormic-editor-btn.save-btn:hover { background-color: #2DD4BF; border-color: #2DD4BF; }
+.ormic-accent-teal .ormic-edit-row.selected { background-color: rgba(20, 184, 166, 0.06); border-color: rgba(20, 184, 166, 0.14); }
+.ormic-accent-teal .ormic-edit-row.selected .ormic-edit-checkbox { color: #14B8A6; }
+.ormic-accent-teal .ormic-prompt-entry { caret-color: #14B8A6; }
+.ormic-accent-teal .ormic-prompt-entry:focus { border-color: #14B8A6; }
+.ormic-accent-teal .ormic-prompt-btn.create-btn { background-color: #14B8A6; border: 1px solid #14B8A6; }
+.ormic-accent-teal .ormic-prompt-btn.create-btn:hover { background-color: #2DD4BF; border-color: #2DD4BF; }
+.ormic-accent-teal .ormic-prompt-btn.create-btn:active { background-color: #0D9488; border-color: #0D9488; }
+.ormic-accent-teal .ormic-tip-key { color: rgba(20, 184, 166, 0.80); background-color: rgba(20, 184, 166, 0.09); }
+
+/* ── Orange ────────────────────────────────────────────────────── */
+.ormic-accent-orange .ormic-entry { caret-color: #F97316; }
+.ormic-accent-orange .ormic-result.selected { background-color: rgba(249, 115, 22, 0.09); }
+.ormic-accent-orange .ormic-result.selected .ormic-accent-bar { background-color: #F97316; }
+.ormic-accent-orange .ormic-result.selected .ormic-name { color: #F97316; }
+.ormic-accent-orange .ormic-fav-btn:hover { color: #F97316; }
+.ormic-accent-orange .ormic-fav-btn.is-fav { color: #F97316; }
+.ormic-accent-orange .ormic-fav-btn.is-fav:hover { background-color: rgba(249, 115, 22, 0.12); }
+.ormic-accent-orange .ormic-kbd-badge { color: rgba(249, 115, 22, 0.72); background-color: rgba(249, 115, 22, 0.07); border: 1px solid rgba(249, 115, 22, 0.18); }
+.ormic-accent-orange .ormic-result.selected .ormic-kbd-badge { border-color: #F97316; }
+.ormic-accent-orange .ormic-grid-item.selected { border-color: rgba(249, 115, 22, 0.32); }
+.ormic-accent-orange .ormic-category-tab.active { border-color: rgba(249, 115, 22, 0.85); }
+.ormic-accent-orange .ormic-editor-entry { caret-color: #F97316; }
+.ormic-accent-orange .ormic-editor-entry:focus { border-color: #F97316; }
+.ormic-accent-orange .ormic-editor-btn.save-btn { background-color: #F97316; border: 1px solid #F97316; }
+.ormic-accent-orange .ormic-editor-btn.save-btn:hover { background-color: #FB923C; border-color: #FB923C; }
+.ormic-accent-orange .ormic-edit-row.selected { background-color: rgba(249, 115, 22, 0.06); border-color: rgba(249, 115, 22, 0.14); }
+.ormic-accent-orange .ormic-edit-row.selected .ormic-edit-checkbox { color: #F97316; }
+.ormic-accent-orange .ormic-prompt-entry { caret-color: #F97316; }
+.ormic-accent-orange .ormic-prompt-entry:focus { border-color: #F97316; }
+.ormic-accent-orange .ormic-prompt-btn.create-btn { background-color: #F97316; border: 1px solid #F97316; }
+.ormic-accent-orange .ormic-prompt-btn.create-btn:hover { background-color: #FB923C; border-color: #FB923C; }
+.ormic-accent-orange .ormic-prompt-btn.create-btn:active { background-color: #EA580C; border-color: #EA580C; }
+.ormic-accent-orange .ormic-tip-key { color: rgba(249, 115, 22, 0.80); background-color: rgba(249, 115, 22, 0.09); }
+
+/* ── Slate ─────────────────────────────────────────────────────── */
+.ormic-accent-slate .ormic-entry { caret-color: #64748B; }
+.ormic-accent-slate .ormic-result.selected { background-color: rgba(100, 116, 139, 0.09); }
+.ormic-accent-slate .ormic-result.selected .ormic-accent-bar { background-color: #64748B; }
+.ormic-accent-slate .ormic-result.selected .ormic-name { color: #64748B; }
+.ormic-accent-slate .ormic-fav-btn:hover { color: #64748B; }
+.ormic-accent-slate .ormic-fav-btn.is-fav { color: #64748B; }
+.ormic-accent-slate .ormic-fav-btn.is-fav:hover { background-color: rgba(100, 116, 139, 0.12); }
+.ormic-accent-slate .ormic-kbd-badge { color: rgba(100, 116, 139, 0.72); background-color: rgba(100, 116, 139, 0.07); border: 1px solid rgba(100, 116, 139, 0.18); }
+.ormic-accent-slate .ormic-result.selected .ormic-kbd-badge { border-color: #64748B; }
+.ormic-accent-slate .ormic-grid-item.selected { border-color: rgba(100, 116, 139, 0.32); }
+.ormic-accent-slate .ormic-category-tab.active { border-color: rgba(100, 116, 139, 0.85); }
+.ormic-accent-slate .ormic-editor-entry { caret-color: #64748B; }
+.ormic-accent-slate .ormic-editor-entry:focus { border-color: #64748B; }
+.ormic-accent-slate .ormic-editor-btn.save-btn { background-color: #64748B; border: 1px solid #64748B; }
+.ormic-accent-slate .ormic-editor-btn.save-btn:hover { background-color: #94A3B8; border-color: #94A3B8; }
+.ormic-accent-slate .ormic-edit-row.selected { background-color: rgba(100, 116, 139, 0.06); border-color: rgba(100, 116, 139, 0.14); }
+.ormic-accent-slate .ormic-edit-row.selected .ormic-edit-checkbox { color: #64748B; }
+.ormic-accent-slate .ormic-prompt-entry { caret-color: #64748B; }
+.ormic-accent-slate .ormic-prompt-entry:focus { border-color: #64748B; }
+.ormic-accent-slate .ormic-prompt-btn.create-btn { background-color: #64748B; border: 1px solid #64748B; }
+.ormic-accent-slate .ormic-prompt-btn.create-btn:hover { background-color: #94A3B8; border-color: #94A3B8; }
+.ormic-accent-slate .ormic-prompt-btn.create-btn:active { background-color: #475569; border-color: #475569; }
+.ormic-accent-slate .ormic-tip-key { color: rgba(100, 116, 139, 0.80); background-color: rgba(100, 116, 139, 0.09); }
+
+/* ── Brown ─────────────────────────────────────────────────────── */
+.ormic-accent-brown .ormic-entry { caret-color: #A16207; }
+.ormic-accent-brown .ormic-result.selected { background-color: rgba(161, 98, 7, 0.09); }
+.ormic-accent-brown .ormic-result.selected .ormic-accent-bar { background-color: #A16207; }
+.ormic-accent-brown .ormic-result.selected .ormic-name { color: #A16207; }
+.ormic-accent-brown .ormic-fav-btn:hover { color: #A16207; }
+.ormic-accent-brown .ormic-fav-btn.is-fav { color: #A16207; }
+.ormic-accent-brown .ormic-fav-btn.is-fav:hover { background-color: rgba(161, 98, 7, 0.12); }
+.ormic-accent-brown .ormic-kbd-badge { color: rgba(161, 98, 7, 0.72); background-color: rgba(161, 98, 7, 0.07); border: 1px solid rgba(161, 98, 7, 0.18); }
+.ormic-accent-brown .ormic-result.selected .ormic-kbd-badge { border-color: #A16207; }
+.ormic-accent-brown .ormic-grid-item.selected { border-color: rgba(161, 98, 7, 0.32); }
+.ormic-accent-brown .ormic-category-tab.active { border-color: rgba(161, 98, 7, 0.85); }
+.ormic-accent-brown .ormic-editor-entry { caret-color: #A16207; }
+.ormic-accent-brown .ormic-editor-entry:focus { border-color: #A16207; }
+.ormic-accent-brown .ormic-editor-btn.save-btn { background-color: #A16207; border: 1px solid #A16207; }
+.ormic-accent-brown .ormic-editor-btn.save-btn:hover { background-color: #CA8A04; border-color: #CA8A04; }
+.ormic-accent-brown .ormic-edit-row.selected { background-color: rgba(161, 98, 7, 0.06); border-color: rgba(161, 98, 7, 0.14); }
+.ormic-accent-brown .ormic-edit-row.selected .ormic-edit-checkbox { color: #A16207; }
+.ormic-accent-brown .ormic-prompt-entry { caret-color: #A16207; }
+.ormic-accent-brown .ormic-prompt-entry:focus { border-color: #A16207; }
+.ormic-accent-brown .ormic-prompt-btn.create-btn { background-color: #A16207; border: 1px solid #A16207; }
+.ormic-accent-brown .ormic-prompt-btn.create-btn:hover { background-color: #CA8A04; border-color: #CA8A04; }
+.ormic-accent-brown .ormic-prompt-btn.create-btn:active { background-color: #854D0E; border-color: #854D0E; }
+.ormic-accent-brown .ormic-tip-key { color: rgba(161, 98, 7, 0.80); background-color: rgba(161, 98, 7, 0.09); }
+
+/* ── Mixed ─────────────────────────────────────────────────────── */
+.ormic-accent-mixed .ormic-entry { caret-color: #64748B; }
+.ormic-accent-mixed .ormic-result.selected { background-color: rgba(100, 116, 139, 0.09); }
+.ormic-accent-mixed .ormic-result.selected .ormic-accent-bar { background-color: #64748B; }
+.ormic-accent-mixed .ormic-result.selected .ormic-name { color: #64748B; }
+.ormic-accent-mixed .ormic-fav-btn:hover { color: #64748B; }
+.ormic-accent-mixed .ormic-fav-btn.is-fav { color: #64748B; }
+.ormic-accent-mixed .ormic-fav-btn.is-fav:hover { background-color: rgba(100, 116, 139, 0.12); }
+.ormic-accent-mixed .ormic-kbd-badge { color: rgba(100, 116, 139, 0.72); background-color: rgba(100, 116, 139, 0.07); border: 1px solid rgba(100, 116, 139, 0.18); }
+.ormic-accent-mixed .ormic-result.selected .ormic-kbd-badge { border-color: #64748B; }
+.ormic-accent-mixed .ormic-grid-item.selected { border-color: rgba(100, 116, 139, 0.32); }
+.ormic-accent-mixed .ormic-category-tab.active { border-color: rgba(100, 116, 139, 0.85); }
+.ormic-accent-mixed .ormic-editor-entry { caret-color: #64748B; }
+.ormic-accent-mixed .ormic-editor-entry:focus { border-color: #64748B; }
+.ormic-accent-mixed .ormic-editor-btn.save-btn { background-color: #64748B; border: 1px solid #64748B; }
+.ormic-accent-mixed .ormic-editor-btn.save-btn:hover { background-color: #94A3B8; border-color: #94A3B8; }
+.ormic-accent-mixed .ormic-edit-row.selected { background-color: rgba(100, 116, 139, 0.06); border-color: rgba(100, 116, 139, 0.14); }
+.ormic-accent-mixed .ormic-edit-row.selected .ormic-edit-checkbox { color: #64748B; }
+.ormic-accent-mixed .ormic-prompt-entry { caret-color: #64748B; }
+.ormic-accent-mixed .ormic-prompt-entry:focus { border-color: #64748B; }
+.ormic-accent-mixed .ormic-prompt-btn.create-btn { background-color: #64748B; border: 1px solid #64748B; }
+.ormic-accent-mixed .ormic-prompt-btn.create-btn:hover { background-color: #94A3B8; border-color: #94A3B8; }
+.ormic-accent-mixed .ormic-prompt-btn.create-btn:active { background-color: #475569; border-color: #475569; }
+.ormic-accent-mixed .ormic-tip-key { color: rgba(100, 116, 139, 0.80); background-color: rgba(100, 116, 139, 0.09); }

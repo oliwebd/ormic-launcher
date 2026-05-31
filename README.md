@@ -103,12 +103,24 @@ ormic-launcher/
   │     ├── Group Editor    # Category checklist editor for custom groups
   │     └── Tips bar        # Keyboard hint overlay footer
   │
+  ├── accent-colors.ts    # Single configuration source for the interface's accent colors
+  ├── scripts/
+  │     └── generate-accent-css.mjs # Build-time CSS compiler generating dynamic style overrides
   ├── prefs.ts            # GTK/Libadwaita preferences configuration window
   ├── stylesheet.css      # Glassmorphic dark styling and Pop!_OS accent styles
   ├── metadata.json       # GNOME extension identifier and version requirements
   ├── gmenu.d.ts          # GMenu typing definitions for TypeScript
   └── schemas/            # GSettings schema definition
 ```
+
+---
+
+## 🎨 Build-Time CSS Accent Color Generation
+
+Ormic Launcher supports multiple UI accent colors (yellow, blue, purple, red, green, etc.). Rather than maintaining duplicate color lists in both TypeScript and CSS:
+1. **Single Source of Truth**: All accent color details (hex value, RGB triplet for translucent layers, hover states, and active pressed states) are stored in a single TypeScript dictionary in [accent-colors.ts](file:///home/waleee/oliwebd/oramic-Launcher/accent-colors.ts).
+2. **Build-Time Compilation**: The node compiler script [scripts/generate-accent-css.mjs](file:///home/waleee/oliwebd/oramic-Launcher/scripts/generate-accent-css.mjs) runs automatically during the `npm run build` or `make build` workflow. It reads the source colors, automatically generates highly optimized CSS rule overrides, and inserts them perfectly into [stylesheet.css](file:///home/waleee/oliwebd/oramic-Launcher/stylesheet.css).
+3. **Simple Color Expansion**: Adding or updating any color scheme is completely friction-free — simply edit `accent-colors.ts` and run `make build`.
 
 ---
 
