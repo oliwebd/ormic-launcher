@@ -7,12 +7,11 @@ import Gio from 'gi://Gio';
 import { SearchResult } from '../types.js';
 
 /**
- * Shared state interface exposed by LauncherDialog to all controllers.
- * Controllers read/write through this interface instead of holding
- * a direct reference to the GObject widget tree.
+ * Context object passed to all controllers. Provides typed access to the
+ * dialog's mutable state and widget tree without controllers holding a
+ * direct GObject reference to LauncherDialog.
  */
 export interface LauncherState {
-    // ─── Extension back-reference ────────────────────────────────────────
     readonly ext: {
         _settings: Gio.Settings;
         hide(): void;
@@ -21,13 +20,11 @@ export interface LauncherState {
     readonly providers: any[];
     readonly shellSettings: Gio.Settings;
 
-    // ─── Search view state ───────────────────────────────────────────────
     results: SearchResult[];
     selIdx: number;
     tid: number | null | undefined;
     gen: number;
 
-    // ─── Grid / Library view state ───────────────────────────────────────
     categoryGridBoxes: Map<string, St.BoxLayout>;
     allAppsCache: SearchResult[];
     allAppsCacheDirty: boolean;
@@ -38,7 +35,6 @@ export interface LauncherState {
     isEditing: boolean;
     gridSelIdx: number;
 
-    // ─── UI widget references ────────────────────────────────────────────
     readonly entryBox: St.BoxLayout;
     readonly entry: St.Entry;
     readonly scroll: St.ScrollView;
@@ -57,18 +53,14 @@ export interface LauncherState {
     readonly editorAppsContainer: St.BoxLayout;
     readonly promptOverlay: St.BoxLayout;
     readonly promptEntry: St.Entry;
-
-    // ─── Page navigation widgets ─────────────────────────────────────────
     readonly pageNavBox: St.BoxLayout;
     readonly pageDotsBox: St.BoxLayout;
     readonly prevPageBtn: St.Button;
     readonly nextPageBtn: St.Button;
 
-    // ─── Methods the controllers may call back into ──────────────────────
     focus(): void;
     getGridBox(): St.BoxLayout;
     getCategoryGridBox(categoryName: string): St.BoxLayout;
     setTabsVisible(visible: boolean): void;
-    /** Runtime check — true if the underlying actor is destroyed */
     isDestroyed(): boolean;
 }

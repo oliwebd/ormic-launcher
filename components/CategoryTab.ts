@@ -7,9 +7,14 @@ import GObject from 'gi://GObject';
 
 import { dbg } from '../utils.js';
 
-export const CategoryTab = GObject.registerClass({
-    Signals: { 'tab-selected': {}, 'tab-hovered': {} },
-}, class CategoryTab extends St.Button {
+export class CategoryTab extends St.Button {
+    static {
+        GObject.registerClass({
+            GTypeName: 'OrmicCategoryTab',
+            Signals: { 'tab-selected': {}, 'tab-hovered': {} },
+        }, this);
+    }
+
     declare private _categoryName: string;
     declare private _iconName: string;
 
@@ -35,21 +40,19 @@ export const CategoryTab = GObject.registerClass({
             x_expand: true,
             y_align: Clutter.ActorAlign.CENTER,
         });
-        (box as any).spacing = 6;
+        (box.layout_manager as Clutter.BoxLayout).spacing = 6;
 
-        const icon = new St.Icon({
+        box.add_child(new St.Icon({
             icon_name: iconName,
             icon_size: 16,
             style_class: 'ormic-category-tab-icon',
-        });
-        box.add_child(icon);
+        }));
 
-        const label = new St.Label({
+        box.add_child(new St.Label({
             text: categoryName,
             style_class: 'ormic-category-tab-label',
             y_align: Clutter.ActorAlign.CENTER,
-        });
-        box.add_child(label);
+        }));
 
         this.set_child(box);
 
@@ -65,5 +68,4 @@ export const CategoryTab = GObject.registerClass({
         if (on) this.add_style_class_name('active');
         else this.remove_style_class_name('active');
     }
-});
-export type CategoryTab = InstanceType<typeof CategoryTab>;
+}

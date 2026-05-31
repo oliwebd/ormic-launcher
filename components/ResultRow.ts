@@ -11,9 +11,14 @@ import { gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.j
 import { SearchResult } from '../types.js';
 import { dbg, boxLayoutParams } from '../utils.js';
 
-export const ResultRow = GObject.registerClass({
-    Signals: { 'item-activated': {}, 'item-hovered': {} },
-}, class ResultRow extends St.Button {
+export class ResultRow extends St.Button {
+    static {
+        GObject.registerClass({
+            GTypeName: 'OrmicResultRow',
+            Signals: { 'item-activated': {}, 'item-hovered': {} },
+        }, this);
+    }
+
     declare private _result: SearchResult;
     declare private _accentBar: St.Widget;
     declare _favButton?: St.Button;
@@ -149,11 +154,7 @@ export const ResultRow = GObject.registerClass({
     get result() { return this._result; }
 
     setSelected(on: boolean) {
-        if (on) {
-            this.add_style_class_name('selected');
-        } else {
-            this.remove_style_class_name('selected');
-        }
+        if (on) this.add_style_class_name('selected');
+        else this.remove_style_class_name('selected');
     }
-});
-export type ResultRow = InstanceType<typeof ResultRow>;
+}

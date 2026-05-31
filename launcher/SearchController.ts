@@ -95,7 +95,7 @@ export class SearchController {
         const s = this._s;
         if (!s.results.length) { s.scroll.hide(); return; }
         s.results.forEach((r, i) => {
-            const row = new (ResultRow as any)() as ResultRow;
+            const row = new ResultRow();
             row.setup(r, i, s.ext._settings, s.shellSettings);
             row.connect('item-activated', () => { s.ext.hide(); r.activate(); });
             row.connect('item-hovered', () => {

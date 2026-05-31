@@ -34,7 +34,7 @@ export class GroupEditorController {
         const groupAppIds = customGroups[s.activeCategory] || [];
 
         apps.forEach(app => {
-            const row = new (EditAppRow as any)() as EditAppRow;
+            const row = new EditAppRow();
             row.setup(app, groupAppIds.includes(app.desktopId ?? ''));
             s.editorAppsContainer.add_child(row);
         });

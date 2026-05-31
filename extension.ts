@@ -41,34 +41,37 @@ import { KeyboardHandler } from './launcher/KeyboardHandler.js';
 
 // ─── Launcher Dialog ──────────────────────────────────────────────────────────
 
-const LauncherDialog = GObject.registerClass(
-    class LauncherDialog extends St.BoxLayout {
-        private _state!: LauncherState;
-        private _searchCtrl!: SearchController;
-        private _gridCtrl!: GridController;
-        private _groupCtrl!: GroupEditorController;
-        private _kbdHandler!: KeyboardHandler;
 
-        private _ext!: OrmicLauncherExtension;
-        private _providers!: any[];
-        private _results!: SearchResult[];
-        private _selIdx!: number;
-        private _tid!: number | null | undefined;
-        private _gen!: number;
-        _shellSettings!: Gio.Settings;
+class LauncherDialog extends St.BoxLayout {
+    static {
+        GObject.registerClass({ GTypeName: 'OrmicLauncherDialog' }, this);
+    }
 
-        private _categoryGridBoxes!: Map<string, St.BoxLayout>;
-        private _allAppsCache!: SearchResult[];
-        private _allAppsCacheDirty!: boolean;
+    private _state!: LauncherState;
+    private _searchCtrl!: SearchController;
+    private _gridCtrl!: GridController;
+    private _groupCtrl!: GroupEditorController;
+    private _kbdHandler!: KeyboardHandler;
 
-        private _renderIdleId = 0;
-        private _bgRenderIdleId = 0;
-        private _bgRenderQueue: string[] = [];
+    private _ext!: OrmicLauncherExtension;
+    private _providers!: any[];
+    private _results!: SearchResult[];
+    private _selIdx!: number;
+    private _tid!: number | null | undefined;
+    private _gen!: number;
+    _shellSettings!: Gio.Settings;
 
-        // Dynamic multi-view state
-        private _activeCategory = 'Library Home';
-        private _isEditing = false;
-        private _gridSelIdx = -1;
+    private _categoryGridBoxes!: Map<string, St.BoxLayout>;
+    private _allAppsCache!: SearchResult[];
+    private _allAppsCacheDirty!: boolean;
+
+    private _renderIdleId = 0;
+    private _bgRenderIdleId = 0;
+    private _bgRenderQueue: string[] = [];
+
+    private _activeCategory = 'Library Home';
+    private _isEditing = false;
+    private _gridSelIdx = -1;
 
         get _gridBox(): St.BoxLayout {
             return this._getCategoryGridBox(this._activeCategory);
@@ -124,12 +127,6 @@ const LauncherDialog = GObject.registerClass(
         _promptEntry!: St.Entry;
 
         _init() {
-            // No blur effect here — blur lives on _blurWrapper, a completely
-            // separate chrome layer registered independently with
-            // Main.layoutManager.addChrome(). This mirrors the GNOME Shell
-            // overview / lockscreen pattern: two scene-graph-independent
-            // branches so hover/repaint events in this dialog tree can never
-            // reach or invalidate the blur actor.
             super._init({ style_class: 'ormic-dialog', ...boxLayoutParams(true), reactive: true });
         }
 
@@ -240,7 +237,7 @@ const LauncherDialog = GObject.registerClass(
 
             // ── Tip bar ───────────────────────────────────────────────────
             this._tips = new St.BoxLayout({ style_class: 'ormic-tips', x_expand: true });
-            (this._tips as any).spacing = 12;
+            (this._tips.layout_manager as Clutter.BoxLayout).spacing = 12;
             for (const [k, v] of [
                 ['↑↓', _('Navigate')], ['↵', _('Open')], ['Tab', _('Complete')],
                 ['Esc', _('Close')], ['>', _('Command')],
@@ -480,7 +477,7 @@ const LauncherDialog = GObject.registerClass(
                 style_class: 'ormic-prompt-btns',
                 x_align: Clutter.ActorAlign.END,
             });
-            (promptBtns as any).spacing = 8;
+            (promptBtns.layout_manager as Clutter.BoxLayout).spacing = 8;
             const pCancel = new St.Button({
                 label: _('Cancel'), style_class: 'ormic-prompt-btn cancel-btn',
                 reactive: true, track_hover: true,
@@ -624,11 +621,6 @@ const LauncherDialog = GObject.registerClass(
             this._groupCtrl = new GroupEditorController(this._state, this._gridCtrl);
             this._kbdHandler = new KeyboardHandler(this._state, this._searchCtrl, this._gridCtrl, this._groupCtrl);
 
-            // NOTE: No OffscreenEffect or blur added here. Blur isolation is
-            // achieved structurally — _blurWrapper is a completely separate
-            // chrome entry registered independently in the extension's enable().
-            // Hover repaints inside this dialog tree have zero shared ancestor
-            // with the blur actor, so they can never invalidate it.
         }
 
         vfunc_key_press_event(ev: Clutter.Event): boolean { return this._onKey(ev); }
@@ -793,26 +785,27 @@ const LauncherDialog = GObject.registerClass(
                 this._gridCtrl.startBackgroundPreRender();
             }
         }
-    },
-);
-type LauncherDialog = InstanceType<typeof LauncherDialog>;
+}
+
 
 // ─── Panel indicator ──────────────────────────────────────────────────────────
 
-const OrmicIndicator = GObject.registerClass(
-    class OrmicIndicator extends PanelMenu.Button {
-        _ext!: OrmicLauncherExtension;
-        _init() {
-            super._init(0.0, 'Ormic Launcher', true);
-            this.add_child(new St.Icon({ icon_name: 'view-app-grid-symbolic', style_class: 'system-status-icon' }));
-            this.connect('button-press-event', () => {
-                this._ext.toggle();
-                return Clutter.EVENT_STOP;
-            });
-        }
-    },
-);
-type OrmicIndicator = InstanceType<typeof OrmicIndicator>;
+class OrmicIndicator extends PanelMenu.Button {
+    static {
+        GObject.registerClass({ GTypeName: 'OrmicIndicator' }, this);
+    }
+
+    _ext!: OrmicLauncherExtension;
+    _init() {
+        super._init(0.0, 'Ormic Launcher', true);
+        this.add_child(new St.Icon({ icon_name: 'view-app-grid-symbolic', style_class: 'system-status-icon' }));
+        this.connect('button-press-event', () => {
+            this._ext.toggle();
+            return Clutter.EVENT_STOP;
+        });
+    }
+}
+
 
 // ─── Extension ────────────────────────────────────────────────────────────────
 
@@ -932,7 +925,7 @@ export default class OrmicLauncherExtension extends Extension {
             return Clutter.EVENT_PROPAGATE;
         });
 
-        this._dialog = new (LauncherDialog as any)() as LauncherDialog;
+        this._dialog = new LauncherDialog();
         this._dialog.setup(this);
         this._overlay.add_child(this._dialog);
 
@@ -1027,6 +1020,7 @@ export default class OrmicLauncherExtension extends Extension {
     _syncInd() {
         if (this._settings.get_boolean('show-indicator')) {
             if (!this._indicator) {
+                // PanelMenu.Button requires constructor args; GJS calls _init() instead.
                 const ind = new (OrmicIndicator as any)() as OrmicIndicator;
                 ind._ext = this; this._indicator = ind;
                 Main.panel.addToStatusArea('ormic-launcher', this._indicator, 0, 'left');
