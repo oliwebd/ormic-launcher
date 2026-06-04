@@ -36,6 +36,7 @@ export class EditAppRow extends St.Button {
             x_expand: true,
             y_align: Clutter.ActorAlign.CENTER,
         });
+        (box.layout_manager as Clutter.BoxLayout).spacing = 10;
 
         const iconBin = new St.Bin({ style_class: 'ormic-edit-icon-bin' });
         if (result.createIcon) {
