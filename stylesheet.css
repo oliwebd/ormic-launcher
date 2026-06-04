@@ -3,7 +3,7 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 
 .ormic-overlay {
-  background-color: rgba(0, 0, 0, 0.30);
+  background-color: rgba(0, 0, 0, 0.55);
 }
 
 /* ── Blur wrapper — non-interactive sibling behind the dialog ────────────── */
@@ -15,6 +15,7 @@
 /* ── Dialog card ─────────────────────────────────────────────────────────── */
 .ormic-dialog {
   border: 1px solid rgba(255, 255, 255, 0.13);
+  background-color: rgba(18, 18, 26, 0.92);
   border-radius: 14px;
   padding: 0;
   width: 960px;
@@ -24,6 +25,11 @@
   max-width: 960px;
   max-height: 640px;
 }
+
+/* ── Background Style ────────────────────────────────────────────────────── */
+.ormic-bg-solid { background-color: rgba(18, 18, 26, 0.97); }
+.ormic-bg-transparent { background-color: rgba(18, 18, 26, 0.72); }
+.ormic-bg-blur { background-color: rgba(18, 18, 26, 0.60); }
 
 /* ── Search row ──────────────────────────────────────────────────────────── */
 .ormic-search-row {
