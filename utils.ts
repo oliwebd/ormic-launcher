@@ -92,15 +92,15 @@ export function createBlurEffect(
 }
 
 /**
- * One-shot timeout.
- *   GNOME 50+  → GLib.timeout_add_once()  (returns void; not cancellable)
- *   GNOME <50  → GLib.timeout_add()  + SOURCE_REMOVE
+ * One-shot timeout — always returns a cancellable GLib source ID.
+ *
+ * We intentionally avoid GLib.timeout_add_once() even on GNOME 50+ because
+ * that API returns void, making the source impossible to cancel.  Every call
+ * site that stores the return value (SearchController.onText, cleanup paths)
+ * needs a valid ID so it can call GLib.source_remove() before creating a new
+ * timer or on extension disable.
  */
-export function timeoutOnce(ms: number, fn: () => void): number | undefined {
-  if (IS_50_PLUS && (GLib as any).timeout_add_once) {
-    (GLib as any).timeout_add_once(GLib.PRIORITY_DEFAULT, ms, fn);
-    return undefined;
-  }
+export function timeoutOnce(ms: number, fn: () => void): number {
   return GLib.timeout_add(GLib.PRIORITY_DEFAULT, ms, () => {
     fn();
     return GLib.SOURCE_REMOVE;
