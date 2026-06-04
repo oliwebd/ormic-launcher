@@ -36,6 +36,7 @@ export class GridItem extends St.Button {
             style_class: 'ormic-grid-item-box',
             x_expand: true, y_expand: true,
         });
+        (box.layout_manager as Clutter.BoxLayout).spacing = 4;
 
         this._iconBin = new St.Bin({ style_class: 'ormic-grid-icon-bin' });
         box.add_child(this._iconBin);
