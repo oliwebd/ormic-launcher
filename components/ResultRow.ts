@@ -70,6 +70,8 @@ export class ResultRow extends St.Button {
             ...boxLayoutParams(true), x_expand: true,
             y_align: Clutter.ActorAlign.CENTER,
         });
+        (textCol.layout_manager as Clutter.BoxLayout).spacing = 2;
+
         const nameLabel = new St.Label({
             text: result.name, style_class: 'ormic-name',
             x_align: Clutter.ActorAlign.START,
@@ -129,6 +131,8 @@ export class ResultRow extends St.Button {
             style_class: 'ormic-cat-pill',
             y_align: Clutter.ActorAlign.CENTER,
         });
+        (pill.layout_manager as Clutter.BoxLayout).spacing = 5;
+
         pill.add_child(new St.Icon({
             icon_name: result.categoryIcon, icon_size: 11,
             style_class: 'ormic-cat-icon',
