@@ -79,6 +79,11 @@ export class GridController {
 
     constructor(state: LauncherState) {
         this._s = state;
+
+        // Re-render the grid live when the icon-size preference changes.
+        state.ext._settings.connect('changed::grid-icon-size', () => {
+            if (state.gridScroll.visible) this.renderGridOnly();
+        });
     }
 
     // ─── Idle/timeout job management ─────────────────────────────────────
@@ -343,6 +348,7 @@ export class GridController {
                             (it, j) => it.setSelected(j === capturedIdx));
                     }
                 },
+                this._s.ext._settings.get_int('grid-icon-size'),
             );
 
             rows[rowIdx].add_child(item);

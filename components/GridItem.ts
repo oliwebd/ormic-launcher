@@ -61,27 +61,35 @@ export class GridItem extends St.Button {
         });
     }
 
-    setup(result: SearchResult, onActivate: () => void, onHover: () => void) {
+    setup(result: SearchResult, onActivate: () => void, onHover: () => void, iconSize = 52) {
         this._result = result;
         this._activateCb = onActivate;
         this._hoverCb = onHover;
 
         this.setSelected(false);
 
+        // Derive card and bin sizes from the icon size setting.
+        // card: icon + 10px padding on each side + 18px label row
+        const cardW = iconSize + 20;
+        const cardH = iconSize + 34;
+        const binRadius = Math.round(iconSize * 0.22);
+        this.set_style(`width: ${cardW}px; height: ${cardH}px;`);
+        this._iconBin.set_style(`width: ${iconSize}px; border-radius: ${binRadius}px;`);
+
         let iconWidget: any = null;
         if (result.createIcon) {
-            iconWidget = result.createIcon(44);
+            iconWidget = result.createIcon(iconSize - 8);
         } else if (result.icon) {
             iconWidget = result.icon;
         }
 
         if (iconWidget) {
-            iconWidget.set_size(44, 44);
+            iconWidget.set_size(iconSize - 8, iconSize - 8);
             this._iconBin.set_child(iconWidget);
         } else {
             this._iconBin.set_child(new St.Icon({
                 icon_name: result.iconName ?? 'application-x-executable-symbolic',
-                icon_size: 44,
+                icon_size: iconSize - 8,
                 style_class: 'ormic-grid-icon-sym',
             }));
         }

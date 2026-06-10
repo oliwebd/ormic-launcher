@@ -64,5 +64,26 @@
       <description>Accent color used for highlights and selections. Choices: gnome, yellow, blue, purple, red, green, pink, teal, orange, slate.</description>
     </key>
 
+    <key name="grid-icon-size" type="i">
+      <default>52</default>
+      <range min="32" max="80"/>
+      <summary>Grid icon size</summary>
+      <description>Size of icons in the library grid view, in pixels (32–80). Controls card width/height and icon bin size proportionally.</description>
+    </key>
+
+    <key name="launcher-width" type="i">
+      <default>960</default>
+      <range min="600" max="1600"/>
+      <summary>Launcher dialog width</summary>
+      <description>Width of the floating launcher dialog in pixels (600–1600).</description>
+    </key>
+
+    <key name="launcher-height" type="i">
+      <default>640</default>
+      <range min="400" max="1200"/>
+      <summary>Launcher dialog height</summary>
+      <description>Height of the floating launcher dialog in pixels (400–1200).</description>
+    </key>
+
   </schema>
 </schemalist>

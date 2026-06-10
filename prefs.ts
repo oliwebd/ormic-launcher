@@ -205,6 +205,43 @@ export default class OrmicLauncherPrefs extends ExtensionPreferences {
         s.bind('enable-quick-select', qsRow, 'active', Gio.SettingsBindFlags.DEFAULT);
         resGroup.add(qsRow);
 
+        // ── Appearance ────────────────────────────────────────────────────
+        const appearGroup = new Adw.PreferencesGroup({ title: _('Appearance') });
+        genPage.add(appearGroup);
+
+        const iconSizeRow = new Adw.SpinRow({
+            title: _('Grid icon size (px)'),
+            subtitle: _('Width/height of icons in the library grid — 32 (tiny) → 80 (large). Default: 52'),
+            adjustment: new Gtk.Adjustment({
+                lower: 32, upper: 80, step_increment: 4,
+                value: s.get_int('grid-icon-size'),
+            }),
+        });
+        s.bind('grid-icon-size', iconSizeRow, 'value', Gio.SettingsBindFlags.DEFAULT);
+        appearGroup.add(iconSizeRow);
+
+        const launcherWRow = new Adw.SpinRow({
+            title: _('Launcher width (px)'),
+            subtitle: _('Width of the floating launcher dialog — 600 → 1600. Default: 960'),
+            adjustment: new Gtk.Adjustment({
+                lower: 600, upper: 1600, step_increment: 20,
+                value: s.get_int('launcher-width'),
+            }),
+        });
+        s.bind('launcher-width', launcherWRow, 'value', Gio.SettingsBindFlags.DEFAULT);
+        appearGroup.add(launcherWRow);
+
+        const launcherHRow = new Adw.SpinRow({
+            title: _('Launcher height (px)'),
+            subtitle: _('Height of the floating launcher dialog — 400 → 1200. Default: 640'),
+            adjustment: new Gtk.Adjustment({
+                lower: 400, upper: 1200, step_increment: 20,
+                value: s.get_int('launcher-height'),
+            }),
+        });
+        s.bind('launcher-height', launcherHRow, 'value', Gio.SettingsBindFlags.DEFAULT);
+        appearGroup.add(launcherHRow);
+
         // ══ Page: Providers ═══════════════════════════════════════════════
         const provPage = new Adw.PreferencesPage({
             title: _('Providers'), icon_name: 'application-x-executable-symbolic',

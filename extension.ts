@@ -212,6 +212,18 @@ class LauncherDialog extends St.BoxLayout {
 
             this._entryBox.add_child(this._entry);
 
+            const settingsBtn = new St.Button({
+                child: new St.Icon({ icon_name: 'preferences-system-symbolic', icon_size: 16 }),
+                style_class: 'ormic-settings-btn',
+                reactive: true, track_hover: true, can_focus: false,
+                y_align: Clutter.ActorAlign.CENTER,
+            });
+            settingsBtn.connect('clicked', () => {
+                this._ext.hide();
+                this._ext.openPreferences();
+            });
+            this._entryBox.add_child(settingsBtn);
+
             const closeBtn = new St.Button({
                 child: new St.Icon({ icon_name: 'window-close-symbolic', icon_size: 18 }),
                 style_class: 'ormic-close-btn',
@@ -949,6 +961,10 @@ export default class OrmicLauncherExtension extends Extension {
 
         this._bgSettingId = this._settings.connect('changed::background-style', () => this._syncBackground());
         this._syncBackground();
+
+        // Re-position dialog live when size settings change
+        this._settings.connect('changed::launcher-width', () => this._pos());
+        this._settings.connect('changed::launcher-height', () => this._pos());
     }
 
     disable() {
@@ -1016,8 +1032,8 @@ export default class OrmicLauncherExtension extends Extension {
         const mon = Main.layoutManager.primaryMonitor;
         if (!mon) return;
 
-        const dw = 960;
-        const dh = 640;
+        const dw = this._settings.get_int('launcher-width');
+        const dh = this._settings.get_int('launcher-height');
         const dx = mon.x + Math.floor((mon.width - dw) / 2);
         const dy = mon.y + Math.floor(mon.height * 0.14);
 
