@@ -8,9 +8,14 @@ import GObject from 'gi://GObject';
 import { SearchResult } from '../types.js';
 import { dbg } from '../utils.js';
 
-export const EditAppRow = GObject.registerClass({
-    Signals: { toggle: {} },
-}, class EditAppRow extends St.Button {
+export class EditAppRow extends St.Button {
+    static {
+        GObject.registerClass({
+            GTypeName: 'OrmicEditAppRow',
+            Signals: { toggle: {} },
+        }, this);
+    }
+
     declare private _result: SearchResult;
     declare private _selected: boolean;
     declare private _checkIcon: St.Icon;
@@ -31,6 +36,7 @@ export const EditAppRow = GObject.registerClass({
             x_expand: true,
             y_align: Clutter.ActorAlign.CENTER,
         });
+        (box.layout_manager as Clutter.BoxLayout).spacing = 10;
 
         const iconBin = new St.Bin({ style_class: 'ormic-edit-icon-bin' });
         if (result.createIcon) {
@@ -50,13 +56,12 @@ export const EditAppRow = GObject.registerClass({
         }
         box.add_child(iconBin);
 
-        const nameLabel = new St.Label({
+        box.add_child(new St.Label({
             text: result.name,
             style_class: 'ormic-edit-name',
             x_expand: true,
             y_align: Clutter.ActorAlign.CENTER,
-        });
-        box.add_child(nameLabel);
+        }));
 
         this._checkIcon = new St.Icon({
             icon_name: this._selected ? 'checkbox-checked-symbolic' : 'checkbox-symbolic',
@@ -85,5 +90,4 @@ export const EditAppRow = GObject.registerClass({
 
     get result() { return this._result; }
     get selected() { return this._selected; }
-});
-export type EditAppRow = InstanceType<typeof EditAppRow>;
+}

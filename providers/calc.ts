@@ -8,30 +8,18 @@ import { SearchResult } from '../types.js';
 
 export class CalcProvider {
     id = 'calc'; priority = 5;
-    private _kw   = /\b(sin|cos|tan|sqrt|log|ln|exp|pi)\b/gi;
-    // Starts with a digit, '.', '(', or a recognised math function name
+    // Quick pre-filter: must start with a digit, '.', '(' or a known function name.
     private _start = /^[\d.(]|^(sin|cos|tan|sqrt|log|ln|exp|pi)\b/i;
-    private _safe  = /^[0-9\s+\-*/.,%^()e]+$/i;
 
-    private valid(q: string) {
-        return this._start.test(q) && this._safe.test(q.replace(this._kw, '0'));
+    private valid(q: string): boolean {
+        return this._start.test(q);
     }
 
     search(q: string): SearchResult[] {
-        q = q.trim();
+        q = q.trim().replace(/,/g, '.').replace(/\^/g, '**');
         if (!q || !this.valid(q)) return [];
         try {
-            const s = q
-                .replace(/\^/g, '**').replace(/,/g, '.')
-                .replace(/\bsin\b/g, 'Math.sin').replace(/\bcos\b/g, 'Math.cos')
-                .replace(/\btan\b/g, 'Math.tan').replace(/\bsqrt\b/g, 'Math.sqrt')
-                .replace(/\blog\b/g, 'Math.log10').replace(/\bln\b/g, 'Math.log')
-                .replace(/\bexp\b/g, 'Math.exp').replace(/\bpi\b/gi, 'Math.PI')
-                // Replace bare 'e' (Euler's number) but NOT the 'e' in
-                // scientific notation (e.g. 1e3, 2.5e-4).
-                .replace(/(?<![A-Za-z0-9])e(?![A-Za-z0-9])/g, 'Math.E');
-             
-            const v = new Function(`"use strict"; return (${s})`)();
+            const v = this._eval(q);
             if (typeof v !== 'number' || !isFinite(v)) return [];
             const display = Number.isInteger(v) ? String(v) : parseFloat(v.toPrecision(10)).toString();
             return [{
@@ -45,5 +33,101 @@ export class CalcProvider {
                 },
             }];
         } catch (_e) { return []; }
+    }
+
+    /** Safe recursive descent evaluator — no dynamic code execution. */
+    private _eval(src: string): number {
+        let i = 0;
+        const skip = () => { while (i < src.length && src[i] === ' ') i++; };
+
+        const FUNS: Record<string, (x: number) => number> = {
+            sin: Math.sin, cos: Math.cos, tan: Math.tan,
+            sqrt: Math.sqrt, log: Math.log10, ln: Math.log, exp: Math.exp,
+        };
+        const CONSTS: Record<string, number> = { pi: Math.PI, e: Math.E };
+
+        const expr = (): number => {
+            let v = term();
+            for (;;) {
+                skip();
+                if (src[i] === '+') { i++; v += term(); }
+                else if (src[i] === '-') { i++; v -= term(); }
+                else break;
+            }
+            return v;
+        };
+
+        const term = (): number => {
+            let v = power();
+            for (;;) {
+                skip();
+                if (src.slice(i, i + 2) === '**') break;
+                if (src[i] === '*') { i++; v *= power(); }
+                else if (src[i] === '/') { i++; v /= power(); }
+                else if (src[i] === '%') { i++; v %= power(); }
+                else break;
+            }
+            return v;
+        };
+
+        const power = (): number => {
+            const base = unary();
+            skip();
+            if (src.slice(i, i + 2) === '**') { i += 2; return base ** unary(); }
+            return base;
+        };
+
+        const unary = (): number => {
+            skip();
+            if (src[i] === '-') { i++; return -primary(); }
+            if (src[i] === '+') { i++; return +primary(); }
+            return primary();
+        };
+
+        const primary = (): number => {
+            skip();
+            if (src[i] === '(') {
+                i++;
+                const v = expr();
+                skip();
+                if (src[i] === ')') i++;
+                return v;
+            }
+            // number literal (including scientific notation like 1e3, 2.5e-4)
+            if ((src[i] >= '0' && src[i] <= '9') || src[i] === '.') {
+                const s = i;
+                while (i < src.length && /[\d.]/.test(src[i])) i++;
+                if (i < src.length && (src[i] === 'e' || src[i] === 'E') &&
+                    i + 1 < src.length && /[\d+\-]/.test(src[i + 1])) {
+                    i++;
+                    if (src[i] === '+' || src[i] === '-') i++;
+                    while (i < src.length && /\d/.test(src[i])) i++;
+                }
+                return parseFloat(src.slice(s, i));
+            }
+            // identifier: named function or constant
+            if (/[a-zA-Z]/.test(src[i])) {
+                const s = i;
+                while (i < src.length && /[a-zA-Z]/.test(src[i])) i++;
+                const name = src.slice(s, i).toLowerCase();
+                skip();
+                if (name in FUNS) {
+                    if (src[i] !== '(') throw new Error(`expected ( after ${name}`);
+                    i++;
+                    const arg = expr();
+                    skip();
+                    if (src[i] === ')') i++;
+                    return FUNS[name](arg);
+                }
+                if (name in CONSTS) return CONSTS[name];
+                throw new Error(`unknown identifier: ${name}`);
+            }
+            throw new Error(`unexpected character: ${src[i]}`);
+        };
+
+        const result = expr();
+        skip();
+        if (i !== src.length) throw new Error('trailing input');
+        return result;
     }
 }

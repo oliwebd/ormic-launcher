@@ -79,6 +79,11 @@ export class GridController {
 
     constructor(state: LauncherState) {
         this._s = state;
+
+        // Re-render the grid live when the icon-size preference changes.
+        state.ext._settings.connect('changed::grid-icon-size', () => {
+            if (state.gridScroll.visible) this.renderGridOnly();
+        });
     }
 
     // ─── Idle/timeout job management ─────────────────────────────────────
@@ -201,7 +206,7 @@ export class GridController {
     }
 
     private _getPoolItem(): GridItem {
-        return this._itemPool.pop() ?? new (GridItem as any)() as GridItem;
+        return this._itemPool.pop() ?? new GridItem();
     }
 
     // ─── collectGridItems — O(1) via flat array ───────────────────────────
@@ -343,6 +348,7 @@ export class GridController {
                             (it, j) => it.setSelected(j === capturedIdx));
                     }
                 },
+                this._s.ext._settings.get_int('grid-icon-size'),
             );
 
             rows[rowIdx].add_child(item);
@@ -400,7 +406,7 @@ export class GridController {
         s.tabsBox.destroy_all_children();
 
         STATIC_TABS.forEach(t => {
-            const tab = new (CategoryTab as any)() as CategoryTab;
+            const tab = new CategoryTab();
             tab.setup(t.name, t.icon);
             tab.setSelected(s.activeCategory === t.name);
             if (t.name === 'Favorites')
@@ -416,7 +422,7 @@ export class GridController {
         });
 
         for (const gName of groupNames) {
-            const tab = new (CategoryTab as any)() as CategoryTab;
+            const tab = new CategoryTab();
             tab.setup(gName, 'folder-symbolic');
             tab.setSelected(s.activeCategory === gName);
             tab.connect('tab-selected', () => {
@@ -427,7 +433,7 @@ export class GridController {
             s.tabsBox.add_child(tab);
         }
 
-        const addTab = new (CategoryTab as any)() as CategoryTab;
+        const addTab = new CategoryTab();
         addTab.setup(_('Add group'), 'list-add-symbolic');
         addTab.connect('tab-selected', () => {
             s.headerBox.hide();

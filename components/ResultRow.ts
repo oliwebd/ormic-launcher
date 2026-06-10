@@ -11,9 +11,14 @@ import { gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.j
 import { SearchResult } from '../types.js';
 import { dbg, boxLayoutParams } from '../utils.js';
 
-export const ResultRow = GObject.registerClass({
-    Signals: { 'item-activated': {}, 'item-hovered': {} },
-}, class ResultRow extends St.Button {
+export class ResultRow extends St.Button {
+    static {
+        GObject.registerClass({
+            GTypeName: 'OrmicResultRow',
+            Signals: { 'item-activated': {}, 'item-hovered': {} },
+        }, this);
+    }
+
     declare private _result: SearchResult;
     declare private _accentBar: St.Widget;
     declare _favButton?: St.Button;
@@ -65,6 +70,8 @@ export const ResultRow = GObject.registerClass({
             ...boxLayoutParams(true), x_expand: true,
             y_align: Clutter.ActorAlign.CENTER,
         });
+        (textCol.layout_manager as Clutter.BoxLayout).spacing = 2;
+
         const nameLabel = new St.Label({
             text: result.name, style_class: 'ormic-name',
             x_align: Clutter.ActorAlign.START,
@@ -124,6 +131,8 @@ export const ResultRow = GObject.registerClass({
             style_class: 'ormic-cat-pill',
             y_align: Clutter.ActorAlign.CENTER,
         });
+        (pill.layout_manager as Clutter.BoxLayout).spacing = 5;
+
         pill.add_child(new St.Icon({
             icon_name: result.categoryIcon, icon_size: 11,
             style_class: 'ormic-cat-icon',
@@ -149,11 +158,7 @@ export const ResultRow = GObject.registerClass({
     get result() { return this._result; }
 
     setSelected(on: boolean) {
-        if (on) {
-            this.add_style_class_name('selected');
-        } else {
-            this.remove_style_class_name('selected');
-        }
+        if (on) this.add_style_class_name('selected');
+        else this.remove_style_class_name('selected');
     }
-});
-export type ResultRow = InstanceType<typeof ResultRow>;
+}

@@ -38,37 +38,41 @@ import { SearchController } from './launcher/SearchController.js';
 import { GridController } from './launcher/GridController.js';
 import { GroupEditorController } from './launcher/GroupEditorController.js';
 import { KeyboardHandler } from './launcher/KeyboardHandler.js';
+import { ACCENT_COLOR_KEYS } from './accent-colors.js';
 
 // ─── Launcher Dialog ──────────────────────────────────────────────────────────
 
-const LauncherDialog = GObject.registerClass(
-    class LauncherDialog extends St.BoxLayout {
-        private _state!: LauncherState;
-        private _searchCtrl!: SearchController;
-        private _gridCtrl!: GridController;
-        private _groupCtrl!: GroupEditorController;
-        private _kbdHandler!: KeyboardHandler;
 
-        private _ext!: OrmicLauncherExtension;
-        private _providers!: any[];
-        private _results!: SearchResult[];
-        private _selIdx!: number;
-        private _tid!: number | null | undefined;
-        private _gen!: number;
-        _shellSettings!: Gio.Settings;
+class LauncherDialog extends St.BoxLayout {
+    static {
+        GObject.registerClass({ GTypeName: 'OrmicLauncherDialog' }, this);
+    }
 
-        private _categoryGridBoxes!: Map<string, St.BoxLayout>;
-        private _allAppsCache!: SearchResult[];
-        private _allAppsCacheDirty!: boolean;
+    private _state!: LauncherState;
+    private _searchCtrl!: SearchController;
+    private _gridCtrl!: GridController;
+    private _groupCtrl!: GroupEditorController;
+    private _kbdHandler!: KeyboardHandler;
 
-        private _renderIdleId = 0;
-        private _bgRenderIdleId = 0;
-        private _bgRenderQueue: string[] = [];
+    private _ext!: OrmicLauncherExtension;
+    private _providers!: any[];
+    private _results!: SearchResult[];
+    private _selIdx!: number;
+    private _tid!: number | null | undefined;
+    private _gen!: number;
+    _shellSettings!: Gio.Settings;
 
-        // Dynamic multi-view state
-        private _activeCategory = 'Library Home';
-        private _isEditing = false;
-        private _gridSelIdx = -1;
+    private _categoryGridBoxes!: Map<string, St.BoxLayout>;
+    private _allAppsCache!: SearchResult[];
+    private _allAppsCacheDirty!: boolean;
+
+    private _renderIdleId = 0;
+    private _bgRenderIdleId = 0;
+    private _bgRenderQueue: string[] = [];
+
+    private _activeCategory = 'Library Home';
+    private _isEditing = false;
+    private _gridSelIdx = -1;
 
         get _gridBox(): St.BoxLayout {
             return this._getCategoryGridBox(this._activeCategory);
@@ -124,12 +128,6 @@ const LauncherDialog = GObject.registerClass(
         _promptEntry!: St.Entry;
 
         _init() {
-            // No blur effect here — blur lives on _blurWrapper, a completely
-            // separate chrome layer registered independently with
-            // Main.layoutManager.addChrome(). This mirrors the GNOME Shell
-            // overview / lockscreen pattern: two scene-graph-independent
-            // branches so hover/repaint events in this dialog tree can never
-            // reach or invalidate the blur actor.
             super._init({ style_class: 'ormic-dialog', ...boxLayoutParams(true), reactive: true });
         }
 
@@ -214,6 +212,18 @@ const LauncherDialog = GObject.registerClass(
 
             this._entryBox.add_child(this._entry);
 
+            const settingsBtn = new St.Button({
+                child: new St.Icon({ icon_name: 'preferences-system-symbolic', icon_size: 16 }),
+                style_class: 'ormic-settings-btn',
+                reactive: true, track_hover: true, can_focus: false,
+                y_align: Clutter.ActorAlign.CENTER,
+            });
+            settingsBtn.connect('clicked', () => {
+                this._ext.hide();
+                this._ext.openPreferences();
+            });
+            this._entryBox.add_child(settingsBtn);
+
             const closeBtn = new St.Button({
                 child: new St.Icon({ icon_name: 'window-close-symbolic', icon_size: 18 }),
                 style_class: 'ormic-close-btn',
@@ -240,7 +250,7 @@ const LauncherDialog = GObject.registerClass(
 
             // ── Tip bar ───────────────────────────────────────────────────
             this._tips = new St.BoxLayout({ style_class: 'ormic-tips', x_expand: true });
-            (this._tips as any).spacing = 12;
+            (this._tips.layout_manager as Clutter.BoxLayout).spacing = 12;
             for (const [k, v] of [
                 ['↑↓', _('Navigate')], ['↵', _('Open')], ['Tab', _('Complete')],
                 ['Esc', _('Close')], ['>', _('Command')],
@@ -480,7 +490,7 @@ const LauncherDialog = GObject.registerClass(
                 style_class: 'ormic-prompt-btns',
                 x_align: Clutter.ActorAlign.END,
             });
-            (promptBtns as any).spacing = 8;
+            (promptBtns.layout_manager as Clutter.BoxLayout).spacing = 8;
             const pCancel = new St.Button({
                 label: _('Cancel'), style_class: 'ormic-prompt-btn cancel-btn',
                 reactive: true, track_hover: true,
@@ -624,11 +634,6 @@ const LauncherDialog = GObject.registerClass(
             this._groupCtrl = new GroupEditorController(this._state, this._gridCtrl);
             this._kbdHandler = new KeyboardHandler(this._state, this._searchCtrl, this._gridCtrl, this._groupCtrl);
 
-            // NOTE: No OffscreenEffect or blur added here. Blur isolation is
-            // achieved structurally — _blurWrapper is a completely separate
-            // chrome entry registered independently in the extension's enable().
-            // Hover repaints inside this dialog tree have zero shared ancestor
-            // with the blur actor, so they can never invalidate it.
         }
 
         vfunc_key_press_event(ev: Clutter.Event): boolean { return this._onKey(ev); }
@@ -793,46 +798,29 @@ const LauncherDialog = GObject.registerClass(
                 this._gridCtrl.startBackgroundPreRender();
             }
         }
-    },
-);
-type LauncherDialog = InstanceType<typeof LauncherDialog>;
+}
+
 
 // ─── Panel indicator ──────────────────────────────────────────────────────────
 
-const OrmicIndicator = GObject.registerClass(
-    class OrmicIndicator extends PanelMenu.Button {
-        _ext!: OrmicLauncherExtension;
-        _init() {
-            super._init(0.0, 'Ormic Launcher', true);
-            this.add_child(new St.Icon({ icon_name: 'view-app-grid-symbolic', style_class: 'system-status-icon' }));
-            this.connect('button-press-event', () => {
-                this._ext.toggle();
-                return Clutter.EVENT_STOP;
-            });
-        }
-    },
-);
-type OrmicIndicator = InstanceType<typeof OrmicIndicator>;
+class OrmicIndicator extends PanelMenu.Button {
+    static {
+        GObject.registerClass({ GTypeName: 'OrmicIndicator' }, this);
+    }
+
+    _ext!: OrmicLauncherExtension;
+    _init() {
+        super._init(0.0, 'Ormic Launcher', true);
+        this.add_child(new St.Icon({ icon_name: 'view-app-grid-symbolic', style_class: 'system-status-icon' }));
+        this.connect('button-press-event', () => {
+            this._ext.toggle();
+            return Clutter.EVENT_STOP;
+        });
+    }
+}
+
 
 // ─── Extension ────────────────────────────────────────────────────────────────
-
-const ACCENT_COLORS = {
-    yellow: { accent: '#FAB84B', rgb: '250, 184, 75', hover: '#fccb7b', active: '#e5a43b' },
-    blue: { accent: '#3B82F6', rgb: '59, 130, 246', hover: '#60A5FA', active: '#2563EB' },
-    purple: { accent: '#8B5CF6', rgb: '139, 92, 246', hover: '#A78BFA', active: '#7C3AED' },
-    red: { accent: '#EF4444', rgb: '239, 68, 68', hover: '#F87171', active: '#DC2626' },
-    green: { accent: '#10B981', rgb: '16, 185, 129', hover: '#34D399', active: '#059669' },
-    pink: { accent: '#EC4899', rgb: '236, 72, 153', hover: '#F472B6', active: '#DB2777' },
-    teal: { accent: '#14B8A6', rgb: '20, 184, 166', hover: '#2DD4BF', active: '#0D9488' },
-    orange: { accent: '#F97316', rgb: '249, 115, 22', hover: '#FB923C', active: '#EA580C' },
-    slate: { accent: '#64748B', rgb: '100, 116, 139', hover: '#94A3B8', active: '#475569' },
-    brown: { accent: '#A16207', rgb: '161, 98, 7', hover: '#CA8A04', active: '#854D0E' },
-    // GNOME 47+ system accent — 'mixed' means the desktop uses a blended/custom
-    // color that we cannot reliably sample; map it to our closest neutral.
-    mixed: { accent: '#64748B', rgb: '100, 116, 139', hover: '#94A3B8', active: '#475569' },
-} as const;
-
-const ACCENT_COLOR_KEYS = new Set<string>(Object.keys(ACCENT_COLORS));
 const ACCENT_CLASS_PREFIX = 'ormic-accent-';
 
 export default class OrmicLauncherExtension extends Extension {
@@ -932,7 +920,7 @@ export default class OrmicLauncherExtension extends Extension {
             return Clutter.EVENT_PROPAGATE;
         });
 
-        this._dialog = new (LauncherDialog as any)() as LauncherDialog;
+        this._dialog = new LauncherDialog();
         this._dialog.setup(this);
         this._overlay.add_child(this._dialog);
 
@@ -973,6 +961,10 @@ export default class OrmicLauncherExtension extends Extension {
 
         this._bgSettingId = this._settings.connect('changed::background-style', () => this._syncBackground());
         this._syncBackground();
+
+        // Re-position dialog live when size settings change
+        this._settings.connect('changed::launcher-width', () => this._pos());
+        this._settings.connect('changed::launcher-height', () => this._pos());
     }
 
     disable() {
@@ -1027,6 +1019,7 @@ export default class OrmicLauncherExtension extends Extension {
     _syncInd() {
         if (this._settings.get_boolean('show-indicator')) {
             if (!this._indicator) {
+                // PanelMenu.Button requires constructor args; GJS calls _init() instead.
                 const ind = new (OrmicIndicator as any)() as OrmicIndicator;
                 ind._ext = this; this._indicator = ind;
                 Main.panel.addToStatusArea('ormic-launcher', this._indicator, 0, 'left');
@@ -1039,8 +1032,8 @@ export default class OrmicLauncherExtension extends Extension {
         const mon = Main.layoutManager.primaryMonitor;
         if (!mon) return;
 
-        const dw = 960;
-        const dh = 640;
+        const dw = this._settings.get_int('launcher-width');
+        const dh = this._settings.get_int('launcher-height');
         const dx = mon.x + Math.floor((mon.width - dw) / 2);
         const dy = mon.y + Math.floor(mon.height * 0.14);
 
