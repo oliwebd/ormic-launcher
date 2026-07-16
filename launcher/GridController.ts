@@ -297,9 +297,7 @@ export class GridController {
                 () => { this._s.ext.hide(); app.activate(); },
                 () => {
                     if (this._s.gridSelIdx !== capturedIdx) {
-                        this._s.gridSelIdx = capturedIdx;
-                        this._currentItems.forEach(
-                            (it, j) => it.setSelected(j === capturedIdx));
+                        this.selectGridIdx(capturedIdx);
                     }
                 },
                 this._s.ext._settings.get_int('grid-icon-size'),
@@ -417,8 +415,17 @@ export class GridController {
         const apps = this._getFilteredApps();
         if (!apps.length) return;
         idx = Math.max(0, Math.min(apps.length - 1, idx));
-        // O(1) flat array iteration
-        this._currentItems.forEach((item, i) => item.setSelected(i === idx));
+
+        const prevIdx = this._s.gridSelIdx;
+        if (prevIdx === idx) return;
+
+        if (prevIdx >= 0 && prevIdx < this._currentItems.length) {
+            this._currentItems[prevIdx].setSelected(false);
+        }
+        if (idx >= 0 && idx < this._currentItems.length) {
+            this._currentItems[idx].setSelected(true);
+        }
+
         this._s.gridSelIdx = idx;
     }
 
