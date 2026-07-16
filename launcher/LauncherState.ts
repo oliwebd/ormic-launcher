@@ -55,5 +55,4 @@ export interface LauncherState {
     getGridBox(): St.BoxLayout;
     getCategoryGridBox(categoryName: string): St.BoxLayout;
     setTabsVisible(visible: boolean): void;
-    isDestroyed(): boolean;
 }

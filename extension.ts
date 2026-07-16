@@ -597,7 +597,6 @@ class LauncherDialog extends St.BoxLayout {
                 getGridBox: () => this._gridBox,
                 getCategoryGridBox: (name: string) => this._getCategoryGridBox(name),
                 setTabsVisible: (v: boolean) => this._setTabsVisible(v),
-                isDestroyed: () => (this as any).is_finalized(),
             };
 
             this._searchCtrl = new SearchController(this._state);
@@ -674,7 +673,7 @@ class LauncherDialog extends St.BoxLayout {
         private _saveCustomGroups(groups: Record<string, string[]>) { this._gridCtrl.saveCustomGroups(groups); }
 
         focus() {
-            if ((this as any).is_finalized() || !this.get_stage()) return;
+            if (!this.get_stage()) return;
             dbg('Focus', 'grab_key_focus');
             if (this._promptOverlay && this._promptOverlay.visible && this._promptEntry) {
                 global.stage.set_key_focus(this._promptEntry);

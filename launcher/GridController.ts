@@ -317,7 +317,6 @@ export class GridController {
     ): void {
         idleOnce(() => {
             if (gen !== this._renderGen) return;
-            if (this._s.isDestroyed()) return;
 
             const endIdx = Math.min(startIdx + CHUNK_ITEMS, apps.length);
             this._fillSlice(apps, rows, startIdx, endIdx, gen);

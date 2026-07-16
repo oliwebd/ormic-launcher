@@ -22,7 +22,6 @@ export class SearchController {
         const gen = ++s.gen;
         s.tid = timeoutOnce(80, () => {
             s.tid = null;
-            if (s.isDestroyed()) return;
             if (gen !== s.gen) return;
             this.search(s.entry.get_text());
         });
