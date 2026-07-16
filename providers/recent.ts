@@ -26,7 +26,7 @@ export class RecentProvider {
             const items: { uri: string; name: string; path: string }[] = [];
             for (const uri of bm.get_uris()) {
                 const res = GLib.filename_from_uri(uri);
-                const path = res?.[0];
+                const path = res[0];
                 if (!path) continue;
                 const base = GLib.path_get_basename(path);
                 items.push({ uri, name: base, path });

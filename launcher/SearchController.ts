@@ -73,7 +73,7 @@ export class SearchController {
 
         const combined: SearchResult[] = [];
         for (const p of s.providers) {
-            try { combined.push(...p.search(q)); } catch (_e) { }
+            combined.push(...p.search(q));
         }
         combined.sort((a, b) => b.score - a.score || b.providerPriority - a.providerPriority);
         s.results = combined.slice(0, max);
@@ -129,7 +129,7 @@ export class SearchController {
     activateSel(): void {
         const s = this._s;
         const r = s.results[s.selIdx];
-        dbg('Activate', 'list sel', s.selIdx, r?.name ?? 'none');
+        dbg('Activate', 'list sel', s.selIdx, r ? r.name : 'none');
         if (r) { s.ext.hide(); r.activate(); }
     }
 
@@ -141,6 +141,6 @@ export class SearchController {
     complete(): void {
         const s = this._s;
         const r = s.results[s.selIdx];
-        if (r?.name) { s.entry.text = r.name; s.entry.clutter_text.set_cursor_position(-1); }
+        if (r && r.name) { s.entry.text = r.name; s.entry.clutter_text.set_cursor_position(-1); }
     }
 }

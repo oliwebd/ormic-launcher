@@ -40,10 +40,10 @@ export function boxLayoutParams(vertical: boolean): object {
 }
 
 export function createAppIcon(app: any, size: number): any {
-  const info = app?.get_app_info?.();
-  const gicon = info?.get_icon?.();
+  const info = app.get_app_info();
+  const gicon = info.get_icon();
   if (gicon) return new St.Icon({ gicon, icon_size: size });
-  return app?.create_icon_texture?.(size) ?? null;
+  return app.create_icon_texture(size);
 }
 
 /**
@@ -138,7 +138,7 @@ export function easeActor(actor: Clutter.Actor, params: any): Promise<void> {
     }).catch(() => { });
   }
   return new Promise<void>(resolve => {
-    actor.ease({ ...rest, onComplete: () => { onComplete?.(); resolve(); } });
+    actor.ease({ ...rest, onComplete: () => { if (onComplete) onComplete(); resolve(); } });
   });
 }
 
@@ -171,8 +171,8 @@ export function listAllWindows(): any[] {
   const display = global.display as any;
   return (display.list_all_windows() as any[]).filter(
     (w: any) =>
-      w.get_window_type?.() === Meta.WindowType.NORMAL &&
-      !w.is_skip_taskbar?.(),
+      w.get_window_type() === Meta.WindowType.NORMAL &&
+      !w.is_skip_taskbar(),
   );
 }
 
@@ -181,6 +181,7 @@ export function listAllWindows(): any[] {
  */
 export function appForWindow(win: any): any {
   const tracker = Shell.WindowTracker.get_default();
-  return tracker.get_window_app(win)
-    ?? Shell.AppSystem.get_default().lookup_app(win.get_wm_class?.() ?? '');
+  const app = tracker.get_window_app(win);
+  if (app) return app;
+  return Shell.AppSystem.get_default().lookup_app(win.get_wm_class());
 }

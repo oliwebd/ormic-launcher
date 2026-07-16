@@ -52,12 +52,12 @@ export class GridItem extends St.Button {
         this.set_child(box);
 
         this.connect('clicked', () => {
-            dbg('GridItem', `clicked on ${this._result?.name}`);
-            this._activateCb?.();
+            dbg('GridItem', `clicked on ${this._result.name}`);
+            if (this._activateCb) this._activateCb();
         });
 
         this.connect('notify::hover', () => {
-            if (this.hover) this._hoverCb?.();
+            if (this.hover && this._hoverCb) this._hoverCb();
         });
     }
 

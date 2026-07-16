@@ -47,10 +47,9 @@ export default class OrmicLauncherPrefs extends ExtensionPreferences {
         // Conflict detection
         const sysSets = new Gio.Settings({ schema_id: 'org.gnome.desktop.wm.keybindings' });
         let ibusSets: Gio.Settings | null = null;
-        try {
-            if (((Gio.Settings as any).list_schemas?.() ?? []).includes('org.freedesktop.ibus.general.hotkey'))
-                ibusSets = new Gio.Settings({ schema_id: 'org.freedesktop.ibus.general.hotkey' });
-        } catch (_e) { }
+        if (Gio.Settings.list_schemas().includes('org.freedesktop.ibus.general.hotkey')) {
+            ibusSets = new Gio.Settings({ schema_id: 'org.freedesktop.ibus.general.hotkey' });
+        }
 
         const conflictRow = new Adw.ActionRow({ title: _('Shortcut Conflict Detected'), subtitle: '', visible: false });
         conflictRow.add_prefix(new Gtk.Image({ icon_name: 'dialog-warning-symbolic', valign: Gtk.Align.CENTER }));
@@ -93,7 +92,7 @@ export default class OrmicLauncherPrefs extends ExtensionPreferences {
         refreshConflict();
         sysSets.connect('changed::switch-input-source', refreshConflict);
         sysSets.connect('changed::switch-input-source-backward', refreshConflict);
-        ibusSets?.connect('changed::triggers', refreshConflict);
+        if (ibusSets) ibusSets.connect('changed::triggers', refreshConflict);
         s.connect('changed::toggle-ormic-launcher', refreshConflict);
 
         // Show indicator

@@ -101,22 +101,19 @@ export class AppProvider {
             if (type === GMenu.TreeItemType.ENTRY) {
                 const entry = iter.get_entry();
                 if (!entry) continue;
-                let id: string | null;
-                try { id = entry.get_desktop_file_id(); } catch { continue; }
+                const id = entry.get_desktop_file_id();
                 if (!id || this._appsCache.has(id)) continue;
 
                 let app = this._sys.lookup_app(id);
                 if (!app) {
-                    try { app = new Shell.App({ app_info: entry.get_app_info() }); }
-                    catch { continue; }
+                    app = new Shell.App({ app_info: entry.get_app_info() });
                 }
-                if (!app?.get_app_info()?.should_show()) continue;
+                if (!app.get_app_info().should_show()) continue;
 
                 const info = app.get_app_info();
 
                 // Pre-fetch GIcon once — avoids repeated property chain at render time
-                let gicon: any = null;
-                try { gicon = info.get_icon() ?? null; } catch (_) {}
+                const gicon = info.get_icon();
 
                 this._appsCache.set(id, {
                     app, category: categoryName,
@@ -163,7 +160,7 @@ export class AppProvider {
                 // Use pre-cached GIcon when available
                 createIcon: gicon
                     ? (sz: number) => new St.Icon({ gicon, icon_size: sz })
-                    : (sz: number) => app.create_icon_texture?.(sz) ?? null,
+                    : (sz: number) => app.create_icon_texture(sz),
                 categoryIcon: 'application-x-executable-symbolic',
                 category,
                 activate: () => {

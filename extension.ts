@@ -165,7 +165,7 @@ class LauncherDialog extends St.BoxLayout {
                 let actor: any = ev.get_source();
                 let isInteractive = false;
                 while (actor && actor !== (this as any)) {
-                    const cName = actor.constructor?.name || '';
+                    const cName = actor.constructor.name || '';
                     if (actor instanceof St.Entry ||
                         actor instanceof St.ScrollBar ||
                         actor instanceof St.Button ||
@@ -178,7 +178,7 @@ class LauncherDialog extends St.BoxLayout {
                         isInteractive = true;
                         break;
                     }
-                    actor = actor.get_parent?.();
+                    actor = actor.get_parent();
                 }
                 if (!isInteractive) {
                     timeoutOnce(10, () => this.focus());
@@ -626,7 +626,7 @@ class LauncherDialog extends St.BoxLayout {
                 getGridBox: () => this._gridBox,
                 getCategoryGridBox: (name: string) => this._getCategoryGridBox(name),
                 setTabsVisible: (v: boolean) => this._setTabsVisible(v),
-                isDestroyed: () => (this as any).is_finalized?.() ?? false,
+                isDestroyed: () => (this as any).is_finalized(),
             };
 
             this._searchCtrl = new SearchController(this._state);
@@ -645,10 +645,10 @@ class LauncherDialog extends St.BoxLayout {
         private _setTabsVisible(visible: boolean) {
             const shouldShowGroups = this._ext._settings.get_boolean('show-groups-sidebar');
             if (visible && shouldShowGroups) {
-                this._tabsBox.get_parent()?.show();
+                this._tabsBox.get_parent()!.show();
                 this._tabsBox.show();
             } else {
-                this._tabsBox.get_parent()?.hide();
+                this._tabsBox.get_parent()!.hide();
                 this._tabsBox.hide();
             }
         }
@@ -681,7 +681,7 @@ class LauncherDialog extends St.BoxLayout {
                 this._tid = null;
             }
             if (this._categoryGridBoxes) {
-                this._categoryGridBoxes.forEach(box => box?.destroy());
+                this._categoryGridBoxes.forEach(box => box.destroy());
                 this._categoryGridBoxes.clear();
             }
         }
@@ -711,7 +711,7 @@ class LauncherDialog extends St.BoxLayout {
         // ─── External Controls ─────────────────────────────────────────────
 
         focus() {
-            if ((this as any).is_finalized?.() || !this.get_stage?.()) return;
+            if ((this as any).is_finalized() || !this.get_stage()) return;
             dbg('Focus', 'grab_key_focus');
             if (this._promptOverlay && this._promptOverlay.visible && this._promptEntry) {
                 global.stage.set_key_focus(this._promptEntry);
@@ -727,7 +727,7 @@ class LauncherDialog extends St.BoxLayout {
 
         reset() {
             for (const p of this._providers) {
-                p?.onOpen?.();
+                if (p.onOpen) p.onOpen();
             }
 
             this._cancelRenderJob();
@@ -980,7 +980,7 @@ export default class OrmicLauncherExtension extends Extension {
         this._interfaceSettings = null;
         if (this._keyId) { global.stage.disconnect(this._keyId); this._keyId = null; }
         if (this._monId) { Main.layoutManager.disconnect(this._monId); this._monId = null; }
-        this._indicator?.destroy(); this._indicator = null;
+        if (this._indicator) this._indicator.destroy(); this._indicator = null;
         Main.wm.removeKeybinding('toggle-ormic-launcher');
 
         if (this._dialog) {
@@ -1009,7 +1009,7 @@ export default class OrmicLauncherExtension extends Extension {
         }
 
         for (const p of this.providers) {
-            p?.destroy?.();
+            if (p.destroy) p.destroy();
         }
         this.providers = [];
         this._settings = null as any;
@@ -1024,7 +1024,7 @@ export default class OrmicLauncherExtension extends Extension {
                 ind._ext = this; this._indicator = ind;
                 Main.panel.addToStatusArea('ormic-launcher', this._indicator, 0, 'left');
             }
-        } else { this._indicator?.destroy(); this._indicator = null; }
+        } else { if (this._indicator) this._indicator.destroy(); this._indicator = null; }
     }
 
     _pos() {
@@ -1096,7 +1096,8 @@ export default class OrmicLauncherExtension extends Extension {
         easeActor(this._overlay, { opacity: 255, duration: 150, mode: Clutter.AnimationMode.EASE_OUT_QUAD });
         easeActor(this._dialog, { opacity: 255, translation_y: 0, duration: 200, mode: Clutter.AnimationMode.EASE_OUT_EXPO });
 
-        timeoutOnce(10, () => this._dialog?.focus());
+        const d = this._dialog;
+        timeoutOnce(10, () => d.focus());
     }
 
     hide() {
@@ -1128,7 +1129,7 @@ export default class OrmicLauncherExtension extends Extension {
 
         easeActor(this._overlay, {
             opacity: 0, duration: 120, mode: Clutter.AnimationMode.EASE_IN_QUAD,
-            onComplete: () => { this._overlay?.hide(); },
+            onComplete: () => { this._overlay!.hide(); },
         });
     }
 

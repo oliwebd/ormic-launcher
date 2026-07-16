@@ -195,7 +195,7 @@ export class GridController {
      */
     harvestItems(): void {
         for (const item of this._currentItems) {
-            item.get_parent()?.remove_child(item);
+            item.get_parent()!.remove_child(item);
             this._itemPool.push(item);
         }
         this._currentItems = [];
@@ -459,7 +459,8 @@ export class GridController {
 
         this.harvestItems();
 
-        s.categoryGridBoxes.get(s.activeCategory)?.destroy();
+        const box = s.categoryGridBoxes.get(s.activeCategory);
+        if (box) box.destroy();
         s.categoryGridBoxes.delete(s.activeCategory);
 
         this._tabCacheKey = '';
@@ -506,18 +507,12 @@ export class GridController {
 
     getCustomGroups(): Record<string, string[]> {
         dbg('Groups', 'getCustomGroups()');
-        try {
-            return JSON.parse(this._s.ext._settings.get_string('custom-groups') || '{}');
-        } catch (_e) { return {}; }
+        return JSON.parse(this._s.ext._settings.get_string('custom-groups'));
     }
 
     saveCustomGroups(groups: Record<string, string[]>): void {
         dbg('Groups', 'saveCustomGroups()', Object.keys(groups));
-        try {
-            this._s.ext._settings.set_string('custom-groups', JSON.stringify(groups));
-        } catch (e: any) {
-            console.error(`Ormic Launcher: Error saving custom groups: ${e.message}`);
-        }
+        this._s.ext._settings.set_string('custom-groups', JSON.stringify(groups));
     }
 
     // ─── Cleanup ──────────────────────────────────────────────────────────
@@ -529,13 +524,13 @@ export class GridController {
         this._renderGen++;
 
         this._currentItems = [];
-        this._itemPool.forEach(item => item?.destroy());
+        this._itemPool.forEach(item => item.destroy());
         this._itemPool = [];
 
         const s = this._s;
         if (s.tid != null) { GLib.source_remove(s.tid as number); s.tid = null; }
         if (s.categoryGridBoxes) {
-            s.categoryGridBoxes.forEach(box => box?.destroy());
+            s.categoryGridBoxes.forEach(box => box.destroy());
             s.categoryGridBoxes.clear();
         }
     }
