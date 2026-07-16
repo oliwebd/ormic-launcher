@@ -90,26 +90,29 @@ export default class OrmicLauncherPrefs extends ExtensionPreferences {
         if (ibusSets) ibusSets.connect('changed::triggers', refreshConflict);
         s.connect('changed::toggle-ormic-launcher', refreshConflict);
 
+        const appearGroup = new Adw.PreferencesGroup({ title: _('Appearance') });
+        genPage.add(appearGroup);
+
         const indRow = new Adw.SwitchRow({
             title: _('Show Top Panel Indicator'),
             subtitle: _('Search icon in the top bar to open the launcher'),
         });
         s.bind('show-indicator', indRow, 'active', Gio.SettingsBindFlags.DEFAULT);
-        kbGroup.add(indRow);
+        appearGroup.add(indRow);
 
         const sbRow = new Adw.SwitchRow({
             title: _('Show Search Bar by Default'),
             subtitle: _('Show a search entry at the top of the library view'),
         });
         s.bind('show-search-bar', sbRow, 'active', Gio.SettingsBindFlags.DEFAULT);
-        kbGroup.add(sbRow);
+        appearGroup.add(sbRow);
 
         const gsRow = new Adw.SwitchRow({
             title: _('Show Groups Sidebar'),
             subtitle: _('Show the category/groups sidebar on the left'),
         });
         s.bind('show-groups-sidebar', gsRow, 'active', Gio.SettingsBindFlags.DEFAULT);
-        kbGroup.add(gsRow);
+        appearGroup.add(gsRow);
 
         const bgRow = new Adw.ComboRow({
             title: _('Background Style'),
@@ -138,7 +141,7 @@ export default class OrmicLauncherPrefs extends ExtensionPreferences {
                 s.set_string('background-style', bgStyles[idx]);
         });
         s.connect('changed::background-style', refreshBg);
-        kbGroup.add(bgRow);
+        appearGroup.add(bgRow);
 
         const accentRow = new Adw.ComboRow({
             title: _('Accent Color'),
@@ -172,7 +175,7 @@ export default class OrmicLauncherPrefs extends ExtensionPreferences {
                 s.set_string('accent-color', colors[idx]);
         });
         s.connect('changed::accent-color', refreshAccent);
-        kbGroup.add(accentRow);
+        appearGroup.add(accentRow);
 
         const resGroup = new Adw.PreferencesGroup({ title: _('Results') });
         genPage.add(resGroup);
@@ -193,8 +196,7 @@ export default class OrmicLauncherPrefs extends ExtensionPreferences {
         s.bind('enable-quick-select', qsRow, 'active', Gio.SettingsBindFlags.DEFAULT);
         resGroup.add(qsRow);
 
-        const appearGroup = new Adw.PreferencesGroup({ title: _('Appearance') });
-        genPage.add(appearGroup);
+
 
         const iconSizeRow = new Adw.SpinRow({
             title: _('Grid icon size (px)'),
