@@ -395,7 +395,7 @@ export class GridController {
             s.pageNavBox.hide();
             s.setTabsVisible(false);
             
-            s.promptEntry.text = '';
+            s.promptEntry.set_text('');
             s.promptOverlay.show();
             s.promptEntry.grab_key_focus();
         });

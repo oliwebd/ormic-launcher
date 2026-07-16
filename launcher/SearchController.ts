@@ -24,7 +24,7 @@ export class SearchController {
             s.tid = null;
             if (s.isDestroyed()) return;
             if (gen !== s.gen) return;
-            this.search(s.entry.text);
+            this.search(s.entry.get_text());
         });
     }
 
@@ -116,6 +116,6 @@ export class SearchController {
     complete(): void {
         const s = this._s;
         const r = s.results[s.selIdx];
-        if (r && r.name) { s.entry.text = r.name; s.entry.clutter_text.set_cursor_position(-1); }
+        if (r && r.name) { s.entry.set_text(r.name); s.entry.clutter_text.set_cursor_position(-1); }
     }
 }

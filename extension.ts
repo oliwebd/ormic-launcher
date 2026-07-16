@@ -706,7 +706,7 @@ class LauncherDialog extends St.BoxLayout {
             this._cancelBgRenderJob();
 
             this._searchCtrl.clear();
-            this._entry.text = '';
+            this._entry.set_text('');
             const previousCategory = this._activeCategory;
             this._activeCategory = 'Library Home';
             this._isEditing = false;

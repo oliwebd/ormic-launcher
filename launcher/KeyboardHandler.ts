@@ -47,7 +47,7 @@ export class KeyboardHandler {
             this._search.activateIdx(sym - Clutter.KEY_1); return true;
         }
 
-        if (!s.scroll.visible && s.entry.text === '' && (sym === Clutter.KEY_Shift_L || sym === Clutter.KEY_Shift_R)) {
+        if (!s.scroll.visible && s.entry.get_text() === '' && (sym === Clutter.KEY_Shift_L || sym === Clutter.KEY_Shift_R)) {
             const cats = this._grid.getCategoriesList();
             const idx = cats.indexOf(s.activeCategory);
             if (idx > -1) {

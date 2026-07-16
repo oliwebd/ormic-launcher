@@ -26,7 +26,7 @@ export class GroupEditorController {
         s.pageNavBox.hide();
         s.setTabsVisible(false);
 
-        s.editorNameEntry.text = s.activeCategory;
+        s.editorNameEntry.set_text(s.activeCategory);
         s.editorAppsContainer.destroy_all_children();
 
         const apps = s.allAppsCache;
@@ -52,7 +52,7 @@ export class GroupEditorController {
         s.setTabsVisible(true);
 
         if (save) {
-            const newName = s.editorNameEntry.text.trim();
+            const newName = s.editorNameEntry.get_text().trim();
             const customGroups = this._grid.getCustomGroups();
 
             const selectedIds: string[] = [];
@@ -95,7 +95,7 @@ export class GroupEditorController {
         s.pageNavBox.hide();
         s.setTabsVisible(false);
         
-        s.promptEntry.text = '';
+        s.promptEntry.set_text('');
         s.promptOverlay.show();
         s.promptEntry.grab_key_focus();
     }
@@ -108,7 +108,7 @@ export class GroupEditorController {
         s.gridScroll.show();
         s.setTabsVisible(true);
 
-        const gName = s.promptEntry.text.trim();
+        const gName = s.promptEntry.get_text().trim();
 
         if (create && gName) {
             const customGroups = this._grid.getCustomGroups();
