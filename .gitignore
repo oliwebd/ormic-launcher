@@ -3,5 +3,5 @@ dist/
 *.zip
 .pnpm-debug.log
 .env
-.agent/*
+.agents/*
 
