@@ -92,14 +92,6 @@ export class GridController {
         }
     }
 
-    cancelBgRenderJob(): void {
-        if (this._s.bgRenderIdleId) {
-            GLib.source_remove(this._s.bgRenderIdleId);
-            this._s.bgRenderIdleId = 0;
-        }
-        this._s.bgRenderQueue = [];
-    }
-
     ensureAllAppsCache(): void {
         const s = this._s;
 
@@ -217,7 +209,6 @@ export class GridController {
         this._filteredCategory = '';
 
         this.cancelRenderJob();
-        this.cancelBgRenderJob();
 
         (s.tabsBox.get_children() as CategoryTab[]).forEach(tab => {
             tab.setSelected(tab.categoryName === categoryName);
@@ -338,8 +329,6 @@ export class GridController {
         });
     }
 
-    startBackgroundPreRender(): void { }
-
     renderTabsOnly(): void {
         const s = this._s;
         const customGroups = this.getCustomGroups();
@@ -409,7 +398,6 @@ export class GridController {
         dbg('Performance', `renderGridAndTabs — for: ${s.activeCategory}`);
 
         this.cancelRenderJob();
-        this.cancelBgRenderJob();
 
         this.harvestItems();
 
@@ -467,7 +455,6 @@ export class GridController {
 
     cleanup(): void {
         this.cancelRenderJob();
-        this.cancelBgRenderJob();
         // Bump gen so any pending idle chunks abort cleanly
         this._renderGen++;
 

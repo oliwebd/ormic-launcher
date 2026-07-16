@@ -24,8 +24,6 @@ export interface LauncherState {
     allAppsCache: SearchResult[];
     allAppsCacheDirty: boolean;
     renderIdleId: number;
-    bgRenderIdleId: number;
-    bgRenderQueue: string[];
     activeCategory: string;
     isEditing: boolean;
     gridSelIdx: number;

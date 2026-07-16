@@ -64,8 +64,6 @@ class LauncherDialog extends St.BoxLayout {
     private _allAppsCacheDirty!: boolean;
 
     private _renderIdleId = 0;
-    private _bgRenderIdleId = 0;
-    private _bgRenderQueue: string[] = [];
 
     private _activeCategory = 'Library Home';
     private _isEditing = false;
@@ -562,12 +560,6 @@ class LauncherDialog extends St.BoxLayout {
                 get renderIdleId() { return dialog._renderIdleId; },
                 set renderIdleId(v) { dialog._renderIdleId = v; },
 
-                get bgRenderIdleId() { return dialog._bgRenderIdleId; },
-                set bgRenderIdleId(v) { dialog._bgRenderIdleId = v; },
-
-                get bgRenderQueue() { return dialog._bgRenderQueue; },
-                set bgRenderQueue(v) { dialog._bgRenderQueue = v; },
-
                 get activeCategory() { return dialog._activeCategory; },
                 set activeCategory(v) { dialog._activeCategory = v; },
 
@@ -644,12 +636,10 @@ class LauncherDialog extends St.BoxLayout {
         private _ensureAllAppsCache() { this._gridCtrl.ensureAllAppsCache(); }
 
         private _cancelRenderJob() { this._gridCtrl.cancelRenderJob(); }
-        private _cancelBgRenderJob() { this._gridCtrl.cancelBgRenderJob(); }
 
         cleanup() {
             this._gridCtrl.cleanup();
             this._cancelRenderJob();
-            this._cancelBgRenderJob();
             if (this._tid != null) {
                 GLib.source_remove(this._tid as number);
                 this._tid = null;
@@ -703,7 +693,6 @@ class LauncherDialog extends St.BoxLayout {
             }
 
             this._cancelRenderJob();
-            this._cancelBgRenderJob();
 
             this._searchCtrl.clear();
             this._entry.set_text('');
@@ -766,8 +755,6 @@ class LauncherDialog extends St.BoxLayout {
                         this._selectGridIdx(0);
                     }
                 });
-
-                this._gridCtrl.startBackgroundPreRender();
             }
         }
 }
