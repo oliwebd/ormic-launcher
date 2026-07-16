@@ -23,6 +23,7 @@ import {
     easeActor,
     createBlurEffect,
     boxLayoutParams,
+    setDebug,
 } from './utils.js';
 
 import { AppProvider } from './providers/apps.js';
@@ -800,6 +801,7 @@ export default class OrmicLauncherExtension extends Extension {
     _overlayCapturedId!: number | null;
     _overlayPressId!: number | null;
     _overlayKeyId!: number | null;
+    _debugSettingId!: number | null;
     _dynamicCssFile: Gio.File | null = null;
     _theme: St.Theme | null = null;
     _dialogSizeId: number | null = null;
@@ -812,7 +814,10 @@ export default class OrmicLauncherExtension extends Extension {
             new RecentProvider(this._settings), new CommandProvider(),
             new WindowProvider(this._settings),
         ];
-        this._visible = false; this._indicator = null; this._cfgId = null; this._accentColorId = null; this._focusId = null;
+        this._visible = false; this._indicator = null; this._cfgId = null; this._accentColorId = null; this._focusId = null; this._debugSettingId = null;
+
+        this._debugSettingId = this._settings.connect('changed::debug', () => setDebug(this._settings.get_boolean('debug')));
+        setDebug(this._settings.get_boolean('debug'));
 
         this._overlay = new St.Widget({
             name: 'ormic-overlay',
@@ -928,6 +933,7 @@ export default class OrmicLauncherExtension extends Extension {
             this._sysAccentId = null;
         }
         if (this._bgSettingId) { this._settings.disconnect(this._bgSettingId); this._bgSettingId = null; }
+        if (this._debugSettingId) { this._settings.disconnect(this._debugSettingId); this._debugSettingId = null; }
         this._interfaceSettings = null;
         if (this._keyId) { global.stage.disconnect(this._keyId); this._keyId = null; }
         if (this._monId) { Main.layoutManager.disconnect(this._monId); this._monId = null; }

@@ -231,6 +231,16 @@ export default class OrmicLauncherPrefs extends ExtensionPreferences {
         s.bind('launcher-height', launcherHRow, 'value', Gio.SettingsBindFlags.DEFAULT);
         appearGroup.add(launcherHRow);
 
+        const advGroup = new Adw.PreferencesGroup({ title: _('Advanced') });
+        genPage.add(advGroup);
+
+        const dbgRow = new Adw.SwitchRow({
+            title: _('Enable Debug Logging'),
+            subtitle: _('Print verbose debug messages to the system journal'),
+        });
+        s.bind('debug', dbgRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        advGroup.add(dbgRow);
+
         const provPage = new Adw.PreferencesPage({
             title: _('Providers'), icon_name: 'application-x-executable-symbolic',
         });

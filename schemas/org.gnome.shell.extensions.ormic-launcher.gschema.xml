@@ -9,6 +9,12 @@
       <description>Keyboard shortcut to open or close the Ormic Launcher dialog.</description>
     </key>
 
+    <key name="debug" type="b">
+      <default>false</default>
+      <summary>Enable Debug Logging</summary>
+      <description>Print verbose debug messages to the system journal.</description>
+    </key>
+
     <key name="show-indicator" type="b">
       <default>true</default>
       <summary>Show top panel indicator</summary>
