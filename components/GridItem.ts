@@ -9,11 +9,6 @@ import Pango from 'gi://Pango';
 import { SearchResult } from '../types.js';
 import { dbg, boxLayoutParams } from '../utils.js';
 
-/**
- * Pooled, reusable grid item widget.
- * Widget tree and signal connections are built once in _init(); setup() just
- * swaps the bound data and callbacks — no allocation or signal churn on reuse.
- */
 export class GridItem extends St.Button {
     static {
         GObject.registerClass({ GTypeName: 'OrmicGridItem' }, this);
@@ -68,8 +63,6 @@ export class GridItem extends St.Button {
 
         this.setSelected(false);
 
-        // Derive card and bin sizes from the icon size setting.
-        // card: icon + 10px padding on each side + 18px label row
         const cardW = iconSize + 20;
         const cardH = iconSize + 34;
         const binRadius = Math.round(iconSize * 0.22);

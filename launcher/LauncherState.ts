@@ -6,11 +6,6 @@ import Gio from 'gi://Gio';
 
 import { SearchResult } from '../types.js';
 
-/**
- * Context object passed to all controllers. Provides typed access to the
- * dialog's mutable state and widget tree without controllers holding a
- * direct GObject reference to LauncherDialog.
- */
 export interface LauncherState {
     readonly ext: {
         _settings: Gio.Settings;

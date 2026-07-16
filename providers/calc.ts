@@ -8,7 +8,6 @@ import { SearchResult } from '../types.js';
 
 export class CalcProvider {
     id = 'calc'; priority = 5;
-    // Quick pre-filter: must start with a digit, '.', '(' or a known function name.
     private _start = /^[\d.(]|^(sin|cos|tan|sqrt|log|ln|exp|pi)\b/i;
 
     private valid(q: string): boolean {
@@ -35,7 +34,6 @@ export class CalcProvider {
         } catch (_e) { return []; }
     }
 
-    /** Safe recursive descent evaluator — no dynamic code execution. */
     private _eval(src: string): number {
         let i = 0;
         const skip = () => { while (i < src.length && src[i] === ' ') i++; };
@@ -93,7 +91,6 @@ export class CalcProvider {
                 if (src[i] === ')') i++;
                 return v;
             }
-            // number literal (including scientific notation like 1e3, 2.5e-4)
             if ((src[i] >= '0' && src[i] <= '9') || src[i] === '.') {
                 const s = i;
                 while (i < src.length && /[\d.]/.test(src[i])) i++;
@@ -105,7 +102,6 @@ export class CalcProvider {
                 }
                 return parseFloat(src.slice(s, i));
             }
-            // identifier: named function or constant
             if (/[a-zA-Z]/.test(src[i])) {
                 const s = i;
                 while (i < src.length && /[a-zA-Z]/.test(src[i])) i++;

@@ -1,8 +1,4 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Ormic Launcher — Search Controller
-//
-// Handles debounced text search, result rendering, list-view selection,
-// and search-result activation.
 
 import GLib from 'gi://GLib';
 
@@ -20,8 +16,6 @@ export class SearchController {
         this._s = state;
     }
 
-    // ─── Debounced text handler ──────────────────────────────────────────
-
     onText(): void {
         const s = this._s;
         if (s.tid != null) { GLib.source_remove(s.tid as number); s.tid = null; }
@@ -33,8 +27,6 @@ export class SearchController {
             this.search(s.entry.text);
         });
     }
-
-    // ─── Core search ─────────────────────────────────────────────────────
 
     search(query: string): void {
         const s = this._s;
@@ -49,18 +41,7 @@ export class SearchController {
             s.gridScroll.show();
             s.setTabsVisible(true);
             s.headerTitleLabel.text = s.activeCategory;
-            const gridBox = s.getGridBox();
-            s.gridScroll.set_child(gridBox);
-            if (gridBox.get_n_children() === 0) {
-                // GridController will handle this via the dialog
-            } else {
-                s.gridSelIdx = -1;
-                timeoutOnce(10, () => {
-                    if (s.gridSelIdx === -1 && s.gridScroll.visible) {
-                        // GridController will handle
-                    }
-                });
-            }
+            s.gridScroll.set_child(s.getGridBox());
             return;
         }
 
@@ -81,15 +62,11 @@ export class SearchController {
         this.renderSearchResults();
     }
 
-    // ─── Clear ───────────────────────────────────────────────────────────
-
     clear(): void {
         this._s.results = [];
         this._s.selIdx = -1;
         this._s.rbox.destroy_all_children();
     }
-
-    // ─── Render results list ─────────────────────────────────────────────
 
     renderSearchResults(): void {
         const s = this._s;
@@ -107,8 +84,6 @@ export class SearchController {
         s.selIdx = -1;
         this.selectIdx(0);
     }
-
-    // ─── Selection management ────────────────────────────────────────────
 
     selectIdx(i: number): void {
         const s = this._s;

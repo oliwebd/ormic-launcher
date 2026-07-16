@@ -7,11 +7,11 @@ export interface SearchResult {
     name: string;
     description: string;
     score: number;
-    providerPriority: number;   // secondary sort key
-    icon?: any;                 // pre-rendered Clutter texture
-    createIcon?: (size: number) => any; // function to lazily create the icon
-    iconName?: string;          // symbolic fallback
+    providerPriority: number;
+    icon?: any;
+    createIcon?: (size: number) => any;
+    iconName?: string;
     categoryIcon: string;
-    category: string;           // right-pill label: "App", "Web", "Window", …
+    category: string;
     activate: () => void;
 }

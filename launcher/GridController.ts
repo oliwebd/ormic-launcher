@@ -2,7 +2,6 @@
 // Ormic Launcher — Grid Controller
 //
 // Performance architecture (GNOME 50 optimised)
-// ───────────────────────────────────────────────
 // • Chunked idle rendering — first INITIAL_ROWS rows render synchronously so
 //   the launcher appears instantly. Remaining rows are added one chunk per
 //   GLib.idle_add_once() tick (GLib.idle_add on older shells), keeping the
@@ -86,8 +85,6 @@ export class GridController {
         });
     }
 
-    // ─── Idle/timeout job management ─────────────────────────────────────
-
     cancelRenderJob(): void {
         if (this._s.renderIdleId) {
             GLib.source_remove(this._s.renderIdleId);
@@ -102,8 +99,6 @@ export class GridController {
         }
         this._s.bgRenderQueue = [];
     }
-
-    // ─── App cache ────────────────────────────────────────────────────────
 
     ensureAllAppsCache(): void {
         const s = this._s;
@@ -146,8 +141,6 @@ export class GridController {
         s.allAppsCache = apps;
     }
 
-    // ─── Category filtering ───────────────────────────────────────────────
-
     private _filterApps(categoryName: string): SearchResult[] {
         this.ensureAllAppsCache();
         const all = this._s.allAppsCache;
@@ -187,21 +180,13 @@ export class GridController {
         return this._filteredApps;
     }
 
-    // ─── GridItem pool ────────────────────────────────────────────────────
-
-    /**
-     * Detach all live items back into the pool and clear the grid rows.
-     * Uses the flat _currentItems array — no widget tree traversal needed.
-     */
     harvestItems(): void {
         for (const item of this._currentItems) {
             item.get_parent()!.remove_child(item);
             this._itemPool.push(item);
         }
         this._currentItems = [];
-        // Remove now-empty row containers (cheap St.BoxLayouts)
         this._s.getGridBox().remove_all_children();
-        // Increment render gen so any in-flight idle chunks abort
         this._renderGen++;
     }
 
@@ -209,18 +194,12 @@ export class GridController {
         return this._itemPool.pop() ?? new GridItem();
     }
 
-    // ─── collectGridItems — O(1) via flat array ───────────────────────────
-
     collectGridItems(): GridItem[] {
         return this._currentItems;
     }
 
-    // ─── No-op stubs (pagination removed) ────────────────────────────────
-
     nextPage(): void { }
     prevPage(): void { }
-
-    // ─── Header button sync ───────────────────────────────────────────────
 
     private _syncHeaderButtons(): void {
         const s = this._s;
@@ -229,8 +208,6 @@ export class GridController {
         if (isCustom) { s.editBtn.show(); s.deleteBtn.show(); }
         else { s.editBtn.hide(); s.deleteBtn.hide(); }
     }
-
-    // ─── Select category ──────────────────────────────────────────────────
 
     selectCategory(categoryName: string): void {
         const s = this._s;
@@ -255,15 +232,12 @@ export class GridController {
         this.renderGridOnly();
     }
 
-    // ─── Core render — chunked idle ───────────────────────────────────────
-
     renderGridOnly(): void {
         const s = this._s;
         const t0 = GLib.get_monotonic_time();
 
         const apps = this._getFilteredApps();
 
-        // Harvest items and bump gen before any async work
         this.harvestItems();
         const gen = this._renderGen;
 
@@ -284,9 +258,6 @@ export class GridController {
             return;
         }
 
-        // Pre-create all row containers in one pass (cheap; just layout hints).
-        // Adding empty containers first prevents layout-pass stutter as items
-        // arrive in later idle chunks.
         const numRows = Math.ceil(apps.length / COLUMNS);
         const rows: St.BoxLayout[] = [];
         for (let r = 0; r < numRows; r++) {
@@ -299,11 +270,9 @@ export class GridController {
             rows.push(row);
         }
 
-        // ── Synchronous first batch — fills the visible viewport ──────────
         const syncEnd = Math.min(INITIAL_ITEMS, apps.length);
         this._fillSlice(apps, rows, 0, syncEnd, gen);
 
-        // Auto-select first item after initial render
         if (s.gridScroll.visible) {
             s.gridSelIdx = 0;
             timeoutOnce(10, () => {
@@ -315,15 +284,10 @@ export class GridController {
         dbg('Performance',
             `renderGridOnly('${s.activeCategory}') sync ${syncEnd}/${apps.length} items — ${elapsed.toFixed(1)}ms`);
 
-        // ── Schedule remaining rows as idle chunks ────────────────────────
         if (apps.length > syncEnd)
             this._scheduleChunk(gen, apps, rows, syncEnd);
     }
 
-    /**
-     * Bind GridItems for apps[start..end) into the pre-created row widgets.
-     * Safe to call from both sync context and idle callbacks.
-     */
     private _fillSlice(
         apps: SearchResult[],
         rows: St.BoxLayout[],
@@ -343,7 +307,6 @@ export class GridController {
                 () => {
                     if (this._s.gridSelIdx !== capturedIdx) {
                         this._s.gridSelIdx = capturedIdx;
-                        // O(1) iteration over flat array
                         this._currentItems.forEach(
                             (it, j) => it.setSelected(j === capturedIdx));
                     }
@@ -354,13 +317,9 @@ export class GridController {
             rows[rowIdx].add_child(item);
             this._currentItems.push(item);
         }
-        void gen; // suppress unused warning — gen is checked by caller
+        void gen;
     }
 
-    /**
-     * Schedule the next idle chunk.  Captures `gen` so stale callbacks from a
-     * superseded render bail out immediately without touching the widget tree.
-     */
     private _scheduleChunk(
         gen: number,
         apps: SearchResult[],
@@ -368,7 +327,6 @@ export class GridController {
         startIdx: number,
     ): void {
         idleOnce(() => {
-            // Bail if render was superseded by a category switch or harvest
             if (gen !== this._renderGen) return;
             if (this._s.isDestroyed()) return;
 
@@ -380,11 +338,7 @@ export class GridController {
         });
     }
 
-    // ─── Background pre-render (no-op) ────────────────────────────────────
-
     startBackgroundPreRender(): void { }
-
-    // ─── Tab rendering ────────────────────────────────────────────────────
 
     renderTabsOnly(): void {
         const s = this._s;
@@ -471,8 +425,6 @@ export class GridController {
         this.renderGridOnly();
     }
 
-    // ─── Grid selection ───────────────────────────────────────────────────
-
     selectGridIdx(idx: number): void {
         const apps = this._getFilteredApps();
         if (!apps.length) return;
@@ -496,8 +448,6 @@ export class GridController {
         if (selected) { s.ext.hide(); selected.activate(); }
     }
 
-    // ─── Settings helpers ─────────────────────────────────────────────────
-
     getCategoriesList(): string[] {
         return [
             'Library Home', 'Favorites', 'Office', 'System', 'Utilities',
@@ -514,8 +464,6 @@ export class GridController {
         dbg('Groups', 'saveCustomGroups()', Object.keys(groups));
         this._s.ext._settings.set_string('custom-groups', JSON.stringify(groups));
     }
-
-    // ─── Cleanup ──────────────────────────────────────────────────────────
 
     cleanup(): void {
         this.cancelRenderJob();

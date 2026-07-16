@@ -22,16 +22,7 @@ export const SHELL_MAJOR = parseInt((Config as any).PACKAGE_VERSION.split('.')[0
 export const IS_50_PLUS = SHELL_MAJOR >= 50;
 export const IS_48_PLUS = SHELL_MAJOR >= 48;
 
-/**
- * Cross-version helper for St.BoxLayout direction.
- *
- * GNOME 46/47 — only supports `vertical: true/false`; the `orientation`
- *               property does not exist on St.BoxLayout.
- * GNOME 48+   — `vertical` is deprecated; use `orientation: Clutter.Orientation.*`.
- *
- * Spread the result into the constructor params object:
- *   new St.BoxLayout({ ...boxLayoutParams(true), style_class: '...' })
- */
+// GNOME 46/47 uses `vertical`; GNOME 48+ uses `orientation`. Always pass the right one.
 export function boxLayoutParams(vertical: boolean): object {
   if (IS_48_PLUS) {
     return { orientation: vertical ? Clutter.Orientation.VERTICAL : Clutter.Orientation.HORIZONTAL };
@@ -46,33 +37,12 @@ export function createAppIcon(app: any, size: number): any {
   return app.create_icon_texture(size);
 }
 
-/**
- * Create an St.Icon from a pre-fetched GIcon — avoids get_app_info().get_icon()
- * call chain on every render when the GIcon is already cached.
- */
 export function iconFromGicon(gicon: any, size: number): St.Icon {
   return new St.Icon({ gicon, icon_size: size });
 }
 
-/**
- * Create a Shell.BlurEffect compatible with ALL supported GNOME versions (45–50).
- *
- * Root cause of the GNOME 50 blur regression:
- *   On GNOME 45–49, Shell.BlurEffect.sigma is a writable GObject property that
- *   can be set after construction.  In GNOME 50 (Shell 18 / Mutter 18) the
- *   internal Cogl pipeline is compiled at construction time, so `sigma` (and
- *   `brightness`) must be provided in the constructor params object — setting
- *   them afterwards is a silent no-op that leaves a zero-sigma (invisible) blur.
- *
- * This helper always passes every parameter upfront, which is valid on every
- * version in the 45–50 matrix, eliminating the need for the `(blur as any).sigma`
- * workaround entirely.
- *
- * @param sigma      Blur radius in pixels (typ. 30–80 for glassmorphic look).
- * @param brightness Brightness multiplier, 0.0–1.0 (default 1.0 = unchanged).
- * @param mode       Shell.BlurMode — BACKGROUND (default) blurs what is behind
- *                   the actor; ACTOR blurs the actor's own content.
- */
+// On GNOME 50+, sigma was replaced by radius. High radius values without
+// a native downscale choke the Cogl pipeline, so we cap it.
 export function createBlurEffect(
   sigma: number,
   brightness = 1.0,
@@ -91,15 +61,8 @@ export function createBlurEffect(
   return new Shell.BlurEffect(effectParams);
 }
 
-/**
- * One-shot timeout — always returns a cancellable GLib source ID.
- *
- * We intentionally avoid GLib.timeout_add_once() even on GNOME 50+ because
- * that API returns void, making the source impossible to cancel.  Every call
- * site that stores the return value (SearchController.onText, cleanup paths)
- * needs a valid ID so it can call GLib.source_remove() before creating a new
- * timer or on extension disable.
- */
+// GLib.timeout_add_once() returns void (no cancel ID), so we always use
+// timeout_add() to keep sources cancellable.
 export function timeoutOnce(ms: number, fn: () => void): number {
   return GLib.timeout_add(GLib.PRIORITY_DEFAULT, ms, () => {
     fn();
@@ -107,13 +70,7 @@ export function timeoutOnce(ms: number, fn: () => void): number {
   });
 }
 
-/**
- * One-shot idle callback — runs when the main loop is idle.
- *   GNOME 50+  → GLib.idle_add_once()
- *   GNOME <50  → GLib.idle_add() + SOURCE_REMOVE
- *
- * Use this for deferred / chunked work that should not block a frame.
- */
+// GNOME 50+ has idle_add_once(); fall back to idle_add() + SOURCE_REMOVE on older shells.
 export function idleOnce(fn: () => void): void {
   if (IS_50_PLUS && (GLib as any).idle_add_once) {
     (GLib as any).idle_add_once(GLib.PRIORITY_DEFAULT_IDLE, fn);
@@ -125,11 +82,7 @@ export function idleOnce(fn: () => void): void {
   });
 }
 
-/**
- * Await-able ease animation.
- *   GNOME 50+  → actor.easeAsync()
- *   GNOME <50  → actor.ease() wrapped in a Promise
- */
+// GNOME 50+ has easeAsync(); wrap ease() in a Promise on older shells.
 export function easeActor(actor: Clutter.Actor, params: any): Promise<void> {
   const { onComplete, ...rest } = params;
   if (IS_50_PLUS && typeof (actor as any).easeAsync === 'function') {
@@ -142,9 +95,6 @@ export function easeActor(actor: Clutter.Actor, params: any): Promise<void> {
   });
 }
 
-/**
- * Scroll a St.ScrollView so that `actor` is visible.
- */
 export function scrollToActor(scrollView: St.ScrollView, actor: Clutter.Actor) {
   if (typeof (scrollView as any).ensure_actor_visible === 'function') {
     (scrollView as any).ensure_actor_visible(actor);
@@ -164,9 +114,6 @@ export function scrollToActor(scrollView: St.ScrollView, actor: Clutter.Actor) {
     adj.set_value(relY + actorHeight - viewHeight + 8);
 }
 
-/**
- * List all normal, visible windows.
- */
 export function listAllWindows(): any[] {
   const display = global.display as any;
   return (display.list_all_windows() as any[]).filter(
@@ -176,9 +123,6 @@ export function listAllWindows(): any[] {
   );
 }
 
-/**
- * Resolve the Shell.App that owns a MetaWindow.
- */
 export function appForWindow(win: any): any {
   const tracker = Shell.WindowTracker.get_default();
   const app = tracker.get_window_app(win);

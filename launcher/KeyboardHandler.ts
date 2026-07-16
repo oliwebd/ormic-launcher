@@ -73,11 +73,6 @@ export class KeyboardHandler {
 
             const char = Clutter.keysym_to_unicode(sym);
             if (char && char >= 32 && char <= 126 && !ctrl) {
-                // Focus the entry and let Clutter route the keystroke to it
-                // naturally. Do NOT overwrite entry.text here — that would
-                // wipe any text already typed (e.g. typing "5*5" produced
-                // only the last character "5" because each keypress replaced
-                // the whole field).
                 s.entry.grab_key_focus();
                 return false;
             }

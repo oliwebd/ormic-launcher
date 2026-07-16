@@ -40,9 +40,6 @@ import { GroupEditorController } from './launcher/GroupEditorController.js';
 import { KeyboardHandler } from './launcher/KeyboardHandler.js';
 import { ACCENT_COLOR_KEYS } from './accent-colors.js';
 
-// ─── Launcher Dialog ──────────────────────────────────────────────────────────
-
-
 class LauncherDialog extends St.BoxLayout {
     static {
         GObject.registerClass({ GTypeName: 'OrmicLauncherDialog' }, this);
@@ -92,16 +89,13 @@ class LauncherDialog extends St.BoxLayout {
             return box;
         }
 
-        // UI Container Boxes
         _entryBox!: St.BoxLayout;
         _entry!: St.Entry;
 
-        // Search Results List
         _scroll!: St.ScrollView;
         _rbox!: St.BoxLayout;
         _tips!: St.BoxLayout;
 
-        // Grid Library View
         _headerBox!: St.BoxLayout;
         _headerTitleLabel!: St.Label;
         _editBtn!: St.Button;
@@ -111,19 +105,16 @@ class LauncherDialog extends St.BoxLayout {
         _tabsBox!: St.BoxLayout;
         _vsep!: St.Widget;
 
-        // Page navigation bar
         _pageNavBox!: St.BoxLayout;
         _pageDotsBox!: St.BoxLayout;
         _prevPageBtn!: St.Button;
         _nextPageBtn!: St.Button;
 
-        // Group Editor checklist view
         _editorBox!: St.BoxLayout;
         _editorNameEntry!: St.Entry;
         _editorScroll!: St.ScrollView;
         _editorAppsContainer!: St.BoxLayout;
 
-        // New Group Modal Overlay
         _promptOverlay!: St.BoxLayout;
         _promptEntry!: St.Entry;
 
@@ -144,7 +135,6 @@ class LauncherDialog extends St.BoxLayout {
             this._allAppsCache = [];
             this._allAppsCacheDirty = true;
 
-            // ── Search row ────────────────────────────────────────────────
             this._entryBox = new St.BoxLayout({ style_class: 'ormic-search-row', x_expand: true });
             this._entryBox.add_child(new St.Icon({
                 icon_name: 'system-search-symbolic',
@@ -158,7 +148,6 @@ class LauncherDialog extends St.BoxLayout {
             this._entry.clutter_text.connect('text-changed', () => this._onText());
             this._entry.clutter_text.connect('key-press-event', (_, ev) => this._onKey(ev));
 
-            // ── Click outside dialog to close ─────────────────────────────
             this.connect('button-press-event', (_, ev) => {
                 this._ext._setClickGuard();
 
@@ -197,7 +186,6 @@ class LauncherDialog extends St.BoxLayout {
                     else if (dy > 0) delta = 1;
                 }
 
-                // Search/editor view: scroll the list
                 let sv: St.ScrollView | null = null;
                 if (this._scroll.visible) sv = this._scroll;
                 else if (this._editorScroll.visible) sv = this._editorScroll;
@@ -235,7 +223,6 @@ class LauncherDialog extends St.BoxLayout {
             });
             this._entryBox.add_child(closeBtn);
 
-            // ── Search Results ────────────────────────────────────────────
             this._scroll = new St.ScrollView({
                 style_class: 'ormic-scroll',
                 hscrollbar_policy: St.PolicyType.NEVER,
@@ -248,7 +235,6 @@ class LauncherDialog extends St.BoxLayout {
             this._scroll.set_child(this._rbox);
             this._scroll.hide();
 
-            // ── Tip bar ───────────────────────────────────────────────────
             this._tips = new St.BoxLayout({ style_class: 'ormic-tips', x_expand: true });
             (this._tips.layout_manager as Clutter.BoxLayout).spacing = 12;
             for (const [k, v] of [
@@ -262,7 +248,6 @@ class LauncherDialog extends St.BoxLayout {
                 this._tips.add_child(innerT);
             }
 
-            // ── Library Grid Header ────────────────────────────────────────────
             this._headerBox = new St.BoxLayout({
                 style_class: 'ormic-header',
                 x_expand: true,
@@ -271,7 +256,6 @@ class LauncherDialog extends St.BoxLayout {
                 y_align: Clutter.ActorAlign.CENTER,
             });
 
-            // Keep a stub title label (never shown) so state references don't break
             this._headerTitleLabel = new St.Label({
                 text: this._activeCategory,
                 style_class: 'ormic-header-title',
@@ -307,7 +291,6 @@ class LauncherDialog extends St.BoxLayout {
 
             this._headerBox.add_child(controlBox);
 
-            // ── Library Grid Scroll Box ───────────────────────────────────
             this._gridScroll = new St.ScrollView({
                 style_class: 'ormic-grid-scroll',
                 hscrollbar_policy: St.PolicyType.NEVER,
@@ -315,7 +298,6 @@ class LauncherDialog extends St.BoxLayout {
                 overlay_scrollbars: true, x_expand: true, y_expand: true,
             });
 
-            // ── Page Navigation Bar ───────────────────────────────────────
             this._pageNavBox = new St.BoxLayout({
                 style_class: 'ormic-page-nav',
                 x_expand: true,
@@ -353,7 +335,6 @@ class LauncherDialog extends St.BoxLayout {
             this._pageNavBox.add_child(this._nextPageBtn);
             this._pageNavBox.hide();
 
-            // ── Top Header Tabs Container ─────────────────────────────────
             this._tabsBox = new St.BoxLayout({
                 style_class: 'ormic-tabs-box',
                 x_expand: true,
@@ -388,7 +369,6 @@ class LauncherDialog extends St.BoxLayout {
             this._vsep = new St.Widget({ name: 'ormic-vsep', style_class: 'ormic-vsep', y_expand: true });
             this._vsep.hide();
 
-            // ── Group Editor Screen ───────────────────────────────────────
             this._editorBox = new St.BoxLayout({
                 style_class: 'ormic-editor-box', ...boxLayoutParams(true), x_expand: true, y_expand: true,
             });
@@ -441,7 +421,6 @@ class LauncherDialog extends St.BoxLayout {
             this._editorScroll.set_child(this._editorAppsContainer);
             this._editorBox.add_child(this._editorScroll);
 
-            // ── Prompt Modal Overlay ──────────────────────────────────────
             this._promptOverlay = new St.BoxLayout({
                 style_class: 'ormic-prompt-overlay',
                 ...boxLayoutParams(true),
@@ -512,7 +491,6 @@ class LauncherDialog extends St.BoxLayout {
             promptCard.add_child(promptBtns);
             this._promptOverlay.add_child(promptCard);
 
-            // Assemble everything
             this.add_child(this._entryBox);
             this.add_child(new St.Widget({ name: 'ormic-sep-tabs', style_class: 'ormic-sep', x_expand: true }));
 
@@ -657,15 +635,11 @@ class LauncherDialog extends St.BoxLayout {
             this._searchCtrl.onText();
         }
 
-        // ─── Search View ─────────────────────────────────────────────────
-
         private _selectIdx(i: number) { this._searchCtrl.selectIdx(i); }
         private _moveSel(d: number) { this._searchCtrl.moveSel(d); }
         private _activateSel() { this._searchCtrl.activateSel(); }
         private _activateIdx(i: number) { this._searchCtrl.activateIdx(i); }
         private _complete() { this._searchCtrl.complete(); }
-
-        // ─── Grid View ────────────────────────────────────────────────────
 
         private _ensureAllAppsCache() { this._gridCtrl.ensureAllAppsCache(); }
 
@@ -707,8 +681,6 @@ class LauncherDialog extends St.BoxLayout {
         private _getCategoriesList(): string[] { return this._gridCtrl.getCategoriesList(); }
         private _getCustomGroups(): Record<string, string[]> { return this._gridCtrl.getCustomGroups(); }
         private _saveCustomGroups(groups: Record<string, string[]>) { this._gridCtrl.saveCustomGroups(groups); }
-
-        // ─── External Controls ─────────────────────────────────────────────
 
         focus() {
             if ((this as any).is_finalized() || !this.get_stage()) return;
@@ -801,8 +773,6 @@ class LauncherDialog extends St.BoxLayout {
 }
 
 
-// ─── Panel indicator ──────────────────────────────────────────────────────────
-
 class OrmicIndicator extends PanelMenu.Button {
     static {
         GObject.registerClass({ GTypeName: 'OrmicIndicator' }, this);
@@ -820,7 +790,6 @@ class OrmicIndicator extends PanelMenu.Button {
 }
 
 
-// ─── Extension ────────────────────────────────────────────────────────────────
 const ACCENT_CLASS_PREFIX = 'ormic-accent-';
 
 export default class OrmicLauncherExtension extends Extension {
@@ -905,9 +874,6 @@ export default class OrmicLauncherExtension extends Extension {
                 this.hide();
                 return Clutter.EVENT_STOP;
             }
-            // Inside the dialog — propagate so St.Button children (tabs, grid
-            // items, result rows) receive the press and fire their 'clicked'
-            // signal normally.
             this._setClickGuard();
             return Clutter.EVENT_PROPAGATE;
         });
@@ -926,7 +892,6 @@ export default class OrmicLauncherExtension extends Extension {
 
         this._updateAccentColor();
 
-        // Register _overlay AFTER blur wrapper so it sits on top
         Main.layoutManager.addTopChrome(this._overlay);
 
         this._monId = Main.layoutManager.connect('monitors-changed', () => this._pos());
@@ -962,7 +927,6 @@ export default class OrmicLauncherExtension extends Extension {
         this._bgSettingId = this._settings.connect('changed::background-style', () => this._syncBackground());
         this._syncBackground();
 
-        // Re-position dialog live when size settings change
         this._settings.connect('changed::launcher-width', () => this._pos());
         this._settings.connect('changed::launcher-height', () => this._pos());
     }
@@ -1019,7 +983,6 @@ export default class OrmicLauncherExtension extends Extension {
     _syncInd() {
         if (this._settings.get_boolean('show-indicator')) {
             if (!this._indicator) {
-                // PanelMenu.Button requires constructor args; GJS calls _init() instead.
                 const ind = new (OrmicIndicator as any)() as OrmicIndicator;
                 ind._ext = this; this._indicator = ind;
                 Main.panel.addToStatusArea('ormic-launcher', this._indicator, 0, 'left');
@@ -1047,8 +1010,6 @@ export default class OrmicLauncherExtension extends Extension {
         (this._dialog as any).max_width = dw;
         this._dialog.min_height = dh;
         (this._dialog as any).max_height = dh;
-        // Clip all children (grid, scrollbars, etc.) to the fixed dialog bounds
-        // so nothing paints outside the dialog card.
         this._dialog.set_clip_to_allocation(true);
     }
 
@@ -1167,10 +1128,8 @@ export default class OrmicLauncherExtension extends Extension {
 
         let colorName = this._getResolvedAccentColor();
 
-        // Clamp to a key we actually have CSS variables for.
-        if (!ACCENT_COLOR_KEYS.has(colorName)) {
+        if (!ACCENT_COLOR_KEYS.has(colorName))
             colorName = 'yellow';
-        }
 
         const newClass = `${ACCENT_CLASS_PREFIX}${colorName}`;
         if (newClass === this._currentAccentClass) return;

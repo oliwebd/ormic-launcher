@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Ormic Launcher — App Search Provider
 
-
 import St from 'gi://St';
 import Shell from 'gi://Shell';
 import GMenu from 'gi://GMenu';
@@ -20,12 +19,6 @@ export class AppProvider {
 
     get dirty(): boolean { return this._dirty; }
 
-    /**
-     * GIcon is pre-fetched once at cache-build time.
-     * Icon creation during grid render then becomes just:
-     *   new St.Icon({ gicon: cached.gicon, icon_size: sz })
-     * — a single GObject allocation with no extra property-chain calls.
-     */
     _appsCache: Map<string, {
         app: any;
         category: string;
@@ -35,7 +28,7 @@ export class AppProvider {
         kw: string;
         displayName: string;
         displayDesc: string;
-        gicon: any | null;  // pre-fetched GIcon
+        gicon: any | null;
     }> = new Map();
 
     constructor() {
@@ -112,7 +105,6 @@ export class AppProvider {
 
                 const info = app.get_app_info();
 
-                // Pre-fetch GIcon once — avoids repeated property chain at render time
                 const gicon = info.get_icon();
 
                 this._appsCache.set(id, {
@@ -157,7 +149,6 @@ export class AppProvider {
                 id: `app:${id}`, desktopId: id,
                 name: displayName, description: displayDesc,
                 score, providerPriority: this.priority,
-                // Use pre-cached GIcon when available
                 createIcon: gicon
                     ? (sz: number) => new St.Icon({ gicon, icon_size: sz })
                     : (sz: number) => app.create_icon_texture(sz),

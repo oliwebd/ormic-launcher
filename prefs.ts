@@ -1,7 +1,5 @@
-/**
- * Ormic Launcher — Preferences
- * Libadwaita UI for GNOME 45+.
- */
+// SPDX-License-Identifier: GPL-2.0-or-later
+// Ormic Launcher — Preferences
 
 import Adw from 'gi://Adw';
 import Gtk from 'gi://Gtk';
@@ -16,13 +14,11 @@ export default class OrmicLauncherPrefs extends ExtensionPreferences {
         win.set_default_size(640, 580);
         win.set_title(_('Ormic Launcher Settings'));
 
-        // ══ Page: General ════════════════════════════════════════════════
         const genPage = new Adw.PreferencesPage({
             title: _('General'), icon_name: 'preferences-system-symbolic',
         });
         win.add(genPage);
 
-        // ── Keybinding ────────────────────────────────────────────────────
         const kbGroup = new Adw.PreferencesGroup({
             title: _('Keyboard Shortcut'),
             description: _('Shortcut to open the Ormic Launcher dialog'),
@@ -44,7 +40,6 @@ export default class OrmicLauncherPrefs extends ExtensionPreferences {
         kbRow.add_suffix(kbLabel);
         kbGroup.add(kbRow);
 
-        // Conflict detection
         const sysSets = new Gio.Settings({ schema_id: 'org.gnome.desktop.wm.keybindings' });
         let ibusSets: Gio.Settings | null = null;
         if (Gio.Settings.list_schemas().includes('org.freedesktop.ibus.general.hotkey')) {
@@ -95,7 +90,6 @@ export default class OrmicLauncherPrefs extends ExtensionPreferences {
         if (ibusSets) ibusSets.connect('changed::triggers', refreshConflict);
         s.connect('changed::toggle-ormic-launcher', refreshConflict);
 
-        // Show indicator
         const indRow = new Adw.SwitchRow({
             title: _('Show Top Panel Indicator'),
             subtitle: _('Search icon in the top bar to open the launcher'),
@@ -103,7 +97,6 @@ export default class OrmicLauncherPrefs extends ExtensionPreferences {
         s.bind('show-indicator', indRow, 'active', Gio.SettingsBindFlags.DEFAULT);
         kbGroup.add(indRow);
 
-        // Show search bar
         const sbRow = new Adw.SwitchRow({
             title: _('Show Search Bar by Default'),
             subtitle: _('Show a search entry at the top of the library view'),
@@ -111,7 +104,6 @@ export default class OrmicLauncherPrefs extends ExtensionPreferences {
         s.bind('show-search-bar', sbRow, 'active', Gio.SettingsBindFlags.DEFAULT);
         kbGroup.add(sbRow);
 
-        // Show groups sidebar
         const gsRow = new Adw.SwitchRow({
             title: _('Show Groups Sidebar'),
             subtitle: _('Show the category/groups sidebar on the left'),
@@ -119,7 +111,6 @@ export default class OrmicLauncherPrefs extends ExtensionPreferences {
         s.bind('show-groups-sidebar', gsRow, 'active', Gio.SettingsBindFlags.DEFAULT);
         kbGroup.add(gsRow);
 
-        // Background Style
         const bgRow = new Adw.ComboRow({
             title: _('Background Style'),
             subtitle: _('Choose the visual style of the launcher background'),
@@ -149,7 +140,6 @@ export default class OrmicLauncherPrefs extends ExtensionPreferences {
         s.connect('changed::background-style', refreshBg);
         kbGroup.add(bgRow);
 
-        // Accent Color
         const accentRow = new Adw.ComboRow({
             title: _('Accent Color'),
             subtitle: _('Highlight and selection color for the launcher'),
@@ -184,7 +174,6 @@ export default class OrmicLauncherPrefs extends ExtensionPreferences {
         s.connect('changed::accent-color', refreshAccent);
         kbGroup.add(accentRow);
 
-        // ── Results ───────────────────────────────────────────────────────
         const resGroup = new Adw.PreferencesGroup({ title: _('Results') });
         genPage.add(resGroup);
 
@@ -204,7 +193,6 @@ export default class OrmicLauncherPrefs extends ExtensionPreferences {
         s.bind('enable-quick-select', qsRow, 'active', Gio.SettingsBindFlags.DEFAULT);
         resGroup.add(qsRow);
 
-        // ── Appearance ────────────────────────────────────────────────────
         const appearGroup = new Adw.PreferencesGroup({ title: _('Appearance') });
         genPage.add(appearGroup);
 
@@ -241,7 +229,6 @@ export default class OrmicLauncherPrefs extends ExtensionPreferences {
         s.bind('launcher-height', launcherHRow, 'value', Gio.SettingsBindFlags.DEFAULT);
         appearGroup.add(launcherHRow);
 
-        // ══ Page: Providers ═══════════════════════════════════════════════
         const provPage = new Adw.PreferencesPage({
             title: _('Providers'), icon_name: 'application-x-executable-symbolic',
         });
@@ -265,7 +252,6 @@ export default class OrmicLauncherPrefs extends ExtensionPreferences {
             rows[key] = row;
         }
 
-        // ══ Page: About ═══════════════════════════════════════════════════
         const aboutPage = new Adw.PreferencesPage({
             title: _('About'), icon_name: 'help-about-symbolic',
         });
