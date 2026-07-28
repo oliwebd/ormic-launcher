@@ -5,7 +5,6 @@ import St from 'gi://St';
 import Shell from 'gi://Shell';
 import GMenu from 'gi://GMenu';
 
-import { gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
 import { SearchResult } from '../types.js';
 import { dbg } from '../utils.js';
 
@@ -78,7 +77,6 @@ export class AppProvider {
                                 this._loadCategory(dir, dir.get_name(), true);
                         }
                     }
-                    this._loadCategory(root, _('App'), false);
                     dbg('AppProvider', `cache size after build: ${this._appsCache.size}`);
                 }
             }
