@@ -86,7 +86,7 @@ function formatSource(src) {
         }
 
         // ── Class-body decisions (depth 1 = inside a class) ──────────────────
-        if (depthBefore === 1) {
+        if (depth === 1) {
             const curIsClosingBrace = /^\s+\}$/.test(line);
             const nextIsMethod = /^\s+[\w#].*\(.*\)\s*\{?\s*$/.test(next) && !/^\s+\//.test(next);
             const nextIsGetter = /^\s+(get|set)\s+\w/.test(next);
@@ -95,7 +95,7 @@ function formatSource(src) {
             const nextIsField = /^\s+[\w#_][\w]*\s*(=|;)/.test(next);
 
             // After a method body's closing brace, blank before next member
-            if (curIsClosingBrace && depth === 1) {
+            if (curIsClosingBrace) {
                 if (nextIsMethod || nextIsGetter || nextIsComment || nextIsBlock || nextIsField) {
                     out.push('');
                 }
