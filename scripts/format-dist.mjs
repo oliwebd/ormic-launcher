@@ -101,6 +101,24 @@ function formatSource(src) {
                 }
             }
         }
+
+        // ── Method-body decisions (depth >= 2 = inside a method) ─────────────
+        if (depth >= 2) {
+            const curIsBlockEnd = /^\s+\}\);?$/.test(line) || /^\s+\};?$/.test(line) || /^\s+\}$/.test(line);
+            const nextIsContinuation = /^\s+\}/.test(next) || /^\s+(else|catch|finally)\b/.test(next) || /^\s+\}\);?$/.test(next);
+
+            if (curIsBlockEnd && nextTrimmed !== '' && !nextIsContinuation) {
+                out.push('');
+            } else {
+                const nextIsVar = /^\s+(const|let|var)\b/.test(next);
+                const curIsVar = /^\s+(const|let|var)\b/.test(line);
+                const curIsStart = /\{\s*$/.test(line);
+                
+                if (nextIsVar && !curIsVar && !curIsStart && trimmed !== '') {
+                    out.push('');
+                }
+            }
+        }
     }
 
     // ── Pass 3: collapse 3+ consecutive blank lines to max 2
