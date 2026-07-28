@@ -16,7 +16,7 @@ export function setDebug(val: boolean) {
   DEBUG = val;
 }
 
-export function dbg(scope: string, msg: string, ...args: any[]) {
+export function logDebug(scope: string, msg: string, ...args: any[]) {
   if (!DEBUG) return;
   const extra = args.length ? ' ' + args.map(a => JSON.stringify(a)).join(' ') : '';
   console.log(`[Ormic:${scope}] ${msg}${extra}`);

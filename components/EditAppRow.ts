@@ -6,7 +6,7 @@ import Clutter from 'gi://Clutter';
 import GObject from 'gi://GObject';
 
 import { SearchResult } from '../types.js';
-import { dbg } from '../utils.js';
+import { logDebug } from '../utils.js';
 
 export class EditAppRow extends St.Button {
     static {
@@ -75,7 +75,7 @@ export class EditAppRow extends St.Button {
         if (this._selected) this.add_style_class_name('selected');
 
         this.connect('clicked', () => {
-            dbg('EditAppRow', `clicked on ${result.name}`);
+            logDebug('EditAppRow', `clicked on ${result.name}`);
             this.toggle();
             this.emit('toggle');
         });

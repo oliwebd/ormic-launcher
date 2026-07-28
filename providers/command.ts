@@ -5,7 +5,7 @@ import GLib from 'gi://GLib';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import { gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
 import { SearchResult } from '../types.js';
-import { dbg } from '../utils.js';
+import { logDebug } from '../utils.js';
 
 export class CommandProvider {
     id = 'command'; priority = 8;
@@ -19,7 +19,7 @@ export class CommandProvider {
             iconName: 'utilities-terminal-symbolic',
             categoryIcon: 'utilities-terminal-symbolic', category: _('Command'),
             activate: () => {
-                dbg('Command', 'spawn:', cmd);
+                logDebug('Command', 'spawn:', cmd);
                 try { GLib.spawn_command_line_async(cmd); }
                 catch (e: any) { Main.notifyError(_('Command Error'), e.message); }
             },

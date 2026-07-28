@@ -5,7 +5,7 @@ import GLib from 'gi://GLib';
 import { gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
 
 import { SearchResult } from '../types.js';
-import { dbg, timeoutOnce, scrollToActor } from '../utils.js';
+import { logDebug, timeoutOnce, scrollToActor } from '../utils.js';
 import { ResultRow } from '../components/ResultRow.js';
 import type { LauncherState } from './LauncherState.js';
 
@@ -29,7 +29,7 @@ export class SearchController {
 
     search(query: string): void {
         const s = this._s;
-        dbg('Search', 'query:', query);
+        logDebug('Search', 'query:', query);
         const q = query.trim();
         const max = s.ext._settings.get_int('max-results');
 
@@ -57,7 +57,7 @@ export class SearchController {
         }
         combined.sort((a, b) => b.score - a.score || b.providerPriority - a.providerPriority);
         s.results = combined.slice(0, max);
-        dbg('Search', `results: ${s.results.length} (max ${max})`);
+        logDebug('Search', `results: ${s.results.length} (max ${max})`);
         this.renderSearchResults();
     }
 
@@ -103,7 +103,7 @@ export class SearchController {
     activateSel(): void {
         const s = this._s;
         const r = s.results[s.selIdx];
-        dbg('Activate', 'list sel', s.selIdx, r ? r.name : 'none');
+        logDebug('Activate', 'list sel', s.selIdx, r ? r.name : 'none');
         if (r) { s.ext.hide(); r.activate(); }
     }
 

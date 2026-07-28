@@ -7,7 +7,7 @@ import GObject from 'gi://GObject';
 import Pango from 'gi://Pango';
 
 import { SearchResult } from '../types.js';
-import { dbg, boxLayoutParams } from '../utils.js';
+import { logDebug, boxLayoutParams } from '../utils.js';
 
 export class GridItem extends St.Button {
     static {
@@ -47,7 +47,7 @@ export class GridItem extends St.Button {
         this.set_child(box);
 
         this.connect('clicked', () => {
-            dbg('GridItem', `clicked on ${this._result.name}`);
+            logDebug('GridItem', `clicked on ${this._result.name}`);
             if (this._activateCb) this._activateCb();
         });
 

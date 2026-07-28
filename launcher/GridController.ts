@@ -31,7 +31,7 @@ import Clutter from 'gi://Clutter';
 import { gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
 
 import { SearchResult } from '../types.js';
-import { dbg, timeoutOnce, idleOnce, createAppIcon } from '../utils.js';
+import { logDebug, timeoutOnce, idleOnce, createAppIcon } from '../utils.js';
 import { AppProvider } from '../providers/apps.js';
 import { GridItem } from '../components/GridItem.js';
 import { CategoryTab } from '../components/CategoryTab.js';
@@ -125,7 +125,7 @@ export class GridController {
                         : (sz: number) => createAppIcon(app, sz),
                     categoryIcon: 'application-x-executable-symbolic',
                     category,
-                    activate: () => { dbg('LibraryGrid', `activate: ${id}`); app.activate(); },
+                    activate: () => { logDebug('LibraryGrid', `activate: ${id}`); app.activate(); },
                 });
             }
         }
@@ -218,7 +218,7 @@ export class GridController {
         s.gridScroll.set_child(s.getGridBox());
 
         const elapsed = (GLib.get_monotonic_time() - t0) / 1000;
-        dbg('Performance', `selectCategory('${categoryName}') — ${elapsed.toFixed(1)}ms`);
+        logDebug('Performance', `selectCategory('${categoryName}') — ${elapsed.toFixed(1)}ms`);
 
         this.renderGridOnly();
     }
@@ -272,7 +272,7 @@ export class GridController {
         }
 
         const elapsed = (GLib.get_monotonic_time() - t0) / 1000;
-        dbg('Performance',
+        logDebug('Performance',
             `renderGridOnly('${s.activeCategory}') sync ${syncEnd}/${apps.length} items — ${elapsed.toFixed(1)}ms`);
 
         if (apps.length > syncEnd)
@@ -333,7 +333,7 @@ export class GridController {
         const newKey = groupNames.join('|');
 
         if (newKey === this._tabCacheKey && s.tabsBox.get_n_children() > 0) {
-            dbg('Grid', `renderTabsOnly — fast path (key="${newKey}")`);
+            logDebug('Grid', `renderTabsOnly — fast path (key="${newKey}")`);
             (s.tabsBox.get_children() as CategoryTab[]).forEach(tab => {
                 tab.setSelected(tab.categoryName === s.activeCategory);
             });
@@ -341,7 +341,7 @@ export class GridController {
             return;
         }
 
-        dbg('Grid', `renderTabsOnly — rebuild (key="${newKey}" was "${this._tabCacheKey}")`);
+        logDebug('Grid', `renderTabsOnly — rebuild (key="${newKey}" was "${this._tabCacheKey}")`);
         this._tabCacheKey = newKey;
         s.tabsBox.destroy_all_children();
 
@@ -392,7 +392,7 @@ export class GridController {
 
     renderGridAndTabs(): void {
         const s = this._s;
-        dbg('Performance', `renderGridAndTabs — for: ${s.activeCategory}`);
+        logDebug('Performance', `renderGridAndTabs — for: ${s.activeCategory}`);
 
         this.cancelRenderJob();
 
@@ -437,7 +437,7 @@ export class GridController {
 
     activateGridSel(): void {
         const s = this._s;
-        dbg('Activate', 'grid sel', s.gridSelIdx);
+        logDebug('Activate', 'grid sel', s.gridSelIdx);
         const selected = this._getFilteredApps()[s.gridSelIdx];
         if (selected) { s.ext.hide(); selected.activate(); }
     }
@@ -450,12 +450,12 @@ export class GridController {
     }
 
     getCustomGroups(): Record<string, string[]> {
-        dbg('Groups', 'getCustomGroups()');
+        logDebug('Groups', 'getCustomGroups()');
         return JSON.parse(this._s.ext._settings.get_string('custom-groups'));
     }
 
     saveCustomGroups(groups: Record<string, string[]>): void {
-        dbg('Groups', 'saveCustomGroups()', Object.keys(groups));
+        logDebug('Groups', 'saveCustomGroups()', Object.keys(groups));
         this._s.ext._settings.set_string('custom-groups', JSON.stringify(groups));
     }
 

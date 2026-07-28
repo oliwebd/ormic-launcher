@@ -9,7 +9,7 @@ import Pango from 'gi://Pango';
 
 import { gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
 import { SearchResult } from '../types.js';
-import { dbg, boxLayoutParams } from '../utils.js';
+import { logDebug, boxLayoutParams } from '../utils.js';
 
 export class ResultRow extends St.Button {
     static {
@@ -146,7 +146,7 @@ export class ResultRow extends St.Button {
         this.set_child(mainBox);
 
         this.connect('clicked', () => {
-            dbg('ResultRow', `clicked on ${result.name}`);
+            logDebug('ResultRow', `clicked on ${result.name}`);
             this.emit('item-activated');
         });
 

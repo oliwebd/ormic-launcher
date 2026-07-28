@@ -5,7 +5,7 @@ import St from 'gi://St';
 import Clutter from 'gi://Clutter';
 import GObject from 'gi://GObject';
 
-import { dbg } from '../utils.js';
+import { logDebug } from '../utils.js';
 
 export class CategoryTab extends St.Button {
     static {
@@ -57,7 +57,7 @@ export class CategoryTab extends St.Button {
         this.set_child(box);
 
         this.connect('clicked', () => {
-            dbg('CategoryTab', `clicked on ${categoryName}`);
+            logDebug('CategoryTab', `clicked on ${categoryName}`);
             this.emit('tab-selected');
         });
     }

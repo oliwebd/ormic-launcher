@@ -6,7 +6,7 @@ import Shell from 'gi://Shell';
 import GMenu from 'gi://GMenu';
 
 import { SearchResult } from '../types.js';
-import { dbg } from '../utils.js';
+import { logDebug } from '../utils.js';
 
 export class AppProvider {
     id = 'apps';
@@ -33,7 +33,7 @@ export class AppProvider {
     constructor() {
         this._tree = new GMenu.Tree({ menu_basename: 'applications.menu' });
         this._installedChangedId = this._sys.connect('installed-changed', () => {
-            dbg('AppProvider', 'installed-changed signal — marking cache dirty');
+            logDebug('AppProvider', 'installed-changed signal — marking cache dirty');
             this._dirty = true;
         });
         this._buildCache();
@@ -61,7 +61,7 @@ export class AppProvider {
     }
 
     private _buildCache() {
-        dbg('AppProvider', '_buildCache() — clearing cache');
+        logDebug('AppProvider', '_buildCache() — clearing cache');
         this._dirty = false;
         this._appsCache.clear();
         try {
@@ -77,7 +77,7 @@ export class AppProvider {
                                 this._loadCategory(dir, dir.get_name(), true);
                         }
                     }
-                    dbg('AppProvider', `cache size after build: ${this._appsCache.size}`);
+                    logDebug('AppProvider', `cache size after build: ${this._appsCache.size}`);
                 }
             }
         } catch (e: any) {
@@ -153,7 +153,7 @@ export class AppProvider {
                 categoryIcon: 'application-x-executable-symbolic',
                 category,
                 activate: () => {
-                    dbg('AppProvider', `activate: ${displayName}`);
+                    logDebug('AppProvider', `activate: ${displayName}`);
                     app.activate();
                 },
             });
