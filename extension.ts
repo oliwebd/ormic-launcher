@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Ormic Launcher — GNOME Shell Extension
-// Copyright (C) 2026 oliwebd <oliwebd@gmail.com>
+// Copyright (C) 2026 oliwebd
 //
 // Compatible with GNOME Shell 45 · 46 · 47 · 48 · 49 · 50
 
