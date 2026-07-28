@@ -274,7 +274,8 @@
 
 .ormic-grid-scroll {
   min-height: 100px;
-  max-height: 520px;
+  /* Let the dialog's own height clamp this — no hard max-height */
+  -st-shadow: 0 -52px 28px -4px rgba(12, 12, 20, 0.88) inset;
 }
 
 .ormic-grid-scroll StScrollBar {
@@ -286,7 +287,8 @@
 }
 
 .ormic-grid-box {
-  padding: 14px 26px 18px 18px;
+  /* Extra bottom padding so the last row isn't hidden under the fade */
+  padding: 14px 26px 36px 18px;
   spacing: 2px;
 }
 
