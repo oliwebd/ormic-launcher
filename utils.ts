@@ -45,25 +45,7 @@ export function iconFromGicon(gicon: any, size: number): St.Icon {
   return new St.Icon({ gicon, icon_size: size });
 }
 
-// On GNOME 50+, sigma was replaced by radius. High radius values without
-// a native downscale choke the Cogl pipeline, so we cap it.
-export function createBlurEffect(
-  sigma: number,
-  brightness = 1.0,
-  mode: Shell.BlurMode = Shell.BlurMode.BACKGROUND,
-): Shell.BlurEffect {
-  const effectParams: any = { brightness, mode };
-  if (IS_50_PLUS) {
-    // GNOME 50 removed sigma in favor of radius.
-    // Extremely high radius values (e.g. sigma 36 -> radius 72) without a native
-    // downscale property will completely choke the Cogl pipeline.
-    // Capping the radius drastically improves performance.
-    effectParams.radius = Math.min(sigma, 14.0);
-  } else {
-    effectParams.sigma = sigma;
-  }
-  return new Shell.BlurEffect(effectParams);
-}
+
 
 // GLib.timeout_add_once() returns void (no cancel ID), so we always use
 // timeout_add() to keep sources cancellable.

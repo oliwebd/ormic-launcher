@@ -21,7 +21,6 @@ import {
     dbg,
     timeoutOnce,
     easeActor,
-    createBlurEffect,
     boxLayoutParams,
     setDebug,
 } from './utils.js';
@@ -436,11 +435,6 @@ class LauncherDialog extends St.BoxLayout {
                 x_expand: true,
                 reactive: true,
             });
-            try {
-                promptCard.add_effect_with_name('blur', createBlurEffect(36, 1.0));
-            } catch (e: any) {
-                console.error(`Ormic Launcher: prompt card blur error: ${e.message}`);
-            }
 
             this._promptOverlay.connect('button-press-event', (_, ev) => {
                 const [x, y] = ev.get_coords();
@@ -795,7 +789,6 @@ export default class OrmicLauncherExtension extends Extension {
     _cfgId!: number | null;
     _accentColorId!: number | null;
     _sysAccentId!: number | null;
-    _bgSettingId!: number | null;
     _focusId!: number | null;
     _overlayCapturedId!: number | null;
     _overlayPressId!: number | null;
@@ -915,9 +908,6 @@ export default class OrmicLauncherExtension extends Extension {
         this._cfgId = this._settings.connect('changed::show-indicator', () => this._syncInd());
         this._syncInd();
 
-        this._bgSettingId = this._settings.connect('changed::background-style', () => this._syncBackground());
-        this._syncBackground();
-
         this._settings.connect('changed::launcher-width', () => this._pos());
         this._settings.connect('changed::launcher-height', () => this._pos());
     }
@@ -931,7 +921,6 @@ export default class OrmicLauncherExtension extends Extension {
             this._interfaceSettings.disconnect(this._sysAccentId);
             this._sysAccentId = null;
         }
-        if (this._bgSettingId) { this._settings.disconnect(this._bgSettingId); this._bgSettingId = null; }
         if (this._debugSettingId) { this._settings.disconnect(this._debugSettingId); this._debugSettingId = null; }
         this._interfaceSettings = null;
         if (this._keyId) { global.stage.disconnect(this._keyId); this._keyId = null; }
@@ -941,7 +930,6 @@ export default class OrmicLauncherExtension extends Extension {
 
         if (this._dialog) {
             if (this._dialogSizeId) { this._dialog.disconnect(this._dialogSizeId); this._dialogSizeId = null; }
-            this._dialog.remove_effect_by_name('blur');
             this._dialog.remove_all_transitions();
             this._dialog.cleanup();
             this._dialog.destroy();
@@ -1020,16 +1008,6 @@ export default class OrmicLauncherExtension extends Extension {
 
         this._visible = true;
         this._dialog.reset();
-
-        const wantsBlur = this._settings.get_string('background-style') === 'blur';
-
-        if (wantsBlur) {
-            if (!this._dialog.get_effect('blur')) {
-                this._dialog.add_effect_with_name('blur', createBlurEffect(14, 1.0));
-            }
-        } else {
-            this._dialog.remove_effect_by_name('blur');
-        }
 
         this._overlay.show();
         this._dialog.opacity = 0;
@@ -1133,34 +1111,4 @@ export default class OrmicLauncherExtension extends Extension {
         this._currentAccentClass = newClass;
     }
 
-    _syncBackground() {
-        if (!this._dialog) return;
-
-        let style = this._settings.get_string('background-style') || 'solid';
-        if (style.startsWith('transparent')) {
-            style = 'transparent';
-        }
-        const wantsBlur = style === 'blur';
-
-        const BG_CLASSES = [
-            'ormic-bg-blur', 'ormic-bg-transparent', 'ormic-bg-solid',
-        ];
-        BG_CLASSES.forEach(c => this._dialog!.remove_style_class_name(c));
-        this._dialog.add_style_class_name(`ormic-bg-${style}`);
-
-        if (!this._visible) {
-            if (!wantsBlur) {
-                this._dialog.remove_effect_by_name('blur');
-            }
-            return;
-        }
-
-        if (wantsBlur) {
-            if (!this._dialog.get_effect('blur')) {
-                this._dialog.add_effect_with_name('blur', createBlurEffect(14, 1.0));
-            }
-        } else {
-            this._dialog.remove_effect_by_name('blur');
-        }
-    }
 }
