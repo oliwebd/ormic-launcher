@@ -5,7 +5,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "build": "tsc && node scripts/generate-accent-css.mjs && prettier --write 'dist/**/*.js' && node scripts/format-dist.mjs",
+    "build": "tsc && prettier --write 'dist/**/*.js' && node scripts/format-dist.mjs",
     "local-install": "make install",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"

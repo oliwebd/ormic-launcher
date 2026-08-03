@@ -29,7 +29,7 @@ import { RecentProvider } from './providers/recent.js';
 import { CommandProvider } from './providers/command.js';
 import { WindowProvider } from './providers/window.js';
 
-import { ACCENT_COLOR_KEYS } from './accent-colors.js';
+import { ACCENT_COLORS, ACCENT_COLOR_KEYS, AccentColorKey } from './accent-colors.js';
 import { LauncherDialog } from './launcher/LauncherDialog.js';
 
 
@@ -50,7 +50,36 @@ class OrmicIndicator extends PanelMenu.Button {
 }
 
 
-const ACCENT_CLASS_PREFIX = 'ormic-accent-';
+function buildAccentCss(colorName: string): string {
+    const p = ACCENT_COLORS[colorName as AccentColorKey] ?? ACCENT_COLORS.yellow;
+    const { accent, rgb, hover, active } = p;
+    return `
+.ormic-entry { caret-color: ${accent}; }
+.ormic-result.selected { background-color: rgba(${rgb}, 0.09); }
+.ormic-result.selected .ormic-accent-bar { background-color: ${accent}; }
+.ormic-result.selected .ormic-name { color: ${accent}; }
+.ormic-fav-btn:hover { color: ${accent}; }
+.ormic-fav-btn.is-fav { color: ${accent}; }
+.ormic-fav-btn.is-fav:hover { background-color: rgba(${rgb}, 0.12); }
+.ormic-kbd-badge { color: rgba(${rgb}, 0.72); background-color: rgba(${rgb}, 0.07); border: 1px solid rgba(${rgb}, 0.18); }
+.ormic-result.selected .ormic-kbd-badge { border-color: ${accent}; }
+.ormic-editor-entry { caret-color: ${accent}; }
+.ormic-editor-entry:focus { border-color: ${accent}; }
+.ormic-editor-btn.save-btn { background-color: ${accent}; border: 1px solid ${accent}; }
+.ormic-editor-btn.save-btn:hover { background-color: ${hover}; border-color: ${hover}; }
+.ormic-edit-row.selected { background-color: rgba(${rgb}, 0.06); border-color: rgba(${rgb}, 0.14); }
+.ormic-edit-row.selected .ormic-edit-checkbox { color: ${accent}; }
+.ormic-prompt-entry { caret-color: ${accent}; }
+.ormic-prompt-entry:focus { border-color: ${accent}; }
+.ormic-prompt-btn.create-btn { background-color: ${accent}; border: 1px solid ${accent}; }
+.ormic-prompt-btn.create-btn:hover { background-color: ${hover}; border-color: ${hover}; }
+.ormic-prompt-btn.create-btn:active { background-color: ${active}; border-color: ${active}; }
+.ormic-tip-key { color: rgba(${rgb}, 0.80); background-color: rgba(${rgb}, 0.09); }
+.ormic-category-tab.active { background-color: rgba(${rgb}, 0.10); border-color: rgba(${rgb}, 0.22); }
+.ormic-category-tab.active .ormic-category-tab-label { color: ${accent}; }
+.ormic-category-tab.active .ormic-category-tab-icon { color: ${accent}; }
+`;
+}
 
 export default class OrmicLauncherExtension extends Extension {
     providers!: any[];
@@ -66,7 +95,6 @@ export default class OrmicLauncherExtension extends Extension {
     _monId!: number | null;
     _keyId!: number | null;
     _cfgId!: number | null;
-    _accentColorId!: number | null;
     _sysAccentId!: number | null;
     _focusId!: number | null;
     _overlayCapturedId!: number | null;
@@ -85,7 +113,7 @@ export default class OrmicLauncherExtension extends Extension {
             new RecentProvider(this._settings), new CommandProvider(),
             new WindowProvider(this._settings),
         ];
-        this._visible = false; this._indicator = null; this._cfgId = null; this._accentColorId = null; this._focusId = null; this._debugSettingId = null;
+        this._visible = false; this._indicator = null; this._cfgId = null; this._focusId = null; this._debugSettingId = null;
 
         this._debugSettingId = this._settings.connect('changed::debug', () => setDebug(this._settings.get_boolean('debug')));
         setDebug(this._settings.get_boolean('debug'));
@@ -96,23 +124,15 @@ export default class OrmicLauncherExtension extends Extension {
             x: 0, y: 0, opacity: 0,
         });
 
-        this._updateAccentColor();
-        this._accentColorId = this._settings.connect('changed::accent-color', () => this._updateAccentColor());
-
-        // Connect listener for system-wide GNOME accent color
         try {
             this._interfaceSettings = new Gio.Settings({ schema_id: 'org.gnome.desktop.interface' });
             if (this._interfaceSettings.settings_schema.has_key('accent-color')) {
-                this._sysAccentId = this._interfaceSettings.connect('changed::accent-color', () => {
-                    const currentSelection = this._settings.get_string('accent-color');
-                    if (currentSelection === 'gnome') {
-                        this._updateAccentColor();
-                    }
-                });
+                this._sysAccentId = this._interfaceSettings.connect('changed::accent-color', () => this._updateAccentColor());
             }
         } catch (_) {
             this._interfaceSettings = null;
         }
+        this._updateAccentColor();
 
         this._overlayCapturedId = this._overlay.connect('captured-event', (_, ev: any) => {
             const t = ev.type();
@@ -152,8 +172,6 @@ export default class OrmicLauncherExtension extends Extension {
         this._dialog = new LauncherDialog();
         this._dialog.setup(this);
         this._overlay.add_child(this._dialog);
-
-        this._updateAccentColor();
 
         Main.layoutManager.addTopChrome(this._overlay);
 
@@ -195,13 +213,17 @@ export default class OrmicLauncherExtension extends Extension {
         logDebug('Extension', 'disable() called');
         if (this._focusId) { global.stage.disconnect(this._focusId); this._focusId = null; }
         if (this._cfgId) { this._settings.disconnect(this._cfgId); this._cfgId = null; }
-        if (this._accentColorId) { this._settings.disconnect(this._accentColorId); this._accentColorId = null; }
         if (this._interfaceSettings && this._sysAccentId) {
             this._interfaceSettings.disconnect(this._sysAccentId);
             this._sysAccentId = null;
         }
         if (this._debugSettingId) { this._settings.disconnect(this._debugSettingId); this._debugSettingId = null; }
         this._interfaceSettings = null;
+        if (this._theme && this._dynamicCssFile) {
+            this._theme.unload_stylesheet(this._dynamicCssFile);
+        }
+        this._theme = null;
+        this._dynamicCssFile = null;
         if (this._keyId) { global.stage.disconnect(this._keyId); this._keyId = null; }
         if (this._monId) { Main.layoutManager.disconnect(this._monId); this._monId = null; }
         if (this._indicator) this._indicator.destroy(); this._indicator = null;
@@ -356,38 +378,35 @@ export default class OrmicLauncherExtension extends Extension {
     }
 
     _getResolvedAccentColor(): string {
-        const userChoice = this._settings.get_string('accent-color');
-        if (userChoice && userChoice !== 'gnome') {
-            return userChoice;
-        }
-
         const iface = this._interfaceSettings;
         if (iface && iface.settings_schema.has_key('accent-color')) {
             const sysColor = iface.get_string('accent-color');
-            if (sysColor) return sysColor;
+            if (sysColor && ACCENT_COLOR_KEYS.has(sysColor)) return sysColor;
         }
-
         return 'yellow';
     }
 
-    private _currentAccentClass: string | null = null;
-
     _updateAccentColor() {
-        if (!this._overlay) return;
+        const colorName = this._getResolvedAccentColor();
 
-        let colorName = this._getResolvedAccentColor();
+        try {
+            if (!this._theme) {
+                this._theme = St.ThemeContext.get_for_stage(global.stage).get_theme();
+            }
 
-        if (!ACCENT_COLOR_KEYS.has(colorName))
-            colorName = 'yellow';
+            const cacheDir = GLib.build_filenamev([GLib.get_user_cache_dir(), 'ormic-launcher']);
+            GLib.mkdir_with_parents(cacheDir, 0o700);
+            const path = GLib.build_filenamev([cacheDir, 'accent.css']);
+            GLib.file_set_contents(path, buildAccentCss(colorName));
 
-        const newClass = `${ACCENT_CLASS_PREFIX}${colorName}`;
-        if (newClass === this._currentAccentClass) return;
-
-        if (this._currentAccentClass) {
-            this._overlay.remove_style_class_name(this._currentAccentClass);
+            if (this._dynamicCssFile) {
+                this._theme.unload_stylesheet(this._dynamicCssFile);
+            }
+            this._dynamicCssFile = Gio.File.new_for_path(path);
+            this._theme.load_stylesheet(this._dynamicCssFile);
+        } catch (e) {
+            logDebug('Extension', `Failed to apply accent color: ${e}`);
         }
-        this._overlay.add_style_class_name(newClass);
-        this._currentAccentClass = newClass;
     }
 
 }

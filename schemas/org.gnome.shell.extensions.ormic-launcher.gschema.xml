@@ -64,12 +64,6 @@
       <description>Style of the dialog background (blur, transparent, or solid).</description>
     </key>
 
-    <key name="accent-color" type="s">
-      <default>'gnome'</default>
-      <summary>Accent color for the theme</summary>
-      <description>Accent color used for highlights and selections. Choices: gnome, yellow, blue, purple, red, green, pink, teal, orange, slate.</description>
-    </key>
-
     <key name="grid-icon-size" type="i">
       <default>52</default>
       <range min="32" max="80"/>

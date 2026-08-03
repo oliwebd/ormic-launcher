@@ -143,39 +143,11 @@ export default class OrmicLauncherPrefs extends ExtensionPreferences {
         s.connect('changed::background-style', refreshBg);
         appearGroup.add(bgRow);
 
-        const accentRow = new Adw.ComboRow({
+        const accentInfoRow = new Adw.ActionRow({
             title: _('Accent Color'),
-            subtitle: _('Highlight and selection color for the launcher'),
-            model: new Gtk.StringList({
-                strings: [
-                    _('System Default (GNOME)'),
-                    _('Yellow (Pop!_OS Orange)'),
-                    _('Blue (Sleek Blue)'),
-                    _('Purple (Vibrant Purple)'),
-                    _('Red (Coral Red)'),
-                    _('Green (Emerald Green)'),
-                    _('Pink (Hot Pink)'),
-                    _('Teal (Modern Teal)'),
-                    _('Orange (Vibrant Orange)'),
-                    _('Slate (Slate Grey)'),
-                ],
-            }),
+            subtitle: _('Ormic Launcher always follows your GNOME system accent color (Settings → Appearance)'),
         });
-        const colors = ['gnome', 'yellow', 'blue', 'purple', 'red', 'green', 'pink', 'teal', 'orange', 'slate'];
-        const refreshAccent = () => {
-            const val = s.get_string('accent-color') || 'gnome';
-            const idx = colors.indexOf(val);
-            if (idx !== -1)
-                accentRow.set_selected(idx);
-        };
-        refreshAccent();
-        accentRow.connect('notify::selected', () => {
-            const idx = accentRow.get_selected();
-            if (idx >= 0 && idx < colors.length)
-                s.set_string('accent-color', colors[idx]);
-        });
-        s.connect('changed::accent-color', refreshAccent);
-        appearGroup.add(accentRow);
+        appearGroup.add(accentInfoRow);
 
         const resGroup = new Adw.PreferencesGroup({ title: _('Results') });
         genPage.add(resGroup);
