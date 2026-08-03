@@ -4,6 +4,7 @@
 import Adw from 'gi://Adw';
 import Gtk from 'gi://Gtk';
 import Gio from 'gi://Gio';
+import GObject from 'gi://GObject';
 
 import { ExtensionPreferences, gettext as _ }
     from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
@@ -202,6 +203,31 @@ export default class OrmicLauncherPrefs extends ExtensionPreferences {
         });
         s.bind('launcher-height', launcherHRow, 'value', Gio.SettingsBindFlags.DEFAULT);
         appearGroup.add(launcherHRow);
+
+        const edgeGroup = new Adw.PreferencesGroup({
+            title: _('Behavior'),
+            description: _('Optional ways to open the launcher besides the keyboard shortcut'),
+        });
+        genPage.add(edgeGroup);
+
+        const edgeRow = new Adw.SwitchRow({
+            title: _('Open on Right Screen Edge'),
+            subtitle: _('Push the mouse pointer against the right edge of the primary monitor to open the launcher, like a GNOME hot corner. Enabled by default.'),
+        });
+        s.bind('enable-edge-trigger', edgeRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        edgeGroup.add(edgeRow);
+
+        const edgePressureRow = new Adw.SpinRow({
+            title: _('Edge Trigger Sensitivity'),
+            subtitle: _('Lower = triggers more easily, higher = requires a firmer push (20 – 300). Default: 100'),
+            adjustment: new Gtk.Adjustment({
+                lower: 20, upper: 300, step_increment: 10,
+                value: s.get_int('edge-trigger-pressure'),
+            }),
+        });
+        s.bind('edge-trigger-pressure', edgePressureRow, 'value', Gio.SettingsBindFlags.DEFAULT);
+        edgeRow.bind_property('active', edgePressureRow, 'sensitive', GObject.BindingFlags.SYNC_CREATE);
+        edgeGroup.add(edgePressureRow);
 
         const advGroup = new Adw.PreferencesGroup({ title: _('Advanced') });
         genPage.add(advGroup);

@@ -14,6 +14,7 @@ import GObject from 'gi://GObject';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import * as Layout from 'resource:///org/gnome/shell/ui/layout.js';
 import { Extension, gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
 
 import {
@@ -49,6 +50,8 @@ class OrmicIndicator extends PanelMenu.Button {
     }
 }
 
+
+const EDGE_TRIGGER_PRESSURE_TIMEOUT = 1000;
 
 function buildAccentCss(colorName: string): string {
     const p = ACCENT_COLORS[colorName as AccentColorKey] ?? ACCENT_COLORS.yellow;
@@ -104,6 +107,12 @@ export default class OrmicLauncherExtension extends Extension {
     _dynamicCssFile: Gio.File | null = null;
     _theme: St.Theme | null = null;
     _dialogSizeId: number | null = null;
+
+    _edgeBarrier: Meta.Barrier | null = null;
+    _edgePressureBarrier: any = null;
+    _edgeTriggerId: number | null = null;
+    _edgeSettingId: number | null = null;
+    _edgePressureSettingId: number | null = null;
 
     enable() {
         logDebug('Extension', 'enable() called');
@@ -175,8 +184,12 @@ export default class OrmicLauncherExtension extends Extension {
 
         Main.layoutManager.addTopChrome(this._overlay);
 
-        this._monId = Main.layoutManager.connect('monitors-changed', () => this._pos());
+        this._monId = Main.layoutManager.connect('monitors-changed', () => {
+            this._pos();
+            this._setupEdgeTrigger();
+        });
         this._pos();
+        this._setupEdgeTrigger();
 
         Main.wm.addKeybinding(
             'toggle-ormic-launcher', this._settings,
@@ -207,10 +220,16 @@ export default class OrmicLauncherExtension extends Extension {
 
         this._settings.connect('changed::launcher-width', () => this._pos());
         this._settings.connect('changed::launcher-height', () => this._pos());
+
+        this._edgeSettingId = this._settings.connect('changed::enable-edge-trigger', () => this._setupEdgeTrigger());
+        this._edgePressureSettingId = this._settings.connect('changed::edge-trigger-pressure', () => this._setupEdgeTrigger());
     }
 
     disable() {
         logDebug('Extension', 'disable() called');
+        this._destroyEdgeTrigger();
+        if (this._edgeSettingId) { this._settings.disconnect(this._edgeSettingId); this._edgeSettingId = null; }
+        if (this._edgePressureSettingId) { this._settings.disconnect(this._edgePressureSettingId); this._edgePressureSettingId = null; }
         if (this._focusId) { global.stage.disconnect(this._focusId); this._focusId = null; }
         if (this._cfgId) { this._settings.disconnect(this._cfgId); this._cfgId = null; }
         if (this._interfaceSettings && this._sysAccentId) {
@@ -292,6 +311,52 @@ export default class OrmicLauncherExtension extends Extension {
         this._dialog.min_height = dh;
         (this._dialog as any).max_height = dh;
         this._dialog.set_clip_to_allocation(true);
+    }
+
+    _setupEdgeTrigger() {
+        this._destroyEdgeTrigger();
+
+        if (!this._settings || !this._settings.get_boolean('enable-edge-trigger')) return;
+
+        const mon = Main.layoutManager.primaryMonitor;
+        if (!mon) return;
+
+        const rightEdge = mon.x + mon.width;
+
+        this._edgeBarrier = new Meta.Barrier({
+            backend: (global as any).backend,
+            x1: rightEdge, x2: rightEdge,
+            y1: mon.y, y2: mon.y + mon.height,
+            directions: Meta.BarrierDirection.NEGATIVE_X,
+        });
+
+        const threshold = this._settings.get_int('edge-trigger-pressure');
+        this._edgePressureBarrier = new (Layout as any).PressureBarrier(
+            threshold,
+            EDGE_TRIGGER_PRESSURE_TIMEOUT,
+            Shell.ActionMode.NORMAL,
+        );
+        this._edgePressureBarrier.addBarrier(this._edgeBarrier);
+        this._edgeTriggerId = this._edgePressureBarrier.connect('trigger', () => {
+            logDebug('EdgeTrigger', 'Right-edge pressure trigger fired');
+            if (!this._visible) this.show();
+        });
+    }
+
+    _destroyEdgeTrigger() {
+        if (this._edgePressureBarrier) {
+            if (this._edgeTriggerId) {
+                this._edgePressureBarrier.disconnect(this._edgeTriggerId);
+                this._edgeTriggerId = null;
+            }
+            if (this._edgeBarrier) this._edgePressureBarrier.removeBarrier(this._edgeBarrier);
+            this._edgePressureBarrier.destroy();
+            this._edgePressureBarrier = null;
+        }
+        if (this._edgeBarrier) {
+            this._edgeBarrier.destroy();
+            this._edgeBarrier = null;
+        }
     }
 
     toggle() {

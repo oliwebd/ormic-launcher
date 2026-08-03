@@ -85,5 +85,18 @@
       <description>Height of the floating launcher dialog in pixels (400–1200).</description>
     </key>
 
+    <key name="enable-edge-trigger" type="b">
+      <default>true</default>
+      <summary>Enable right screen-edge trigger</summary>
+      <description>When enabled, pushing the mouse pointer against the right edge of the primary monitor opens the launcher, similar to a GNOME hot corner. Optional — can be turned off.</description>
+    </key>
+
+    <key name="edge-trigger-pressure" type="i">
+      <default>100</default>
+      <range min="20" max="300"/>
+      <summary>Edge trigger sensitivity</summary>
+      <description>How far (in pixels of accumulated pointer pressure) you must push against the right edge before the launcher opens. Lower values trigger more easily.</description>
+    </key>
+
   </schema>
 </schemalist>
