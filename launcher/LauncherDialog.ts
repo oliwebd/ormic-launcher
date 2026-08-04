@@ -100,6 +100,7 @@ export class LauncherDialog extends St.BoxLayout {
     _editorAppsContainer!: St.BoxLayout;
 
     _promptOverlay!: St.BoxLayout;
+    _promptCard!: St.BoxLayout;
     _promptEntry!: St.Entry;
 
     _init() {
@@ -421,6 +422,8 @@ export class LauncherDialog extends St.BoxLayout {
             x_expand: true,
             reactive: true,
         });
+        promptCard.set_pivot_point(0.5, 0.5);
+        this._promptCard = promptCard;
 
         this._promptOverlay.connect('button-press-event', (_, ev) => {
             const [x, y] = ev.get_coords();
@@ -567,6 +570,7 @@ export class LauncherDialog extends St.BoxLayout {
             editorScroll: this._editorScroll,
             editorAppsContainer: this._editorAppsContainer,
             promptOverlay: this._promptOverlay,
+            promptCard: this._promptCard,
             promptEntry: this._promptEntry,
             pageNavBox: this._pageNavBox,
             pageDotsBox: this._pageDotsBox,

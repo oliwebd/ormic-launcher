@@ -31,7 +31,7 @@ import Clutter from 'gi://Clutter';
 import { gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
 
 import { SearchResult } from '../types.js';
-import { logDebug, timeoutOnce, idleOnce, createAppIcon } from '../utils.js';
+import { logDebug, timeoutOnce, idleOnce, createAppIcon, easeActor } from '../utils.js';
 import { AppProvider } from '../providers/apps.js';
 import { GridItem } from '../components/GridItem.js';
 import { CategoryTab } from '../components/CategoryTab.js';
@@ -215,7 +215,18 @@ export class GridController {
         });
 
         this._syncHeaderButtons();
-        s.gridScroll.set_child(s.getGridBox());
+
+        // Cross-fade the grid instead of hard-cutting to the new category's
+        // content — quick enough to stay snappy, but avoids the jarring
+        // instant swap on tab click.
+        s.gridScroll.remove_all_transitions();
+        easeActor(s.gridScroll, {
+            opacity: 60, duration: 70, mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+            onComplete: () => {
+                s.gridScroll.set_child(s.getGridBox());
+                easeActor(s.gridScroll, { opacity: 255, duration: 110, mode: Clutter.AnimationMode.EASE_OUT_QUAD });
+            },
+        });
 
         const elapsed = (GLib.get_monotonic_time() - t0) / 1000;
         logDebug('Performance', `selectCategory('${categoryName}') — ${elapsed.toFixed(1)}ms`);

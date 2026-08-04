@@ -180,6 +180,7 @@ export default class OrmicLauncherExtension extends Extension {
 
         this._dialog = new LauncherDialog();
         this._dialog.setup(this);
+        this._dialog.set_pivot_point(0.5, 0.5);
         this._overlay.add_child(this._dialog);
 
         Main.layoutManager.addTopChrome(this._overlay);
@@ -377,7 +378,9 @@ export default class OrmicLauncherExtension extends Extension {
 
         this._overlay.show();
         this._dialog.opacity = 0;
-        this._dialog.translation_y = -20;
+        this._dialog.translation_y = -14;
+        this._dialog.scale_x = 0.94;
+        this._dialog.scale_y = 0.94;
 
         const grab = Main.pushModal(this._overlay, {
             actionMode: Shell.ActionMode.NORMAL | Shell.ActionMode.OVERVIEW | Shell.ActionMode.POPUP,
@@ -390,8 +393,14 @@ export default class OrmicLauncherExtension extends Extension {
         }
         this._grab = grab;
 
-        easeActor(this._overlay, { opacity: 255, duration: 150, mode: Clutter.AnimationMode.EASE_OUT_QUAD });
-        easeActor(this._dialog, { opacity: 255, translation_y: 0, duration: 200, mode: Clutter.AnimationMode.EASE_OUT_EXPO });
+        // Scrim fades in a touch faster than the dialog so the dialog reads
+        // as arriving "on top of" an already-dimmed backdrop, rather than
+        // both elements popping in at once.
+        easeActor(this._overlay, { opacity: 255, duration: 140, mode: Clutter.AnimationMode.EASE_OUT_QUAD });
+        easeActor(this._dialog, {
+            opacity: 255, translation_y: 0, scale_x: 1, scale_y: 1,
+            duration: 260, mode: Clutter.AnimationMode.EASE_OUT_QUINT,
+        });
 
         const d = this._dialog;
         timeoutOnce(10, () => d.focus());
@@ -417,15 +426,18 @@ export default class OrmicLauncherExtension extends Extension {
         }
 
         easeActor(this._dialog, {
-            opacity: 0, translation_y: -14, duration: 120, mode: Clutter.AnimationMode.EASE_IN_QUAD,
+            opacity: 0, translation_y: -10, scale_x: 0.96, scale_y: 0.96,
+            duration: 140, mode: Clutter.AnimationMode.EASE_IN_CUBIC,
             onComplete: () => {
                 this._dialog!.opacity = 255;
                 this._dialog!.translation_y = 0;
+                this._dialog!.scale_x = 1;
+                this._dialog!.scale_y = 1;
             },
         });
 
         easeActor(this._overlay, {
-            opacity: 0, duration: 120, mode: Clutter.AnimationMode.EASE_IN_QUAD,
+            opacity: 0, duration: 160, mode: Clutter.AnimationMode.EASE_IN_QUAD,
             onComplete: () => { this._overlay!.hide(); },
         });
     }

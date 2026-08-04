@@ -45,6 +45,7 @@ export interface LauncherState {
     readonly editorScroll: St.ScrollView;
     readonly editorAppsContainer: St.BoxLayout;
     readonly promptOverlay: St.BoxLayout;
+    readonly promptCard: St.BoxLayout;
     readonly promptEntry: St.Entry;
     readonly pageNavBox: St.BoxLayout;
     readonly pageDotsBox: St.BoxLayout;

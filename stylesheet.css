@@ -38,6 +38,7 @@
 .ormic-entry {
   background-color: transparent;
   border: none;
+  transition-duration: 120ms;
   border-radius: 0;
   box-shadow: none;
   color: rgba(255, 255, 255, 0.95);
@@ -65,6 +66,7 @@
   border-radius: 8px;
   padding: 6px;
   padding: 6px;
+  transition-duration: 120ms;
 }
 
 .ormic-close-btn:hover {
@@ -82,6 +84,7 @@
   border-radius: 8px;
   padding: 6px;
   margin-right: 2px;
+  transition-duration: 120ms;
 }
 
 .ormic-settings-btn:hover {
@@ -108,10 +111,12 @@
 
 .ormic-scroll StScrollBar {
   opacity: 0;
+  transition-duration: 150ms;
 }
 
 .ormic-scroll:hover StScrollBar {
   opacity: 1;
+  transition-duration: 150ms;
 }
 
 .ormic-rbox {
@@ -124,6 +129,7 @@
   border-radius: 8px;
   background-color: transparent;
   min-height: 56px;
+  transition-duration: 100ms;
 }
 
 .ormic-result:hover {
@@ -140,6 +146,7 @@
   background-color: transparent;
   border-radius: 3px;
   margin: 8px 0 8px 5px;
+  transition-duration: 100ms;
 }
 
 .ormic-result.selected .ormic-accent-bar {
@@ -206,6 +213,7 @@
   padding: 5px;
   margin-right: 4px;
   margin-right: 4px;
+  transition-duration: 120ms;
 }
 
 .ormic-fav-btn:hover {
@@ -258,6 +266,7 @@
   border: 1px solid rgba(255, 255, 255, 0.06);
   color: rgba(255, 255, 255, 0.55);
   color: rgba(255, 255, 255, 0.55);
+  transition-duration: 120ms;
 }
 
 .ormic-header-btn:hover {
@@ -280,10 +289,12 @@
 
 .ormic-grid-scroll StScrollBar {
   opacity: 0;
+  transition-duration: 150ms;
 }
 
 .ormic-grid-scroll:hover StScrollBar {
   opacity: 1;
+  transition-duration: 150ms;
 }
 
 .ormic-grid-box {
@@ -309,6 +320,7 @@
   border-radius: 12px;
   width: 100px;
   height: 94px;
+  transition-duration: 100ms;
 }
 
 .ormic-grid-item-box {
@@ -369,6 +381,7 @@
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.05);
   background-color: transparent;
+  transition-duration: 130ms;
 }
 
 .ormic-category-tab:hover {
@@ -383,6 +396,7 @@
 
 .ormic-category-tab-icon {
   color: rgba(255, 255, 255, 0.45);
+  transition-duration: 130ms;
 }
 
 .ormic-category-tab:hover .ormic-category-tab-icon {
@@ -397,6 +411,7 @@
   font-size: 12px;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.55);
+  transition-duration: 130ms;
 }
 
 .ormic-category-tab:hover .ormic-category-tab-label {
@@ -436,6 +451,7 @@
   padding: 6px 12px;
   font-size: 14px;
   caret-color: #FAB84B;
+  transition-duration: 120ms;
 }
 
 .ormic-editor-entry:focus {
@@ -458,6 +474,7 @@
   background-color: rgba(255, 255, 255, 0.05);
   color: rgba(255, 255, 255, 0.70);
   border: 1px solid rgba(255, 255, 255, 0.08);
+  transition-duration: 120ms;
 }
 
 .ormic-editor-btn.cancel-btn:hover {
@@ -469,6 +486,7 @@
   background-color: #FAB84B;
   color: #111117;
   border: 1px solid #FAB84B;
+  transition-duration: 120ms;
 }
 
 .ormic-editor-btn.save-btn:hover {
@@ -486,6 +504,7 @@
   background-color: transparent;
   border: 1px solid transparent;
   min-height: 48px;
+  transition-duration: 100ms;
 }
 
 .ormic-edit-row-box {
@@ -552,6 +571,7 @@
   padding: 10px 14px;
   font-size: 14px;
   caret-color: #FAB84B;
+  transition-duration: 120ms;
 }
 
 .ormic-prompt-entry:focus {
@@ -575,6 +595,7 @@
   background-color: rgba(255, 255, 255, 0.05);
   color: rgba(255, 255, 255, 0.65);
   border: 1px solid rgba(255, 255, 255, 0.09);
+  transition-duration: 120ms;
 }
 
 .ormic-prompt-btn.cancel-btn:hover {
@@ -591,6 +612,7 @@
   background-color: #FAB84B;
   color: #111117;
   border: 1px solid #FAB84B;
+  transition-duration: 120ms;
 }
 
 .ormic-prompt-btn.create-btn:hover {

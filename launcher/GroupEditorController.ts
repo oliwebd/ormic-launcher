@@ -4,7 +4,8 @@
 // Manages the "Create New Group" modal prompt, and the group editor
 // checklist screen where apps can be checked/unchecked to belong to a custom group.
 
-import { timeoutOnce } from '../utils.js';
+import Clutter from 'gi://Clutter';
+import { timeoutOnce, easeActor } from '../utils.js';
 import { EditAppRow } from '../components/EditAppRow.js';
 import type { LauncherState } from './LauncherState.js';
 import type { GridController } from './GridController.js';
@@ -96,14 +97,33 @@ export class GroupEditorController {
         s.setTabsVisible(false);
         
         s.promptEntry.set_text('');
+
+        s.promptOverlay.remove_all_transitions();
+        s.promptCard.remove_all_transitions();
+
+        s.promptOverlay.opacity = 0;
+        s.promptCard.opacity = 0;
+        s.promptCard.scale_x = 0.92;
+        s.promptCard.scale_y = 0.92;
         s.promptOverlay.show();
+
+        easeActor(s.promptOverlay, { opacity: 255, duration: 120, mode: Clutter.AnimationMode.EASE_OUT_QUAD });
+        easeActor(s.promptCard, {
+            opacity: 255, scale_x: 1, scale_y: 1,
+            duration: 180, mode: Clutter.AnimationMode.EASE_OUT_QUINT,
+        });
+
         s.promptEntry.grab_key_focus();
     }
 
     hidePromptOverlay(create: boolean): void {
         const s = this._s;
-        s.promptOverlay.hide();
-        
+
+        s.promptOverlay.remove_all_transitions();
+        s.promptCard.remove_all_transitions();
+        easeActor(s.promptOverlay, { opacity: 0, duration: 100, mode: Clutter.AnimationMode.EASE_IN_QUAD, onComplete: () => s.promptOverlay.hide() });
+        easeActor(s.promptCard, { opacity: 0, scale_x: 0.94, scale_y: 0.94, duration: 100, mode: Clutter.AnimationMode.EASE_IN_QUAD });
+
         s.headerBox.show();
         s.gridScroll.show();
         s.setTabsVisible(true);
